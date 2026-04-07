@@ -94,6 +94,72 @@
                 <div><span>{{ to_watch_count }}</span> remaining</div>
             </div>
         </div>
+
+        <!-- Rating Distribution -->
+        <div class="analytics-card" style="grid-column: 1 / -1; max-width: 600px; justify-self: center; width: 100%;">
+            <h3 class="analytics-title"><i class="fas fa-star" style="color:#ffb703;"></i> Rating Distribution</h3>
+            <div class="bar-chart" style="height: 150px; justify-content: space-around;">
+                {% set max_rating = rating_counts | max if rating_counts else 1 %}
+                {% if max_rating > 0 %}
+                {% for i in range(10) %}
+                <div class="bar-group" style="width:10%;">
+                    <div class="bar-stack" style="background:transparent; justify-content: flex-end;">
+                        <div class="bar-segment" style="height:{{ ((rating_counts[i] / max_rating) * 100) | int }}%; background:#ffb703; min-width:15px; border-radius:4px 4px 0 0;" title="{{ rating_counts[i] }} item(s) rated {{ i+1 }}⭐"></div>
+                    </div>
+                    <div class="bar-label">{{ i+1 }}</div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            {% if max_rating == 0 %}
+            <p class="no-data-msg">Rate your collection to see the distribution.</p>
+            {% endif %}
+        </div>
+
+        <!-- Release Era Breakdown -->
+        <div class="analytics-card">
+            <h3 class="analytics-title"><i class="fas fa-history" style="color:var(--accent-book)"></i> Release Eras</h3>
+            <div class="genre-bars">
+                {% if era_labels %}
+                {% set max_era = era_data | max %}
+                {% for i in range(era_labels|length) %}
+                <div class="genre-row">
+                    <span class="genre-name">{{ era_labels[i] }}</span>
+                    <div class="genre-bar-track">
+                        <div class="genre-bar-fill" style="width:{{ (era_data[i] / (max_era or 1) * 100) | int }}%; background:var(--accent-book);"></div>
+                    </div>
+                    <span class="genre-count">{{ era_data[i] }}</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="no-data-msg">Not enough data to calculate eras.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Top Rated -->
+        <div class="analytics-card">
+            <h3 class="analytics-title"><i class="fas fa-trophy" style="color:var(--accent);"></i> Hall of Fame</h3>
+            <div style="display:flex; flex-direction:column; gap:0.8rem;">
+                {% for item in top_items %}
+                <div style="display:flex; align-items:center; gap:0.8rem; background:rgba(255,255,255,0.05); padding:0.5rem 0.8rem; border-radius:8px;">
+                    <span style="font-weight:bold; color:var(--accent); font-size:1.1rem;">#{{ loop.index }}</span>
+                    {% if item.img_url %}
+                    <img src="{{ item.img_url }}" style="width:30px; height:45px; object-fit:cover; border-radius:4px;">
+                    {% else %}
+                    <div style="width:30px; height:45px; background:rgba(255,255,255,0.1); border-radius:4px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-film" style="font-size:0.8rem;"></i></div>
+                    {% endif %}
+                    <div style="flex:1; overflow:hidden;">
+                        <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.95rem;">{{ item.title }}</div>
+                        <div style="font-size:0.8rem; opacity:0.7;">⭐ {{ item.rating }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="no-data-msg">Rate titles to see them here.</p>
+                {% endfor %}
+            </div>
+        </div>
+
     </div>
 </div>
 {% endblock %}

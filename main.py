@@ -266,6 +266,26 @@ def analytics():
 
     week_max = max((week_movies[i] + week_books[i] for i in range(7)), default=0) or 1
     month_max = max((month_movies[i] + month_books[i] for i in range(12)), default=0) or 1
+    
+    # --- Advanced Analytics ---
+    rating_counts = [0] * 10
+    for item in watched + read_books:
+        r = item.rating
+        if r and r > 0:
+            idx = min(int(r) - 1, 9)
+            rating_counts[idx] += 1
+            
+    era_counts = Counter()
+    for item in watched + read_books:
+        year = item.year
+        if year and year.isdigit():
+            decade = (int(year) // 10) * 10
+            if decade > 1900:
+                era_counts[f"{decade}s"] += 1
+    era_labels = list(era_counts.keys())
+    era_data = list(era_counts.values())
+    
+    top_items = sorted(watched + read_books, key=lambda x: x.rating or 0, reverse=True)[:5]
 
     return render_template("analytics.html",
         watched_count=len(watched),
@@ -280,6 +300,10 @@ def analytics():
         month_max=month_max,
         top_genres=top_genres,
         completion_pct=completion_pct,
+        rating_counts=rating_counts,
+        era_labels=era_labels,
+        era_data=era_data,
+        top_items=top_items
     )
 
 
@@ -316,6 +340,48 @@ def collection():
     books = book_q.all()
     return render_template("collection.html", movies=movies, books=books,
                            tab=tab, status=status, sort=sort)
+
+@app.route("/u/<username>")
+def public_collection(username):
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        flash("User not found.", "error")
+        return redirect(url_for("landing"))
+        
+    tab = request.args.get("tab", "movies")
+    status = request.args.get("status", "all")
+    sort = request.args.get("sort", "newest")
+
+    movie_q = Movie.query.filter_by(user_id=user.id)
+    book_q = Book.query.filter_by(user_id=user.id)
+
+    if status == "watched":
+        movie_q = movie_q.filter_by(status="watched")
+    elif status == "to_watch":
+        movie_q = movie_q.filter_by(status="to_watch")
+    if status == "read":
+        book_q = book_q.filter_by(status="read")
+    elif status == "to_read":
+        book_q = book_q.filter_by(status="to_read")
+
+    if sort == "rating":
+        movie_q = movie_q.order_by(Movie.rating.desc())
+        book_q = book_q.order_by(Book.rating.desc())
+    elif sort == "title":
+        movie_q = movie_q.order_by(Movie.title)
+        book_q = book_q.order_by(Book.title)
+    else:  # newest
+        movie_q = movie_q.order_by(Movie.date_added.desc())
+        book_q = book_q.order_by(Book.date_added.desc())
+
+    movies = movie_q.all()
+    books = book_q.all()
+    
+    return render_template("public_collection.html", 
+                           profile_user=user, 
+                           movies=movies, books=books,
+                           tab=tab, status=status, sort=sort)
+
 
 
 # =====================

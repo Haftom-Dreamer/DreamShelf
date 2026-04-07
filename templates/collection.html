@@ -7,8 +7,9 @@
     <div class="collection-header">
         <h1 class="page-title">My Collection</h1>
         <div class="collection-actions">
-            <a href="{{ url_for('add') }}" class="btn-primary"><i class="fas fa-film"></i> Add Movie</a>
-            <a href="{{ url_for('add_book') }}" class="btn-secondary"><i class="fas fa-book"></i> Add Book</a>
+            <button class="btn-secondary" onclick="copyShareLink('{{ url_for('public_collection', username=current_user.username, _external=True) }}')"><i class="fas fa-share-alt"></i> Share</button>
+            <a href="{{ url_for('add') }}" class="btn-primary" style="margin-left: 0.5rem;"><i class="fas fa-film"></i> Add Movie</a>
+            <a href="{{ url_for('add_book') }}" class="btn-secondary" style="margin-left: 0.5rem;"><i class="fas fa-book"></i> Add Book</a>
         </div>
     </div>
 
@@ -43,6 +44,11 @@
                 <a class="sort-chip {% if sort == 'newest' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='newest') }}">Newest</a>
                 <a class="sort-chip {% if sort == 'rating' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='rating') }}">Rating</a>
                 <a class="sort-chip {% if sort == 'title' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='title') }}">A–Z</a>
+            </div>
+            <div class="grid-controls" style="display:flex; gap:0.3rem; margin-left:0.5rem;">
+                <button class="sort-chip" onclick="setGridSize('small')" title="Small Size" style="padding:0.4rem 0.6rem;"><i class="fas fa-th"></i></button>
+                <button class="sort-chip" onclick="setGridSize('medium')" title="Medium Size" style="padding:0.4rem 0.6rem;"><i class="fas fa-th-large"></i></button>
+                <button class="sort-chip" onclick="setGridSize('large')" title="Large Size" style="padding:0.4rem 0.6rem;"><i class="fas fa-square"></i></button>
             </div>
         </div>
     </div>
@@ -159,5 +165,26 @@ function filterCards(query) {
     const noRes = document.getElementById('noResults');
     if (noRes) noRes.style.display = visible === 0 ? 'block' : 'none';
 }
+
+function copyShareLink(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        alert("Public collection link copied to clipboard: " + url);
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+    });
+}
+
+function setGridSize(size) {
+    const grid = document.getElementById('mediaGrid');
+    if (!grid) return;
+    grid.classList.remove('grid-small', 'grid-medium', 'grid-large');
+    grid.classList.add('grid-' + size);
+    localStorage.setItem('cineshelf_gridSize', size);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const size = localStorage.getItem('cineshelf_gridSize') || 'medium';
+    setGridSize(size);
+});
 </script>
 {% endblock %}

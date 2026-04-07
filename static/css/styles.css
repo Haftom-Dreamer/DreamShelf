@@ -1856,3 +1856,17 @@ select.form-control option { background: var(--bg-surface); }
 .autocomplete-item:hover {
     background: rgba(255,255,255,0.1);
 }
+
+/* Grid Resizing Controls */
+.grid-small { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important; }
+.grid-small .media-card { height: 210px !important; }
+.grid-small .card-title, .grid-small .card-back-title { font-size: 0.95rem; }
+.grid-small .card-sub { font-size: 0.75rem; }
+.grid-small .btn-card-edit, .grid-small .btn-card-delete, .grid-small .btn-card-flip { padding: 0.3rem 0.6rem; font-size: 0.7rem; }
+
+.grid-medium { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; } /* Standard */
+
+.grid-large { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important; }
+.grid-large .media-card { height: 420px !important; }
+.grid-large .card-title, .grid-large .card-back-title { font-size: 1.4rem; }
+.grid-large .card-sub { font-size: 1rem; }
