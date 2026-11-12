@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width: 600px; margin: 0 auto;">
+    <div class="dashboard-header" style="margin-bottom: 2rem;">
+        <h1 class="page-title"><i class="fas fa-cog" style="color:var(--accent);"></i> Settings</h1>
+        <p class="page-subtitle">Customize your public profile.</p>
+    </div>
+
+    <div class="form-wrapper">
+        <form method="POST" action="{{ url_for('settings') }}">
+            {{ form.csrf_token }}
+            
+            <div class="form-group" style="margin-bottom: 2rem; display:flex; align-items:center; gap: 1rem;">
+                {% if current_user.avatar_url %}
+                <img src="{{ current_user.avatar_url }}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
+                {% else %}
+                <div style="width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{ current_user.avatar_color }}; color: white; font-size: 2rem;">
+                    <i class="fas fa-user"></i>
+                </div>
+                {% endif %}
+                <div style="flex: 1;">
+                    <label class="form-label">{{ form.avatar_url.label.text }}</label>
+                    {{ form.avatar_url(class="form-control", placeholder="https://example.com/image.jpg") }}
+                    <small>Paste an image URL to show as your profile picture instead of a color.</small>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label class="form-label">{{ form.bio.label.text }}</label>
+                {{ form.bio(class="form-control", rows="4", placeholder="A short bio about your taste in media...") }}
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                {{ form.submit(class="btn-primary", style="flex: 1;") }}
+                <a href="{{ url_for('dashboard') }}" class="btn-secondary">Cancel</a>
+            </div>
+            <div class="settings-actions" style="margin-top: 2rem; text-align: center;">
+                <a href="{{ url_for('import_csv') }}" class="btn-secondary" style="margin-right: 0.5rem;"><i class="fas fa-file-import"></i> Import CSV</a>
+                <a href="{{ url_for('logout') }}" class="btn-primary" style="background:#e63946;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

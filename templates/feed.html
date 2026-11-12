@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Activity Feed{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width: 800px; margin: 0 auto;">
+    <div class="dashboard-header" style="margin-bottom: 2rem;">
+        <h1 class="page-title"><i class="fas fa-stream" style="color:var(--accent);"></i> Activity Feed</h1>
+        <p class="page-subtitle">See what your friends are watching and reading.</p>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+        {% for feed_event in feed_items %}
+        <div style="background:var(--card-bg); border-radius:12px; padding:1.5rem; display:flex; gap:1rem; box-shadow:0 10px 30px rgba(0,0,0,0.1); border:1px solid rgba(255,255,255,0.05);">
+            <div>
+                {% if feed_event.user.avatar_url %}
+                <img src="{{ feed_event.user.avatar_url }}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
+                {% else %}
+                <div style="width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{ feed_event.user.avatar_color }}; color: white; font-size: 1.5rem;">
+                    <i class="fas fa-user"></i>
+                </div>
+                {% endif %}
+            </div>
+            <div style="flex: 1;">
+                <div style="margin-bottom: 0.5rem;">
+                    <a href="{{ url_for('public_collection', username=feed_event.user.username) }}" style="color:white; font-weight:bold; text-decoration:none; font-size:1.1rem;">{{ feed_event.user.username }}</a> 
+                    <span style="opacity: 0.7; font-size: 0.95rem;"> {{ feed_event.action }}</span>
+                    <span style="opacity: 0.4; font-size: 0.8rem; float: right;">{{ feed_event.date.strftime('%b %d, %Y') if feed_event.date else 'Recently' }}</span>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px;">
+                    {% if feed_event.item.img_url %}
+                    <img src="{{ feed_event.item.img_url }}" style="width: 60px; border-radius: 4px;">
+                    {% else %}
+                    <div style="width: 60px; height: 90px; background:rgba(255,255,255,0.1); border-radius:4px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-film" style="font-size:1.2rem;"></i></div>
+                    {% endif %}
+                    <div style="flex: 1; display:flex; flex-direction: column; justify-content:center;">
+                        <span style="font-weight: 600; font-size:1.1rem;">{{ feed_event.item.title }}</span>
+                        {% if feed_event.item.review and 'rated' in feed_event.action %}
+                        <p style="font-style: italic; opacity: 0.8; font-size: 0.9rem; margin-top: 0.3rem;">"{{ feed_event.item.review }}"</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-user-friends" style="font-size:3rem;color:var(--accent);opacity:.4;"></i>
+            <h3>No activity yet</h3>
+            <p>Follow other users to see their activity here!</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

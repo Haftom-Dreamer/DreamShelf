@@ -10,6 +10,8 @@ import requests
 import os
 from datetime import datetime, date, timedelta
 from collections import Counter, defaultdict
+import io
+import csv
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Date
 
@@ -43,15 +45,27 @@ AVATAR_COLORS = ["#6c63ff", "#ff6584", "#43b89c", "#f5a623", "#4ecdc4", "#c56ef3
 # --- DB Models ---
 # =====================
 
+followers_table = db.Table('followers',
+    db.Column('follower_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('followed_id', db.Integer, db.ForeignKey('user.id'))
+)
+
 class User(UserMixin, db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
     avatar_color: Mapped[str] = mapped_column(String(20), nullable=False, default="#6c63ff")
+    bio: Mapped[str] = mapped_column(String(500), nullable=True)
+    avatar_url: Mapped[str] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     movies: Mapped[list["Movie"]] = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")
     books: Mapped[list["Book"]] = relationship("Book", back_populates="owner", cascade="all, delete-orphan")
+    followed: Mapped[list["User"]] = relationship(
+        'User', secondary=followers_table,
+        primaryjoin=(followers_table.c.follower_id == id),
+        secondaryjoin=(followers_table.c.followed_id == id),
+        backref=db.backref('followers', lazy='dynamic'), lazy='dynamic')
 
 class Movie(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -65,6 +79,7 @@ class Movie(db.Model):
     img_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="to_watch")
     genre: Mapped[str] = mapped_column(String(200), nullable=True, default="")
+    custom_tags: Mapped[str] = mapped_column(String(250), nullable=True, default="")
     date_added: Mapped[date] = mapped_column(Date, default=date.today)
     date_watched: Mapped[date] = mapped_column(Date, nullable=True)
     owner: Mapped["User"] = relationship("User", back_populates="movies")
@@ -82,6 +97,7 @@ class Book(db.Model):
     img_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="to_read")
     genre: Mapped[str] = mapped_column(String(200), nullable=True, default="")
+    custom_tags: Mapped[str] = mapped_column(String(250), nullable=True, default="")
     date_added: Mapped[date] = mapped_column(Date, default=date.today)
     date_read: Mapped[date] = mapped_column(Date, nullable=True)
     owner: Mapped["User"] = relationship("User", back_populates="books")
@@ -153,6 +169,170 @@ def logout():
     logout_user()
     return redirect(url_for("landing"))
 
+class SettingsForm(FlaskForm):
+    bio = TextAreaField("Bio", validators=[Length(max=500)])
+    avatar_url = StringField("Avatar URL", validators=[Length(max=500)])
+    submit = SubmitField("Save Settings")
+
+@app.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings():
+    form = SettingsForm(obj=current_user)
+    if form.validate_on_submit():
+        current_user.bio = form.bio.data
+        current_user.avatar_url = form.avatar_url.data
+        db.session.commit()
+        flash("Settings saved successfully.", "success")
+        return redirect(url_for("public_collection", username=current_user.username))
+    return render_template("settings.html", form=form)
+
+# =====================
+# --- Social Routes ---
+# =====================
+
+@app.route("/follow/<username>")
+@login_required
+def follow(username):
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash(f"User {username} not found.", "error")
+        return redirect(url_for("landing"))
+    if user == current_user:
+        flash("You cannot follow yourself!", "error")
+        return redirect(url_for("public_collection", username=username))
+    if user not in current_user.followed:
+        current_user.followed.append(user)
+        db.session.commit()
+        flash(f"You followed {username}.", "success")
+    return redirect(url_for("public_collection", username=username))
+
+@app.route("/unfollow/<username>")
+@login_required
+def unfollow(username):
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        flash(f"User {username} not found.", "error")
+        return redirect(url_for("landing"))
+    if user in current_user.followed:
+        current_user.followed.remove(user)
+        db.session.commit()
+        flash(f"You stopped following {username}.", "info")
+    return redirect(url_for("public_collection", username=username))
+
+@app.route("/import", methods=["GET", "POST"])
+@login_required
+def import_csv():
+    if request.method == "POST":
+        if 'csv_file' not in request.files:
+            flash("No file part", "error")
+            return redirect(request.url)
+        file = request.files['csv_file']
+        if file.filename == '':
+            flash("No selected file", "error")
+            return redirect(request.url)
+        if file and file.filename.endswith('.csv'):
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            csv_input = csv.DictReader(stream)
+            count = 0
+            for row in csv_input:
+                title = row.get("Title") or row.get("Name")
+                year = row.get("Year")
+                if not title:
+                    continue
+                try:
+                    params = {"api_key": TMDB_API_KEY, "query": title}
+                    if year:
+                        params["year"] = year
+                    r = requests.get("https://api.themoviedb.org/3/search/movie", params=params, timeout=6)
+                    data = r.json()
+                    if data["results"]:
+                        d = data["results"][0]
+                        tmdb_id = d["id"]
+                        
+                        existing = Movie.query.filter_by(user_id=current_user.id, tmdb_id=str(tmdb_id)).first()
+                        if not existing:
+                            r2 = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}", params={"api_key": TMDB_API_KEY}, timeout=6)
+                            d2 = r2.json()
+                            genres = ", ".join([g["name"] for g in d2.get("genres", [])])
+                            
+                            rating_val = float(row.get("Rating", 0))
+                            if rating_val <= 5.0 and rating_val > 0.0:
+                                rating_val *= 2  # Convert letterboxd out-of-5 to out-of-10
+                            
+                            new_movie = Movie(
+                                user_id=current_user.id,
+                                tmdb_id=str(tmdb_id),
+                                title=d2.get("title", "Unknown"),
+                                year=(d2.get("release_date") or "")[:4],
+                                rating=rating_val,
+                                description=(d2.get("overview") or "")[:1000],
+                                genre=genres,
+                                img_url=f"https://image.tmdb.org/t/p/w500{d2.get('poster_path', '')}",
+                                status="watched",
+                                date_watched=date.today(),
+                            )
+                            db.session.add(new_movie)
+                            count += 1
+                except:
+                    pass
+            db.session.commit()
+            flash(f"Successfully imported {count} movies!", "success")
+            return redirect(url_for("collection"))
+    return render_template("import.html")
+
+
+@app.route("/feed")
+@login_required
+def feed():
+    followed_users = current_user.followed.all()
+    feed_items = []
+    for u in followed_users:
+        for m in u.movies:
+            feed_items.append({"action": "added the movie", "item": m, "user": u, "date": m.date_added})
+            if m.status == "watched" and m.date_watched:
+                feed_items.append({"action": f"watched and rated ⭐ {m.rating}", "item": m, "user": u, "date": m.date_watched})
+        for b in u.books:
+            feed_items.append({"action": "added the book", "item": b, "user": u, "date": b.date_added})
+            if b.status == "read" and b.date_read:
+                feed_items.append({"action": f"read and rated ⭐ {b.rating}", "item": b, "user": u, "date": b.date_read})
+    
+    feed_items.sort(key=lambda x: x["date"] or date.min, reverse=True)
+    return render_template("feed.html", feed_items=feed_items[:50])
+
+
+@app.route("/view/movie/<int:item_id>")
+def view_movie(item_id):
+    movie = Movie.query.get_or_404(item_id)
+    tmdb_url = f"https://api.themoviedb.org/3/movie/{movie.tmdb_id}?api_key={TMDB_API_KEY}&append_to_response=credits,videos"
+    response = requests.get(tmdb_url).json()
+    
+    trailer_key = None
+    if "videos" in response and "results" in response["videos"]:
+        for video in response["videos"]["results"]:
+            if video["type"] == "Trailer" and video["site"] == "YouTube":
+                trailer_key = video["key"]
+                break
+                
+    cast = []
+    if "credits" in response and "cast" in response["credits"]:
+        cast = response["credits"]["cast"][:6]
+        
+    director = None
+    if "credits" in response and "crew" in response["credits"]:
+        for crew_member in response["credits"]["crew"]:
+            if crew_member["job"] == "Director":
+                director = crew_member["name"]
+                break
+
+    backdrop_path = response.get("backdrop_path")
+    backdrop_url = f"https://image.tmdb.org/t/p/original{backdrop_path}" if backdrop_path else movie.img_url
+
+    return render_template("detail.html", item=movie, trailer_key=trailer_key, cast=cast, director=director, backdrop_url=backdrop_url, item_type="movie")
+
+@app.route("/view/book/<int:item_id>")
+def view_book(item_id):
+    book = Book.query.get_or_404(item_id)
+    return render_template("detail.html", item=book, trailer_key=None, cast=[], director=book.author, backdrop_url=book.img_url, item_type="book")
 
 # =====================
 # --- Core Routes ---
@@ -313,6 +493,7 @@ def collection():
     tab = request.args.get("tab", "movies")
     status = request.args.get("status", "all")
     sort = request.args.get("sort", "newest")
+    tag_filter = request.args.get("tag")
 
     movie_q = Movie.query.filter_by(user_id=current_user.id)
     book_q = Book.query.filter_by(user_id=current_user.id)
@@ -338,8 +519,23 @@ def collection():
 
     movies = movie_q.all()
     books = book_q.all()
+
+    # Tag Processing
+    all_tags = set()
+    for m in movies:
+        if m.custom_tags:
+            all_tags.update([t.strip() for t in m.custom_tags.split(",") if t.strip()])
+    for b in books:
+        if b.custom_tags:
+            all_tags.update([t.strip() for t in b.custom_tags.split(",") if t.strip()])
+    all_tags = sorted(list(all_tags))
+
+    if tag_filter:
+        movies = [m for m in movies if m.custom_tags and tag_filter in [t.strip() for t in m.custom_tags.split(",")]]
+        books = [b for b in books if b.custom_tags and tag_filter in [t.strip() for t in b.custom_tags.split(",")]]
+
     return render_template("collection.html", movies=movies, books=books,
-                           tab=tab, status=status, sort=sort)
+                           tab=tab, status=status, sort=sort, all_tags=all_tags, current_tag=tag_filter)
 
 @app.route("/u/<username>")
 def public_collection(username):
@@ -734,6 +930,7 @@ def edit(movie_id):
     class EditForm(FlaskForm):
         title = StringField("Title", validators=[DataRequired()])
         rating = StringField("Your Rating (0–10)")
+        custom_tags = StringField("Custom Tags (comma separated)")
         review = TextAreaField("Your Review")
         description = TextAreaField("Synopsis")
         status = SelectField("Status", choices=[("to_watch", "🕐 To Watch"), ("watched", "✅ Watched")])
@@ -745,6 +942,7 @@ def edit(movie_id):
             movie.rating = float(form.rating.data or 0)
         except ValueError:
             movie.rating = 0.0
+        movie.custom_tags = form.custom_tags.data
         movie.review = form.review.data
         movie.description = form.description.data
         movie.status = form.status.data
@@ -755,6 +953,7 @@ def edit(movie_id):
         return redirect(url_for("collection", tab="movies"))
     form.title.data = movie.title
     form.rating.data = str(movie.rating)
+    form.custom_tags.data = movie.custom_tags
     form.review.data = movie.review
     form.description.data = movie.description
     form.status.data = movie.status
@@ -882,6 +1081,7 @@ def edit_book(book_id):
     class EditForm(FlaskForm):
         title = StringField("Title", validators=[DataRequired()])
         rating = StringField("Your Rating (0–10)")
+        custom_tags = StringField("Custom Tags (comma separated)")
         review = TextAreaField("Your Review")
         description = TextAreaField("Synopsis")
         status = SelectField("Status", choices=[("to_read", "📖 To Read"), ("read", "✅ Read")])
@@ -893,6 +1093,7 @@ def edit_book(book_id):
             book.rating = float(form.rating.data or 0)
         except ValueError:
             book.rating = 0.0
+        book.custom_tags = form.custom_tags.data
         book.review = form.review.data
         book.description = form.description.data
         book.status = form.status.data
@@ -903,6 +1104,7 @@ def edit_book(book_id):
         return redirect(url_for("collection", tab="books"))
     form.title.data = book.title
     form.rating.data = str(book.rating)
+    form.custom_tags.data = book.custom_tags
     form.review.data = book.review
     form.description.data = book.description
     form.status.data = book.status

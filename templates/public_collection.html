@@ -4,10 +4,26 @@
 
 {% block content %}
 <div class="page-container">
-    <div class="collection-header">
-        <h1 class="page-title"><i class="fas fa-user-circle" style="color:{{ profile_user.avatar_color }}"></i> {{ profile_user.username }}'s Collection</h1>
-        <div class="collection-actions">
-            {% if not current_user.is_authenticated %}
+    <div class="collection-header" style="flex-direction: column; align-items: center; gap: 1rem; text-align: center;">
+        {% if profile_user.avatar_url %}
+        <img src="{{ profile_user.avatar_url }}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--card-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+        {% else %}
+        <div style="width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{ profile_user.avatar_color }}; color: white; font-size: 3rem; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+            <i class="fas fa-user"></i>
+        </div>
+        {% endif %}
+        
+        <div>
+            <h1 class="page-title">{{ profile_user.username }}'s Collection</h1>
+            {% if profile_user.bio %}
+            <p style="opacity: 0.8; max-width: 500px; margin: 0 auto; font-style: italic;">"{{ profile_user.bio }}"</p>
+            {% endif %}
+        </div>
+
+        <div class="collection-actions" style="margin-top: 1rem;">
+            {% if current_user.is_authenticated and current_user.id == profile_user.id %}
+            <a href="{{ url_for('settings') }}" class="btn-card-edit"><i class="fas fa-cog"></i> Edit Profile</a>
+            {% elif not current_user.is_authenticated %}
             <a href="{{ url_for('register') }}" class="btn-primary">Create Your Own Shelf</a>
             {% endif %}
         </div>
@@ -112,6 +128,10 @@
                         </div>
                     </div>
                     <div class="card-back">
+                        <div class="card-actions" style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
+                            <p style="font-size: 0.8rem; opacity: 0.6;">Added: {{ book.date_added.strftime('%Y-%m-%d') }}</p>
+                            <a href="{{ url_for('view_book', item_id=book.id) }}" class="btn-card-edit"><i class="fas fa-eye"></i> Details</a>
+                        </div>
                         <div class="card-back-title">{{ book.title }}</div>
                         <div class="card-genre">by {{ book.author }} {% if book.year %}· {{ book.year }}{% endif %}</div>
                         <p class="card-review">{{ book.review if book.review else 'No review yet.' }}</p>

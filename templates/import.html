@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Import from CSV{% endblock %}
+
+{% block content %}
+<div class="page-container narrow">
+    <div class="form-page-header">
+        <h1 class="page-title"><i class="fas fa-file-csv" style="color:var(--accent)"></i> Import Data</h1>
+        <p class="page-subtitle">Upload your Letterboxd or custom CSV export to automatically sync your media.</p>
+    </div>
+    
+    <div class="form-card edit-form-card" style="text-align:center;">
+        <form method="POST" enctype="multipart/form-data" class="styled-form">
+            <div style="margin-bottom: 2rem; border: 2px dashed rgba(255,255,255,0.2); padding: 3rem; border-radius: 12px; transition: all 0.3s ease;">
+                <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; margin-bottom: 1rem; color:var(--accent);"></i>
+                <h3 style="margin-bottom: 1rem;">Select a CSV file to upload</h3>
+                <p style="opacity:0.7; font-size:0.8rem; margin-bottom:1rem;">Make sure the CSV has 'Title' and optionally 'Year' and 'Rating' headers.</p>
+                <input type="file" name="csv_file" accept=".csv" required style="display: block; margin: 0 auto; color: white;">
+            </div>
+            
+            <button type="submit" class="btn-primary" style="width: 100%;"><i class="fas fa-upload"></i> Start Import</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
