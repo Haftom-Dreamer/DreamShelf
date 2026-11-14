@@ -1,19 +1,19 @@
 {% extends 'base.html' %}
 
-{% block title %}CineShelf — Track Every Story{% endblock %}
+{% block title %}DreamShelf — Where Stories Meet Dreams{% endblock %}
 
 {% block content %}
 <section class="landing-hero">
     <div class="landing-hero-content">
-        <div class="hero-badge">🎬 Movies + 📚 Books in one place</div>
-        <h1 class="welcome-title">Track Every<br>Story You Love.</h1>
-        <p class="welcome-subtitle">Rate, review, and discover your next favorite movie or book — all in one beautiful collection.</p>
+        <div class="hero-badge">✦ Curate Your Universe · Movies + Books</div>
+        <h1 class="welcome-title">Dream, Track &amp; Curate<br>Every Story You Love.</h1>
+        <p class="welcome-subtitle">Your personal celestial shelf for favorite movies and books. Rate, review, and discover timeless stories in one magical collection.</p>
         <div class="hero-cta-group">
             {% if current_user.is_authenticated %}
             <a href="{{ url_for('dashboard') }}" class="btn-hero-primary">Go to Dashboard <i class="fas fa-arrow-right"></i></a>
             <a href="{{ url_for('discover') }}" class="btn-hero-secondary">Discover Trending</a>
             {% else %}
-            <a href="{{ url_for('register') }}" class="btn-hero-primary">Get Started Free <i class="fas fa-arrow-right"></i></a>
+            <a href="{{ url_for('register') }}" class="btn-hero-primary">Start Your DreamShelf <i class="fas fa-arrow-right"></i></a>
             <a href="{{ url_for('login') }}" class="btn-hero-secondary">Sign In</a>
             {% endif %}
         </div>
@@ -50,38 +50,38 @@
 
 <!-- Features -->
 <section class="landing-features">
-    <h2 class="landing-section-title">Everything you need to track your media.</h2>
+    <h2 class="landing-section-title">Everything you need to curate your dream collection.</h2>
     <div class="features-grid">
         <div class="feature-card">
-            <div class="feature-icon" style="background:rgba(108,99,255,0.12);color:#6c63ff;"><i class="fas fa-layer-group"></i></div>
-            <h3>Dual Library</h3>
-            <p>Track movies and books side by side. Switch between them instantly with a single click.</p>
+            <div class="feature-icon" style="background:rgba(124,92,255,0.15);color:#a29bfe;"><i class="fas fa-layer-group"></i></div>
+            <h3>Celestial Dual Library</h3>
+            <p>Track movies and books harmoniously side by side. Switch between stories instantly with a single click.</p>
         </div>
         <div class="feature-card">
-            <div class="feature-icon" style="background:rgba(245,200,66,0.12);color:#f5c842;"><i class="fas fa-star"></i></div>
-            <h3>Rate & Review</h3>
-            <p>Give every title a personal rating out of 10, and leave a note for your future self.</p>
+            <div class="feature-icon" style="background:rgba(255,209,102,0.15);color:#ffd166;"><i class="fas fa-star"></i></div>
+            <h3>Rate &amp; Reflect</h3>
+            <p>Score every title out of 10, write heartfelt reviews, and craft your personal legacy of stories.</p>
         </div>
         <div class="feature-card">
-            <div class="feature-icon" style="background:rgba(67,184,156,0.12);color:#43b89c;"><i class="fas fa-chart-bar"></i></div>
-            <h3>Activity Dashboard</h3>
-            <p>See your stats at a glance — how many watched, read, and your monthly progress.</p>
+            <div class="feature-icon" style="background:rgba(56,239,125,0.15);color:#38ef7d;"><i class="fas fa-chart-pie"></i></div>
+            <h3>Dream Analytics</h3>
+            <p>Visualize your reading streaks, movie milestones, and genre constellations with vivid charts.</p>
         </div>
         <div class="feature-card">
-            <div class="feature-icon" style="background:rgba(255,107,107,0.12);color:#ff6b6b;"><i class="fas fa-compass"></i></div>
-            <h3>Discover</h3>
-            <p>Browse trending movies from TMDB and popular books — add them to your list in one click.</p>
+            <div class="feature-icon" style="background:rgba(0,242,254,0.15);color:#00f2fe;"><i class="fas fa-compass"></i></div>
+            <h3>Cosmic Discovery</h3>
+            <p>Explore personalized recommendations from TMDB and Google Books — add gems with one tap.</p>
         </div>
     </div>
 </section>
 
 <!-- CTA -->
 <section class="landing-cta">
-    <h2>Start your collection today.</h2>
-    <p>It's free. No credit card needed.</p>
+    <h2>Begin your DreamShelf today.</h2>
+    <p>Free forever. Curate movies, books, and timeless favorites in one celestial space.</p>
     {% if not current_user.is_authenticated %}
     <a href="{{ url_for('register') }}" class="btn-hero-primary" style="margin-top:1.5rem; font-size:1rem; padding: 0.85rem 2rem;">
-        <i class="fas fa-user-plus"></i> Create Free Account
+        <i class="fas fa-sparkles"></i> Create Free Account
     </a>
     {% else %}
     <a href="{{ url_for('dashboard') }}" class="btn-hero-primary" style="margin-top:1.5rem; font-size:1rem; padding: 0.85rem 2rem;">

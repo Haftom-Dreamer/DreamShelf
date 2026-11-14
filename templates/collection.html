@@ -206,11 +206,11 @@ function setGridSize(size) {
     if (!grid) return;
     grid.classList.remove('grid-small', 'grid-medium', 'grid-large');
     grid.classList.add('grid-' + size);
-    localStorage.setItem('cineshelf_gridSize', size);
+    localStorage.setItem('dreamshelf_gridSize', size);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const size = localStorage.getItem('cineshelf_gridSize') || 'medium';
+    const size = localStorage.getItem('dreamshelf_gridSize') || localStorage.getItem('cineshelf_gridSize') || 'medium';
     setGridSize(size);
 });
 </script>

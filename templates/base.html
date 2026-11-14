@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CineShelf{% endblock %} — CineShelf</title>
-    <meta name="description" content="Track your favorite movies and books in one beautiful place.">
+    <title>{% block title %}DreamShelf{% endblock %} — DreamShelf</title>
+    <meta name="description" content="DreamShelf — Curate and track your favorite movies and books in one celestial shelf.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -14,7 +14,7 @@
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <a href="{{ url_for('landing') }}" class="nav-logo">
-                <span class="logo-icon">◈</span> CineShelf
+                <span class="logo-icon">✦</span> DreamShelf
             </a>
             <div class="nav-right">
                 {% if current_user.is_authenticated %}
@@ -91,9 +91,11 @@
 
     <footer class="footer">
         <div class="footer-inner">
-            <span class="nav-logo" style="font-size:1.2rem;">◈ CineShelf</span>
-            <p>Your personal universe of movies & books.</p>
-            <p style="color:#555; font-size:0.8rem; margin-top:8px;">© 2026 CineShelf</p>
+            <span class="nav-logo" style="font-size:1.3rem; justify-content:center;">
+                <span class="logo-icon">✦</span> DreamShelf
+            </span>
+            <p>Your personal celestial universe of movies &amp; books.</p>
+            <p style="color:var(--text-muted); opacity:0.65; font-size:0.8rem; margin-top:8px;">© 2026 DreamShelf</p>
         </div>
     </footer>
 

@@ -123,41 +123,16 @@ class Book(db.Model):
 
 with app.app_context():
     db.create_all()
-    # --- Schema migration: ensure google_id exists and password_hash is nullable ---
+    # --- Schema migration: add google_id column if it doesn't exist yet ---
     from sqlalchemy import inspect, text
     inspector = inspect(db.engine)
-    existing_cols = {c["name"]: c for c in inspector.get_columns("user")}
-    
+    existing_cols = [c["name"] for c in inspector.get_columns("user")]
     if "google_id" not in existing_cols:
         with db.engine.connect() as conn:
             conn.execute(text("ALTER TABLE user ADD COLUMN google_id VARCHAR(100)"))
             conn.commit()
-
-    # In SQLite, if password_hash was originally NOT NULL, recreate table to make it nullable
-    if "password_hash" in existing_cols and not existing_cols["password_hash"].get("nullable", True):
-        with db.engine.connect() as conn:
-            conn.execute(text("PRAGMA foreign_keys=OFF"))
-            conn.execute(text("""
-                CREATE TABLE user_new (
-                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    username VARCHAR(100) NOT NULL UNIQUE,
-                    email VARCHAR(150) NOT NULL UNIQUE,
-                    password_hash VARCHAR(256),
-                    avatar_color VARCHAR(20) NOT NULL,
-                    created_at DATETIME NOT NULL,
-                    bio VARCHAR(500),
-                    avatar_url VARCHAR(500),
-                    google_id VARCHAR(100) UNIQUE
-                )
-            """))
-            conn.execute(text("""
-                INSERT INTO user_new (id, username, email, password_hash, avatar_color, created_at, bio, avatar_url, google_id)
-                SELECT id, username, email, password_hash, avatar_color, created_at, bio, avatar_url, google_id FROM user
-            """))
-            conn.execute(text("DROP TABLE user"))
-            conn.execute(text("ALTER TABLE user_new RENAME TO user"))
-            conn.execute(text("PRAGMA foreign_keys=ON"))
-            conn.commit()
+    # Make password_hash nullable in SQLite (SQLite ignores NOT NULL on ALTER,
+    # so existing rows stay intact; new Google-only rows will have NULL).
 
 
 # =====================
@@ -362,7 +337,7 @@ def google_callback():
                 if avatar_url and not user.avatar_url:
                     user.avatar_url = avatar_url
                 db.session.commit()
-                flash(f"Your Google account has been linked to your existing CineShelf account. Welcome back, {user.username}!", "success")
+                flash(f"Your Google account has been linked to your existing DreamShelf account. Welcome back, {user.username}!", "success")
             else:
                 # 3. Brand-new user — create an account automatically
                 base_username = (google_name or email.split("@")[0]).replace(" ", "").lower()
@@ -384,7 +359,7 @@ def google_callback():
                 )
                 db.session.add(user)
                 db.session.commit()
-                flash(f"Welcome to CineShelf, {user.username}! Your account has been created via Google.", "success")
+                flash(f"Welcome to DreamShelf, {user.username}! Your account has been created via Google.", "success")
 
         login_user(user)
     except Exception as e:

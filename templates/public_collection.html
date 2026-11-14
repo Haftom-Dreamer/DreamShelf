@@ -24,7 +24,7 @@
             {% if current_user.is_authenticated and current_user.id == profile_user.id %}
             <a href="{{ url_for('settings') }}" class="btn-card-edit"><i class="fas fa-cog"></i> Edit Profile</a>
             {% elif not current_user.is_authenticated %}
-            <a href="{{ url_for('register') }}" class="btn-primary">Create Your Own Shelf</a>
+            <a href="{{ url_for('register') }}" class="btn-primary"><i class="fas fa-sparkles"></i> Create Your DreamShelf</a>
             {% endif %}
         </div>
     </div>
