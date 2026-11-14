@@ -806,6 +806,189 @@ def public_collection(username):
 # --- Discover (Personalized + Filtered) ---
 # =====================
 
+CURATED_BOOKS = [
+    {
+        "google_id": "OL17930368W",
+        "title": "Atomic Habits",
+        "author": "James Clear",
+        "year": "2018",
+        "genre": "Self-Help, Psychology, Productivity",
+        "img_url": "https://covers.openlibrary.org/b/id/12539702-M.jpg",
+        "overview": "No matter your goals, Atomic Habits offers a proven framework for improving every day. James Clear reveals practical strategies to form good habits and break bad ones."
+    },
+    {
+        "google_id": "OL17364145W",
+        "title": "The Subtle Art of Not Giving a F*ck",
+        "author": "Mark Manson",
+        "year": "2016",
+        "genre": "Self-Help, Philosophy",
+        "img_url": "https://covers.openlibrary.org/b/id/8231990-M.jpg",
+        "overview": "A generation-defining self-help guide that shows how to stop trying to be 'positive' all the time and instead become better at handling adversity."
+    },
+    {
+        "google_id": "OL27178342W",
+        "title": "The Courage to Be Disliked",
+        "author": "Ichiro Kishimi, Fumitake Koga",
+        "year": "2013",
+        "genre": "Philosophy, Psychology, Self-Help",
+        "img_url": "https://covers.openlibrary.org/b/id/10543210-M.jpg",
+        "overview": "The Japanese phenomenon demonstrating how to free yourself, change your life, and achieve real happiness through the philosophy of Alfred Adler."
+    },
+    {
+        "google_id": "OL17860775W",
+        "title": "Deep Work",
+        "author": "Cal Newport",
+        "year": "2016",
+        "genre": "Self-Help, Productivity, Business",
+        "img_url": "https://covers.openlibrary.org/b/id/8235111-M.jpg",
+        "overview": "Deep work is the ability to focus without distraction on a demanding cognitive task. A guide for focused success in a distracted world."
+    },
+    {
+        "google_id": "OL20862660W",
+        "title": "The Psychology of Money",
+        "author": "Morgan Housel",
+        "year": "2020",
+        "genre": "Finance, Psychology, Business",
+        "img_url": "https://covers.openlibrary.org/b/id/10574768-M.jpg",
+        "overview": "Doing well with money isn't just about what you know—it's about how you behave. Timeless lessons on wealth, greed, and happiness."
+    },
+    {
+        "google_id": "OL61565W",
+        "title": "Meditations",
+        "author": "Marcus Aurelius",
+        "year": "2002",
+        "genre": "Philosophy, Stoicism, Classics",
+        "img_url": "https://covers.openlibrary.org/b/id/8774136-M.jpg",
+        "overview": "The personal writings of the Roman Emperor Marcus Aurelius, recording private reflections on Stoic philosophy, duty, and life."
+    },
+    {
+        "google_id": "OL24198165W",
+        "title": "Man's Search for Meaning",
+        "author": "Viktor E. Frankl",
+        "year": "1946",
+        "genre": "Psychology, Philosophy, Memoir",
+        "img_url": "https://covers.openlibrary.org/b/id/8231856-M.jpg",
+        "overview": "Psychiatrist Viktor Frankl explores his experiences in concentration camps and the fundamental human drive to find purpose and meaning."
+    },
+    {
+        "google_id": "OL15849841W",
+        "title": "Thinking, Fast and Slow",
+        "author": "Daniel Kahneman",
+        "year": "2011",
+        "genre": "Psychology, Behavioral Economics, Science",
+        "img_url": "https://covers.openlibrary.org/b/id/7266155-M.jpg",
+        "overview": "Nobel laureate Daniel Kahneman takes us on a groundbreaking tour of the mind, explaining the two systems that drive how we think and decide."
+    },
+    {
+        "google_id": "OL331168W",
+        "title": "The 48 Laws of Power",
+        "author": "Robert Greene",
+        "year": "1998",
+        "genre": "Philosophy, Psychology, Strategy",
+        "img_url": "https://covers.openlibrary.org/b/id/6424160-M.jpg",
+        "overview": "Amoral, cunning, and instructive—a synthesis of three thousand years of history distilled into forty-eight essential laws of power."
+    },
+    {
+        "google_id": "OL27178343W",
+        "title": "The Alchemist",
+        "author": "Paulo Coelho",
+        "year": "1988",
+        "genre": "Fiction, Fantasy, Philosophy",
+        "img_url": "https://covers.openlibrary.org/b/id/8231992-M.jpg",
+        "overview": "The enchanting story of Santiago, an Andalusian shepherd boy who journeys across the desert in pursuit of his personal legend."
+    },
+    {
+        "google_id": "OL20862661W",
+        "title": "The Midnight Library",
+        "author": "Matt Haig",
+        "year": "2020",
+        "genre": "Fiction, Fantasy, Magical Realism",
+        "img_url": "https://covers.openlibrary.org/b/id/10313767-M.jpg",
+        "overview": "Between life and death stands a library with infinite books—each one an opportunity to live out a different path you could have taken."
+    },
+    {
+        "google_id": "OL1168007W",
+        "title": "1984",
+        "author": "George Orwell",
+        "year": "1949",
+        "genre": "Fiction, Dystopian, Classics",
+        "img_url": "https://covers.openlibrary.org/b/id/7222246-M.jpg",
+        "overview": "A dystopian masterpiece exploring ubiquitous surveillance, truth manipulation, and individual liberty in a totalitarian world."
+    },
+    {
+        "google_id": "OL3298910W",
+        "title": "To Kill a Mockingbird",
+        "author": "Harper Lee",
+        "year": "1960",
+        "genre": "Fiction, Classics, Literature",
+        "img_url": "https://covers.openlibrary.org/b/id/8226191-M.jpg",
+        "overview": "A compassionate and deeply moving story of innocence, moral growth, and empathy amidst racial injustice in the American South."
+    },
+    {
+        "google_id": "OL123456W",
+        "title": "Dune",
+        "author": "Frank Herbert",
+        "year": "1965",
+        "genre": "Sci-Fi, Fantasy, Classics",
+        "img_url": "https://covers.openlibrary.org/b/id/8235123-M.jpg",
+        "overview": "Set on the desert planet Arrakis, Dune is the grand epic of young Paul Atreides, destiny, ecology, and planetary power."
+    },
+    {
+        "google_id": "OL24198166W",
+        "title": "Project Hail Mary",
+        "author": "Andy Weir",
+        "year": "2021",
+        "genre": "Sci-Fi, Space, Adventure",
+        "img_url": "https://covers.openlibrary.org/b/id/10543211-M.jpg",
+        "overview": "A lone astronaut awakens with amnesia on a desperate last-chance interstellar mission to save humanity from impending extinction."
+    },
+    {
+        "google_id": "OL17364146W",
+        "title": "Sapiens: A Brief History of Humankind",
+        "author": "Yuval Noah Harari",
+        "year": "2014",
+        "genre": "History, Science, Anthropology",
+        "img_url": "https://covers.openlibrary.org/b/id/8231991-M.jpg",
+        "overview": "A provocative narrative tracing the evolutionary history of Homo sapiens from the Stone Age to modern global society."
+    },
+    {
+        "google_id": "OL8315603W",
+        "title": "Rich Dad Poor Dad",
+        "author": "Robert T. Kiyosaki",
+        "year": "1997",
+        "genre": "Finance, Personal Growth, Business",
+        "img_url": "https://covers.openlibrary.org/b/id/8315603-M.jpg",
+        "overview": "What the rich teach their kids about money that the poor and middle class do not—an iconic guide on financial independence."
+    },
+    {
+        "google_id": "OL19747970W",
+        "title": "Can't Hurt Me",
+        "author": "David Goggins",
+        "year": "2018",
+        "genre": "Biography, Self-Help, Motivation",
+        "img_url": "https://covers.openlibrary.org/b/id/8739161-M.jpg",
+        "overview": "The remarkable story of how mental toughness, disciplined habits, and self-belief turned hardship into legendary achievement."
+    },
+    {
+        "google_id": "OL1234567W",
+        "title": "The Great Gatsby",
+        "author": "F. Scott Fitzgerald",
+        "year": "1925",
+        "genre": "Fiction, Classics, Literature",
+        "img_url": "https://covers.openlibrary.org/b/id/7222161-M.jpg",
+        "overview": "The evocative story of Jay Gatsby's pursuit of love and wealth on Long Island during the glittering roaring twenties."
+    },
+    {
+        "google_id": "OL151817W",
+        "title": "Beyond Good and Evil",
+        "author": "Friedrich Nietzsche",
+        "year": "1886",
+        "genre": "Philosophy, Classics",
+        "img_url": "https://covers.openlibrary.org/b/id/8235222-M.jpg",
+        "overview": "Nietzsche's incisive philosophical critique dissecting conventional morality, dogmatism, and the will to power."
+    }
+]
+
 def _get_user_collection_ids():
     movie_tmdb_ids = {m.tmdb_id for m in Movie.query.filter_by(user_id=current_user.id).all() if m.tmdb_id}
     book_google_ids = {b.google_id for b in Book.query.filter_by(user_id=current_user.id).all() if b.google_id}
@@ -816,121 +999,182 @@ def _get_user_collection_ids():
 @login_required
 def discover():
     import random
-    movie_in_collection, book_in_collection = _get_user_collection_ids()
+    tab = request.args.get("tab", "movies")
     refresh = request.args.get('refresh', type=int, default=0)
     page_offset = random.randint(1, 4) if refresh else 1
 
-    # -- Personalized movie recommendations --
-    user_movies = Movie.query.filter_by(user_id=current_user.id, status="watched").all()
-    genre_ids = set()
-    for m in user_movies:
-        if m.tmdb_id:
-            try:
-                r = requests.get(f"https://api.themoviedb.org/3/movie/{m.tmdb_id}",
-                                 params={"api_key": TMDB_API_KEY}, timeout=4)
-                for g in r.json().get("genres", []):
-                    genre_ids.add(str(g["id"]))
-                if len(genre_ids) >= 6:
-                    break
-            except Exception:
-                pass
-
-    if genre_ids and refresh:
-        genre_ids = set(random.sample(list(genre_ids), min(3, len(genre_ids))))
+    movie_in_collection, book_in_collection = _get_user_collection_ids()
+    book_titles_in_collection = {b.title.lower().strip() for b in Book.query.filter_by(user_id=current_user.id).all() if b.title}
 
     recommended_movies = []
-    is_personalized_movies = bool(genre_ids)
-    if is_personalized_movies:
+    trending_movies = []
+    is_personalized_movies = False
+
+    recommended_books = []
+    trending_books = []
+    is_personalized_books = False
+
+    if tab == "movies":
+        # -- Personalized movie recommendations based on BOTH watched and to_watch movies --
+        user_movies = Movie.query.filter_by(user_id=current_user.id).all()
+        genre_ids = set()
+        for m in user_movies:
+            if m.tmdb_id:
+                try:
+                    r = requests.get(f"https://api.themoviedb.org/3/movie/{m.tmdb_id}",
+                                     params={"api_key": TMDB_API_KEY}, timeout=4)
+                    for g in r.json().get("genres", []):
+                        genre_ids.add(str(g["id"]))
+                    if len(genre_ids) >= 6:
+                        break
+                except Exception:
+                    pass
+
+        if genre_ids and refresh:
+            genre_ids = set(random.sample(list(genre_ids), min(3, len(genre_ids))))
+
+        is_personalized_movies = bool(genre_ids)
+        if is_personalized_movies:
+            try:
+                params = {"api_key": TMDB_API_KEY, "sort_by": "popularity.desc", "page": page_offset}
+                params["with_genres"] = ",".join(list(genre_ids)[:3])
+                r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=6)
+                for item in r.json().get("results", []):
+                    tid = str(item["id"])
+                    if tid in movie_in_collection: continue
+                    if item.get("poster_path"):
+                        recommended_movies.append({
+                            "tmdb_id": tid, "title": item.get("title", ""),
+                            "year": (item.get("release_date") or "")[:4],
+                            "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                            "rating": round(item.get("vote_average", 0), 1),
+                            "overview": (item.get("overview") or "")[:200]
+                        })
+                    if len(recommended_movies) >= 12: break
+            except Exception: pass
+
         try:
-            params = {"api_key": TMDB_API_KEY, "sort_by": "popularity.desc", "page": page_offset}
-            params["with_genres"] = ",".join(list(genre_ids)[:3])
-            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=6)
+            tparams = {"api_key": TMDB_API_KEY, "sort_by": "popularity.desc", "page": page_offset}
+            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=tparams, timeout=6)
             for item in r.json().get("results", []):
                 tid = str(item["id"])
                 if tid in movie_in_collection: continue
                 if item.get("poster_path"):
-                    recommended_movies.append({
+                    trending_movies.append({
                         "tmdb_id": tid, "title": item.get("title", ""),
                         "year": (item.get("release_date") or "")[:4],
                         "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
                         "rating": round(item.get("vote_average", 0), 1),
                         "overview": (item.get("overview") or "")[:200]
                     })
-                if len(recommended_movies) >= 12: break
+                if len(trending_movies) >= 12: break
         except Exception: pass
 
-    trending_movies = []
-    try:
-        tparams = {"api_key": TMDB_API_KEY, "sort_by": "popularity.desc", "page": page_offset}
-        r = requests.get("https://api.themoviedb.org/3/discover/movie", params=tparams, timeout=6)
-        for item in r.json().get("results", []):
-            tid = str(item["id"])
-            if tid in movie_in_collection: continue
-            if item.get("poster_path"):
-                trending_movies.append({
-                    "tmdb_id": tid, "title": item.get("title", ""),
-                    "year": (item.get("release_date") or "")[:4],
-                    "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
-                    "rating": round(item.get("vote_average", 0), 1),
-                    "overview": (item.get("overview") or "")[:200]
-                })
-            if len(trending_movies) >= 12: break
-    except Exception: pass
+    else:
+        # tab == "books"
+        # -- Personalized book recommendations based on BOTH read AND to_read books --
+        user_books = Book.query.filter_by(user_id=current_user.id).all()
+        is_personalized_books = bool(user_books)
 
-    # -- Personalized book recommendations --
-    user_books = Book.query.filter_by(user_id=current_user.id, status="read").all()
-    book_subjects = []
-    for b in user_books:
-        if b.genre:
-            book_subjects += [g.strip().lower() for g in b.genre.split(",") if g.strip()]
-    if book_subjects and refresh:
-        random.shuffle(book_subjects)
-        
-    book_query = "+".join(book_subjects[:2]) if book_subjects else ""
-    is_personalized_books = bool(book_query)
+        user_authors = []
+        user_genres = []
+        for b in user_books:
+            if b.author and b.author.strip().lower() != "unknown":
+                for a in b.author.split(","):
+                    ac = a.strip().lower()
+                    if ac and ac not in user_authors:
+                        user_authors.append(ac)
+            if b.genre:
+                for g in b.genre.split(","):
+                    for sub in g.split("/"):
+                        gc = sub.strip().lower()
+                        if gc and gc not in ["general", "none", "unknown"] and len(gc) > 2:
+                            if gc not in user_genres:
+                                user_genres.append(gc)
 
-    recommended_books = []
-    if is_personalized_books:
+        # 1. Score curated book bank against user reading interests
+        scored_books = []
+        for book in CURATED_BOOKS:
+            title_clean = book["title"].lower().strip()
+            if title_clean in book_titles_in_collection or book["google_id"] in book_in_collection:
+                continue
+
+            score = 0
+            bg_lower = book["genre"].lower()
+            ba_lower = book["author"].lower()
+
+            # Match authors
+            for a in user_authors:
+                if a in ba_lower:
+                    score += 10
+            # Match genres
+            for g in user_genres:
+                if g in bg_lower:
+                    score += 4
+
+            # If user has books, add score + random jitter if refresh
+            jitter = random.random() if refresh else 0
+            scored_books.append((score + jitter, book))
+
+        scored_books.sort(key=lambda x: x[0], reverse=True)
+
+        if is_personalized_books:
+            # Pick top scored books that have matching affinity (or top diverse picks)
+            for sc, b in scored_books:
+                recommended_books.append(b)
+                if len(recommended_books) >= 12:
+                    break
+
+        # 2. Popular & Trending Books (from curated library + Open Library live data)
+        # Try live trending from Open Library with fast timeout
+        live_trending = []
         try:
-            r = requests.get("https://www.googleapis.com/books/v1/volumes",
-                             params={"q": f"subject:{book_query}", "maxResults": 20,
-                                     "orderBy": "relevance", "printType": "books", "startIndex": (page_offset-1)*15}, timeout=6)
-            for item in r.json().get("items", []):
-                gid = item.get("id")
-                if gid in book_in_collection: continue
-                vol = item.get("volumeInfo", {})
-                thumb = vol.get("imageLinks", {}).get("thumbnail", "").replace("http://", "https://")
-                if not thumb: continue
-                recommended_books.append({
-                    "google_id": gid, "title": vol.get("title", ""),
-                    "author": ", ".join(vol.get("authors", ["Unknown"])),
-                    "year": (vol.get("publishedDate") or "")[:4],
-                    "img_url": thumb, "overview": (vol.get("description") or "")[:200]
+            r = requests.get("https://openlibrary.org/trending/daily.json", params={"limit": 15}, timeout=4)
+            for w in r.json().get("works", []):
+                w_title = w.get("title", "").strip()
+                if not w_title or w_title.lower() in book_titles_in_collection:
+                    continue
+                w_key = w.get("key", "").replace("/works/", "")
+                if w_key in book_in_collection:
+                    continue
+                cover_i = w.get("cover_i")
+                thumb = f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg" if cover_i else ""
+                if not thumb:
+                    continue
+                authors = w.get("author_name", ["Unknown"])
+                author_str = ", ".join(authors[:2]) if isinstance(authors, list) else str(authors)
+                live_trending.append({
+                    "google_id": w_key,
+                    "title": w_title,
+                    "author": author_str,
+                    "year": str(w.get("first_publish_year", "")),
+                    "img_url": thumb,
+                    "overview": ""
                 })
-                if len(recommended_books) >= 12: break
-        except Exception: pass
+                if len(live_trending) >= 12:
+                    break
+        except Exception:
+            pass
 
-    trending_books = []
-    try:
-        tr = requests.get("https://www.googleapis.com/books/v1/volumes",
-                         params={"q": "subject:fiction", "maxResults": 20,
-                                 "orderBy": "newest", "printType": "books", "startIndex": (page_offset-1)*15}, timeout=6)
-        for item in tr.json().get("items", []):
-            gid = item.get("id")
-            if gid in book_in_collection: continue
-            vol = item.get("volumeInfo", {})
-            thumb = vol.get("imageLinks", {}).get("thumbnail", "").replace("http://", "https://")
-            if not thumb: continue
-            trending_books.append({
-                "google_id": gid, "title": vol.get("title", ""),
-                "author": ", ".join(vol.get("authors", ["Unknown"])),
-                "year": (vol.get("publishedDate") or "")[:4],
-                "img_url": thumb, "overview": (vol.get("description") or "")[:200]
-            })
-            if len(trending_books) >= 12: break
-    except Exception: pass
+        # Combine live trending + curated popular books (excluding already recommended or in collection)
+        rec_titles = {b["title"].lower().strip() for b in recommended_books}
+        trending_pool = live_trending + [b for b in CURATED_BOOKS if b["title"].lower().strip() not in book_titles_in_collection and b["title"].lower().strip() not in rec_titles]
+
+        seen_titles = set()
+        for b in trending_pool:
+            tl = b["title"].lower().strip()
+            if tl not in seen_titles and tl not in book_titles_in_collection:
+                seen_titles.add(tl)
+                trending_books.append(b)
+            if len(trending_books) >= 12:
+                break
+
+        # If refresh requested, shuffle trending for fresh inspiration
+        if refresh:
+            random.shuffle(trending_books)
 
     return render_template("discover.html",
+        tab=tab,
         recommended_movies=recommended_movies,
         trending_movies=trending_movies,
         recommended_books=recommended_books,
@@ -971,8 +1215,49 @@ def movie_preview(tmdb_id):
 @app.route("/book_preview/<book_id>")
 @login_required
 def book_preview(book_id):
+    # 1. Check curated bank first (instant response)
+    for b in CURATED_BOOKS:
+        if b["google_id"] == book_id:
+            return jsonify({
+                "title": b["title"],
+                "author": b["author"],
+                "year": b["year"],
+                "overview": b["overview"],
+                "poster": b["img_url"],
+                "genres": b["genre"],
+                "pages": "",
+                "google_id": book_id,
+            })
+
+    # 2. If Open Library work key
+    if book_id.startswith("OL"):
+        try:
+            r = requests.get(f"https://openlibrary.org/works/{book_id}.json", timeout=5)
+            if r.status_code == 200:
+                d = r.json()
+                desc = d.get("description", "")
+                if isinstance(desc, dict):
+                    desc = desc.get("value", "")
+                covers = d.get("covers", [])
+                cover_id = covers[0] if covers else None
+                poster = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else ""
+                genres = ", ".join(d.get("subjects", [])[:4])
+                return jsonify({
+                    "title": d.get("title", ""),
+                    "author": request.args.get("author", "Unknown"),
+                    "year": (d.get("first_publish_date") or "")[:4],
+                    "overview": desc[:600] if desc else "No description available.",
+                    "poster": poster,
+                    "genres": genres,
+                    "pages": "",
+                    "google_id": book_id,
+                })
+        except Exception:
+            pass
+
+    # 3. Google Books API
     try:
-        r = requests.get(f"https://www.googleapis.com/books/v1/volumes/{book_id}", timeout=6)
+        r = requests.get(f"https://www.googleapis.com/books/v1/volumes/{book_id}", timeout=5)
         data = r.json()
         vol = data.get("volumeInfo", {})
         thumb = ""
@@ -1002,13 +1287,13 @@ def quick_add_movie():
     tmdb_id = request.args.get("id")
     status = request.args.get("status", "to_watch")
     if not tmdb_id:
-        return redirect(url_for("discover"))
+        return redirect(url_for("discover", tab="movies"))
 
     # Don't add duplicates
     existing = Movie.query.filter_by(user_id=current_user.id, tmdb_id=str(tmdb_id)).first()
     if existing:
         flash(f'"{existing.title}" is already in your collection.', "error")
-        return redirect(url_for("discover"))
+        return redirect(url_for("discover", tab="movies"))
 
     try:
         r = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}",
@@ -1033,7 +1318,7 @@ def quick_add_movie():
     except Exception as e:
         flash(f"Could not add movie: {str(e)}", "error")
 
-    return redirect(url_for("discover"))
+    return redirect(url_for("discover", tab="movies"))
 
 
 @app.route("/quick_add_book")
@@ -1041,41 +1326,121 @@ def quick_add_movie():
 def quick_add_book():
     google_id = request.args.get("id")
     status = request.args.get("status", "to_read")
-    if not google_id:
-        return redirect(url_for("discover"))
+    title = request.args.get("title")
+    author = request.args.get("author")
+    img_url = request.args.get("img_url")
+    year = request.args.get("year", "")
+    genre = request.args.get("genre", "")
+    overview = request.args.get("overview", "")
 
-    existing = Book.query.filter_by(user_id=current_user.id, google_id=google_id).first()
+    if not google_id and not title:
+        return redirect(url_for("discover", tab="books"))
+
+    # Check duplicates by id or title
+    existing = None
+    if google_id:
+        existing = Book.query.filter_by(user_id=current_user.id, google_id=google_id).first()
+    if not existing and title:
+        existing = Book.query.filter_by(user_id=current_user.id, title=title).first()
+
     if existing:
         flash(f'"{existing.title}" is already in your collection.', "error")
-        return redirect(url_for("discover"))
+        return redirect(url_for("discover", tab="books"))
 
-    try:
-        r = requests.get(f"https://www.googleapis.com/books/v1/volumes/{google_id}", timeout=6)
-        data = r.json()
-        vol = data.get("volumeInfo", {})
-        thumb = ""
-        if "imageLinks" in vol:
-            thumb = vol["imageLinks"].get("thumbnail", "").replace("http://", "https://")
+    # If parameters passed directly from card, add immediately
+    if title and author and img_url:
         new_book = Book(
             user_id=current_user.id,
-            google_id=google_id,
-            title=vol.get("title", "Unknown"),
-            author=", ".join(vol.get("authors", ["Unknown"])),
-            year=(vol.get("publishedDate") or "")[:4],
+            google_id=google_id or f"book_{secrets.token_hex(6)}",
+            title=title,
+            author=author,
+            year=year,
             rating=0.0,
-            description=(vol.get("description") or "")[:1000],
-            genre=", ".join(vol.get("categories", [])),
-            img_url=thumb,
+            description=overview[:1000] if overview else "",
+            genre=genre,
+            img_url=img_url,
             status=status,
             date_read=date.today() if status == "read" else None,
         )
         db.session.add(new_book)
         db.session.commit()
         flash(f'"{new_book.title}" added to your collection!', "success")
+        return redirect(url_for("discover", tab="books"))
+
+    # If in curated bank, use curated details
+    for b in CURATED_BOOKS:
+        if b["google_id"] == google_id:
+            new_book = Book(
+                user_id=current_user.id,
+                google_id=google_id,
+                title=b["title"],
+                author=b["author"],
+                year=b["year"],
+                rating=0.0,
+                description=b["overview"],
+                genre=b["genre"],
+                img_url=b["img_url"],
+                status=status,
+                date_read=date.today() if status == "read" else None,
+            )
+            db.session.add(new_book)
+            db.session.commit()
+            flash(f'"{new_book.title}" added to your collection!', "success")
+            return redirect(url_for("discover", tab="books"))
+
+    # Otherwise fetch from Open Library or Google Books
+    try:
+        if google_id and google_id.startswith("OL"):
+            r = requests.get(f"https://openlibrary.org/works/{google_id}.json", timeout=6)
+            data = r.json()
+            b_title = data.get("title", "Unknown")
+            desc = data.get("description", "")
+            if isinstance(desc, dict):
+                desc = desc.get("value", "")
+            covers = data.get("covers", [])
+            cover_id = covers[0] if covers else None
+            thumb = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else ""
+            genres = ", ".join(data.get("subjects", [])[:3])
+            new_book = Book(
+                user_id=current_user.id,
+                google_id=google_id,
+                title=b_title,
+                author=author or "Unknown",
+                year=year or (data.get("first_publish_date") or "")[:4],
+                rating=0.0,
+                description=desc[:1000] if desc else "",
+                genre=genres,
+                img_url=thumb,
+                status=status,
+                date_read=date.today() if status == "read" else None,
+            )
+        else:
+            r = requests.get(f"https://www.googleapis.com/books/v1/volumes/{google_id}", timeout=6)
+            data = r.json()
+            vol = data.get("volumeInfo", {})
+            thumb = ""
+            if "imageLinks" in vol:
+                thumb = vol["imageLinks"].get("thumbnail", "").replace("http://", "https://")
+            new_book = Book(
+                user_id=current_user.id,
+                google_id=google_id,
+                title=vol.get("title", "Unknown"),
+                author=", ".join(vol.get("authors", ["Unknown"])),
+                year=(vol.get("publishedDate") or "")[:4],
+                rating=0.0,
+                description=(vol.get("description") or "")[:1000],
+                genre=", ".join(vol.get("categories", [])),
+                img_url=thumb,
+                status=status,
+                date_read=date.today() if status == "read" else None,
+            )
+        db.session.add(new_book)
+        db.session.commit()
+        flash(f'"{new_book.title}" added to your collection!', "success")
     except Exception as e:
         flash(f"Could not add book: {str(e)}", "error")
 
-    return redirect(url_for("discover"))
+    return redirect(url_for("discover", tab="books"))
 
 
 # =====================
@@ -1215,28 +1580,69 @@ def find_book():
     title = request.args.get("title")
     if not title:
         return redirect(url_for("add_book"))
-    try:
-        r = requests.get("https://www.googleapis.com/books/v1/volumes",
-                         params={"q": title, "maxResults": 12}, timeout=8)
-        data = r.json()
-    except Exception:
-        flash("Could not reach Google Books API. Please try again.", "error")
-        return redirect(url_for("add_book"))
 
     items = []
-    for item in data.get("items", []):
-        vol = item.get("volumeInfo", {})
-        thumb = ""
-        if "imageLinks" in vol:
-            thumb = vol["imageLinks"].get("thumbnail", "").replace("http://", "https://")
-        items.append({
-            "id": item.get("id"),
-            "title": vol.get("title", "Unknown"),
-            "release_date": vol.get("publishedDate", ""),
-            "poster_path": None,
-            "thumb": thumb,
-            "author": ", ".join(vol.get("authors", ["Unknown"])),
-        })
+    # 1. Try Google Books API
+    try:
+        r = requests.get("https://www.googleapis.com/books/v1/volumes",
+                         params={"q": title, "maxResults": 12}, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            for item in data.get("items", []):
+                vol = item.get("volumeInfo", {})
+                thumb = ""
+                if "imageLinks" in vol:
+                    thumb = vol["imageLinks"].get("thumbnail", "").replace("http://", "https://")
+                items.append({
+                    "id": item.get("id"),
+                    "title": vol.get("title", "Unknown"),
+                    "release_date": vol.get("publishedDate", ""),
+                    "poster_path": None,
+                    "thumb": thumb,
+                    "author": ", ".join(vol.get("authors", ["Unknown"])),
+                })
+    except Exception:
+        pass
+
+    # 2. Try Open Library if Google gave 0 results
+    if not items:
+        try:
+            r = requests.get("https://openlibrary.org/search.json", params={"q": title, "limit": 12}, timeout=6)
+            if r.status_code == 200:
+                for doc in r.json().get("docs", []):
+                    cover_i = doc.get("cover_i")
+                    thumb = f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg" if cover_i else ""
+                    key = doc.get("key", "").replace("/works/", "")
+                    authors = doc.get("author_name", ["Unknown"])
+                    items.append({
+                        "id": key,
+                        "title": doc.get("title", "Unknown"),
+                        "release_date": str(doc.get("first_publish_year", "")),
+                        "poster_path": None,
+                        "thumb": thumb,
+                        "author": ", ".join(authors[:2]) if isinstance(authors, list) else str(authors),
+                    })
+        except Exception:
+            pass
+
+    # 3. Match from CURATED_BOOKS
+    if not items:
+        q_lower = title.lower()
+        for b in CURATED_BOOKS:
+            if q_lower in b["title"].lower() or q_lower in b["author"].lower() or q_lower in b["genre"].lower():
+                items.append({
+                    "id": b["google_id"],
+                    "title": b["title"],
+                    "release_date": b["year"],
+                    "poster_path": None,
+                    "thumb": b["img_url"],
+                    "author": b["author"],
+                })
+
+    if not items:
+        flash("Could not find books matching that query. Please try another search term.", "error")
+        return redirect(url_for("add_book"))
+
     return render_template("select.html", items=items, item_type="Book", query=title)
 
 
@@ -1253,45 +1659,103 @@ def select_book():
         flash(f'"{existing.title}" is already in your collection.', "error")
         return redirect(url_for("collection", tab="books"))
 
+    # 1. Check curated bank
+    for b in CURATED_BOOKS:
+        if b["google_id"] == book_id:
+            new_book = Book(
+                user_id=current_user.id,
+                google_id=book_id,
+                title=b["title"],
+                author=b["author"],
+                year=b["year"],
+                rating=0.0,
+                description=b["overview"],
+                genre=b["genre"],
+                img_url=b["img_url"],
+                status=status,
+                date_read=date.today() if status == "read" else None,
+            )
+            db.session.add(new_book)
+            db.session.commit()
+            if status == "to_read":
+                flash(f'"{new_book.title}" added to your reading list!', "success")
+                return redirect(url_for("collection", tab="books"))
+            return redirect(url_for("edit_book", book_id=new_book.id))
+
+    # 2. Check Open Library
+    if book_id.startswith("OL"):
+        try:
+            r = requests.get(f"https://openlibrary.org/works/{book_id}.json", timeout=6)
+            data = r.json()
+            b_title = data.get("title", "Unknown")
+            desc = data.get("description", "")
+            if isinstance(desc, dict):
+                desc = desc.get("value", "")
+            covers = data.get("covers", [])
+            cover_id = covers[0] if covers else None
+            thumb = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else ""
+            genres = ", ".join(data.get("subjects", [])[:3])
+            new_book = Book(
+                user_id=current_user.id,
+                google_id=book_id,
+                title=b_title,
+                author=request.args.get("author", "Unknown"),
+                year=(data.get("first_publish_date") or "")[:4],
+                rating=0.0,
+                description=desc[:1000] if desc else "",
+                genre=genres,
+                img_url=thumb,
+                status=status,
+                date_read=date.today() if status == "read" else None,
+            )
+            db.session.add(new_book)
+            db.session.commit()
+            if status == "to_read":
+                flash(f'"{new_book.title}" added to your reading list!', "success")
+                return redirect(url_for("collection", tab="books"))
+            return redirect(url_for("edit_book", book_id=new_book.id))
+        except Exception:
+            pass
+
+    # 3. Check Google Books
     try:
         r = requests.get(f"https://www.googleapis.com/books/v1/volumes/{book_id}", timeout=8)
         data = r.json()
-    except Exception:
-        flash("Could not fetch book details. Please try again.", "error")
+        vol = data.get("volumeInfo", {})
+        if not vol:
+            flash("Book details could not be retrieved.", "error")
+            return redirect(url_for("add_book"))
+
+        year = (vol.get("publishedDate") or "")[:4]
+        authors = ", ".join(vol.get("authors", ["Unknown"]))
+        thumb = ""
+        if "imageLinks" in vol:
+            thumb = vol["imageLinks"].get("thumbnail", "").replace("http://", "https://")
+        categories = ", ".join(vol.get("categories", []))
+
+        new_book = Book(
+            user_id=current_user.id,
+            google_id=book_id,
+            title=vol.get("title", "Unknown"),
+            author=authors,
+            year=year,
+            rating=0.0,
+            description=(vol.get("description") or "")[:1000],
+            genre=categories,
+            img_url=thumb,
+            status=status,
+            date_read=date.today() if status == "read" else None,
+        )
+        db.session.add(new_book)
+        db.session.commit()
+
+        if status == "to_read":
+            flash(f'"{new_book.title}" added to your reading list!', "success")
+            return redirect(url_for("collection", tab="books"))
+        return redirect(url_for("edit_book", book_id=new_book.id))
+    except Exception as e:
+        flash(f"Could not fetch book details: {str(e)}", "error")
         return redirect(url_for("add_book"))
-
-    vol = data.get("volumeInfo", {})
-    if not vol:
-        flash("Book not found. Please try again.", "error")
-        return redirect(url_for("add_book"))
-
-    year = (vol.get("publishedDate") or "")[:4]
-    authors = ", ".join(vol.get("authors", ["Unknown"]))
-    thumb = ""
-    if "imageLinks" in vol:
-        thumb = vol["imageLinks"].get("thumbnail", "").replace("http://", "https://")
-    categories = ", ".join(vol.get("categories", []))
-
-    new_book = Book(
-        user_id=current_user.id,
-        google_id=book_id,
-        title=vol.get("title", "Unknown"),
-        author=authors,
-        year=year,
-        rating=0.0,
-        description=(vol.get("description") or "")[:1000],
-        genre=categories,
-        img_url=thumb,
-        status=status,
-        date_read=date.today() if status == "read" else None,
-    )
-    db.session.add(new_book)
-    db.session.commit()
-
-    if status == "to_read":
-        flash(f'"{new_book.title}" added to your reading list!', "success")
-        return redirect(url_for("collection", tab="books"))
-    return redirect(url_for("edit_book", book_id=new_book.id))
 
 
 @app.route("/edit_book/<int:book_id>", methods=["GET", "POST"])

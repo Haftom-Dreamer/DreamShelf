@@ -16,7 +16,7 @@
         <div class="tmdb-rating">⭐ {{ movie.rating }}</div>
     </div>
     <div class="discover-info">
-        <div class="discover-title">{{ movie.title }}</div>
+        <div class="discover-title" title="{{ movie.title }}">{{ movie.title }}</div>
         <div class="discover-year">{{ movie.year }}</div>
         <div class="quick-add-row">
             <a href="{{ url_for('quick_add_movie', id=movie.tmdb_id, status='to_watch') }}" class="btn-quick to-watch" title="Add to Watchlist">
@@ -31,7 +31,7 @@
 {% endmacro %}
 
 {% macro render_book(book) %}
-<div class="discover-card" data-google="{{ book.google_id }}" data-title="{{ book.title }}">
+<div class="discover-card" data-google="{{ book.google_id }}" data-title="{{ book.title }}" data-author="{{ book.author }}" data-year="{{ book.year }}" data-img="{{ book.img_url }}">
     <div class="discover-poster">
         <img src="{{ book.img_url }}" alt="{{ book.title }}" loading="lazy">
         <div class="discover-overlay">
@@ -41,13 +41,13 @@
         </div>
     </div>
     <div class="discover-info">
-        <div class="discover-title">{{ book.title }}</div>
+        <div class="discover-title" title="{{ book.title }}">{{ book.title }}</div>
         <div class="discover-year">{{ book.author }}{% if book.year %} · {{ book.year }}{% endif %}</div>
         <div class="quick-add-row">
-            <a href="{{ url_for('quick_add_book', id=book.google_id, status='to_read') }}" class="btn-quick to-read" title="Add to Reading List">
+            <a href="{{ url_for('quick_add_book', id=book.google_id, status='to_read', title=book.title, author=book.author, img_url=book.img_url, year=book.year) }}" class="btn-quick to-read" title="Add to Reading List">
                 <i class="fas fa-bookmark"></i> To Read
             </a>
-            <a href="{{ url_for('quick_add_book', id=book.google_id, status='read') }}" class="btn-quick read-done" title="Mark as Read">
+            <a href="{{ url_for('quick_add_book', id=book.google_id, status='read', title=book.title, author=book.author, img_url=book.img_url, year=book.year) }}" class="btn-quick read-done" title="Mark as Read">
                 <i class="fas fa-check"></i> Read
             </a>
         </div>
@@ -61,62 +61,91 @@
             <h1 class="page-title"><i class="fas fa-compass" style="color:var(--accent)"></i> Discover</h1>
             <p class="page-subtitle">Handpicked algorithms and popular picks from around the world.</p>
         </div>
-        <a href="{{ url_for('discover', refresh=1) }}" class="btn-secondary" style="white-space:nowrap;"><i class="fas fa-sync-alt"></i> Refresh</a>
-    </div>
-
-    <!-- Movies -->
-    {% if is_personalized_movies and recommended_movies %}
-    <div class="dashboard-section" style="margin-top:2rem;">
-        <div class="section-header">
-            <h2 class="section-heading"><i class="fas fa-magic" style="color:var(--accent)"></i> Recommended Movies</h2>
-            <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Based on what you've watched</span>
-        </div>
-        <div class="discover-grid">
-            {% for movie in recommended_movies %}{{ render_movie(movie) }}{% endfor %}
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <a href="{{ url_for('discover', tab=tab, refresh=1) }}" class="btn-secondary" style="white-space:nowrap;"><i class="fas fa-sync-alt"></i> Refresh</a>
+            {% if tab == 'movies' %}
+            <a href="{{ url_for('add') }}" class="btn-primary" style="white-space:nowrap;"><i class="fas fa-search"></i> Search Movie</a>
+            {% else %}
+            <a href="{{ url_for('add_book') }}" class="btn-secondary" style="white-space:nowrap; border-color:var(--accent-book); color:var(--accent-book);"><i class="fas fa-search"></i> Search Book</a>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
 
-    <div class="dashboard-section" style="margin-top:3rem;">
-        <div class="section-header">
-            <h2 class="section-heading"><i class="fas fa-fire" style="color:#ff6b6b"></i> Trending Movies</h2>
-            <a href="{{ url_for('add') }}" class="section-link">Search Movie <i class="fas fa-search"></i></a>
+    <!-- Tab Bar: Separate Movies & Books -->
+    <div class="tab-bar" style="margin-top: 1.5rem;">
+        <a href="{{ url_for('discover', tab='movies') }}"
+           class="tab-item {% if tab == 'movies' %}active{% endif %}">
+            <i class="fas fa-film"></i> Movies
+        </a>
+        <a href="{{ url_for('discover', tab='books') }}"
+           class="tab-item {% if tab == 'books' %}active{% endif %}">
+            <i class="fas fa-book"></i> Books
+        </a>
+    </div>
+
+    {% if tab == 'movies' %}
+        <!-- Movies Content -->
+        {% if is_personalized_movies and recommended_movies %}
+        <div class="dashboard-section" style="margin-top:2rem;">
+            <div class="section-header">
+                <h2 class="section-heading"><i class="fas fa-magic" style="color:var(--accent)"></i> Recommended Movies</h2>
+                <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Based on movies you've watched &amp; want to watch</span>
+            </div>
+            <div class="discover-grid">
+                {% for movie in recommended_movies %}{{ render_movie(movie) }}{% endfor %}
+            </div>
         </div>
-        {% if trending_movies %}
-        <div class="discover-grid">
-            {% for movie in trending_movies %}{{ render_movie(movie) }}{% endfor %}
-        </div>
-        {% else %}
-        <div class="empty-state" style="padding:2rem;"><p>No trending available right now.</p></div>
         {% endif %}
-    </div>
 
-    <!-- Books -->
-    {% if is_personalized_books and recommended_books %}
-    <div class="dashboard-section" style="margin-top:4rem;">
-        <div class="section-header">
-            <h2 class="section-heading"><i class="fas fa-magic" style="color:var(--accent-book)"></i> Books You Might Like</h2>
-            <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Based on what you've read</span>
+        <div class="dashboard-section" style="margin-top:2.5rem;">
+            <div class="section-header">
+                <h2 class="section-heading"><i class="fas fa-fire" style="color:#ff6b6b"></i> Trending &amp; Popular Movies</h2>
+                <a href="{{ url_for('add') }}" class="section-link">Search Movie <i class="fas fa-search"></i></a>
+            </div>
+            {% if trending_movies %}
+            <div class="discover-grid">
+                {% for movie in trending_movies %}{{ render_movie(movie) }}{% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding:2rem;"><p>No trending movies available right now.</p></div>
+            {% endif %}
         </div>
-        <div class="discover-grid">
-            {% for book in recommended_books %}{{ render_book(book) }}{% endfor %}
-        </div>
-    </div>
-    {% endif %}
 
-    <div class="dashboard-section" style="margin-top:3rem;">
-        <div class="section-header">
-            <h2 class="section-heading"><i class="fas fa-book-open" style="color:var(--accent-book)"></i> Popular Books</h2>
-            <a href="{{ url_for('add_book') }}" class="section-link">Search Book <i class="fas fa-search"></i></a>
+    {% else %}
+        <!-- Books Content -->
+        {% if is_personalized_books and recommended_books %}
+        <div class="dashboard-section" style="margin-top:2rem;">
+            <div class="section-header">
+                <h2 class="section-heading"><i class="fas fa-magic" style="color:var(--accent-book)"></i> Recommended Books</h2>
+                <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Based on books in your collection (read &amp; to read)</span>
+            </div>
+            <div class="discover-grid">
+                {% for book in recommended_books %}{{ render_book(book) }}{% endfor %}
+            </div>
         </div>
-        {% if trending_books %}
-        <div class="discover-grid">
-            {% for book in trending_books %}{{ render_book(book) }}{% endfor %}
+        {% elif not is_personalized_books %}
+        <div class="dashboard-section" style="margin-top:2rem;">
+            <div class="empty-state" style="padding:1.5rem; margin-bottom:1rem; border:1px dashed var(--border);">
+                <i class="fas fa-book-reader" style="font-size:2rem; color:var(--accent-book); opacity:0.6; margin-bottom:0.5rem;"></i>
+                <p style="margin:0; font-size:0.9rem;">Add books to your reading list or mark them as read to get personalized recommendations tailored to your taste!</p>
+            </div>
         </div>
-        {% else %}
-        <div class="empty-state" style="padding:2rem;"><p>No popular books available.</p></div>
         {% endif %}
-    </div>
+
+        <div class="dashboard-section" style="margin-top:2.5rem;">
+            <div class="section-header">
+                <h2 class="section-heading"><i class="fas fa-fire" style="color:var(--gold)"></i> Popular &amp; Trending Books</h2>
+                <a href="{{ url_for('add_book') }}" class="section-link">Search Book <i class="fas fa-search"></i></a>
+            </div>
+            {% if trending_books %}
+            <div class="discover-grid">
+                {% for book in trending_books %}{{ render_book(book) }}{% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding:2rem;"><p>No popular books available.</p></div>
+            {% endif %}
+        </div>
+    {% endif %}
 </div>
 
 <!-- Preview Panel -->
@@ -147,36 +176,58 @@ function showPreview(type, id, card) {
     document.getElementById('previewLoading').style.display = 'flex';
     document.getElementById('previewContent').style.display = 'none';
 
-    const url = type === 'movie' ? `/movie_preview/${id}` : `/book_preview/${id}`;
+    const cardAuthor = card && card.dataset.author ? encodeURIComponent(card.dataset.author) : '';
+    const url = type === 'movie' ? `/movie_preview/${id}` : `/book_preview/${id}?author=${cardAuthor}`;
     fetch(url)
         .then(r => r.json())
         .then(d => {
-            document.getElementById('previewPoster').src = d.poster || '';
-            document.getElementById('previewTitle').textContent = d.title;
+            document.getElementById('previewPoster').src = d.poster || (card && card.dataset.img ? card.dataset.img : '');
+            document.getElementById('previewTitle').textContent = d.title || (card ? card.dataset.title : '');
             document.getElementById('previewSub').textContent = type === 'movie'
-                ? (d.year + (d.runtime ? ` · ${d.runtime} min` : ''))
-                : `by ${d.author}${d.year ? ' · ' + d.year : ''}${d.pages ? ' · ' + d.pages + ' pages' : ''}`;
+                ? ((d.year || '') + (d.runtime ? ` · ${d.runtime} min` : ''))
+                : `by ${d.author || (card ? card.dataset.author : 'Unknown')}${d.year ? ' · ' + d.year : ''}${d.pages ? ' · ' + d.pages + ' pages' : ''}`;
             document.getElementById('previewGenres').textContent = d.genres || '';
             document.getElementById('previewRating').textContent = d.rating ? `⭐ ${d.rating} / 10` : '';
             document.getElementById('previewExtra').textContent = type === 'movie' && d.cast ? `Cast: ${d.cast}` : '';
             document.getElementById('previewOverview').textContent = d.overview || 'No description available.';
 
-            const tmdb_id = d.tmdb_id || '';
-            const google_id = d.google_id || '';
+            const tmdb_id = d.tmdb_id || id;
+            const google_id = d.google_id || id;
             let actions = '';
             if (type === 'movie') {
                 actions = `<a href="/quick_add_movie?id=${tmdb_id}&status=to_watch" class="btn-preview-action to-watch"><i class="fas fa-clock"></i> Add to Watchlist</a>
                            <a href="/quick_add_movie?id=${tmdb_id}&status=watched" class="btn-preview-action watched"><i class="fas fa-check"></i> Mark as Watched</a>`;
             } else {
-                actions = `<a href="/quick_add_book?id=${google_id}&status=to_read" class="btn-preview-action to-read"><i class="fas fa-bookmark"></i> Add to Reading List</a>
-                           <a href="/quick_add_book?id=${google_id}&status=read" class="btn-preview-action read-done"><i class="fas fa-check"></i> Mark as Read</a>`;
+                const titleEnc = encodeURIComponent(d.title || (card ? card.dataset.title : ''));
+                const authorEnc = encodeURIComponent(d.author || (card ? card.dataset.author : ''));
+                const imgEnc = encodeURIComponent(d.poster || (card ? card.dataset.img : ''));
+                const yearEnc = encodeURIComponent(d.year || (card ? card.dataset.year : ''));
+                actions = `<a href="/quick_add_book?id=${google_id}&status=to_read&title=${titleEnc}&author=${authorEnc}&img_url=${imgEnc}&year=${yearEnc}" class="btn-preview-action to-read"><i class="fas fa-bookmark"></i> Add to Reading List</a>
+                           <a href="/quick_add_book?id=${google_id}&status=read&title=${titleEnc}&author=${authorEnc}&img_url=${imgEnc}&year=${yearEnc}" class="btn-preview-action read-done"><i class="fas fa-check"></i> Mark as Read</a>`;
             }
             document.getElementById('previewActions').innerHTML = actions;
             document.getElementById('previewLoading').style.display = 'none';
             document.getElementById('previewContent').style.display = 'block';
         })
         .catch(() => {
-            document.getElementById('previewLoading').innerHTML = '<p style="color:var(--danger)">Failed to load details.</p>';
+            if (card) {
+                document.getElementById('previewPoster').src = card.dataset.img || '';
+                document.getElementById('previewTitle').textContent = card.dataset.title || '';
+                document.getElementById('previewSub').textContent = card.dataset.author ? `by ${card.dataset.author}` : '';
+                document.getElementById('previewOverview').textContent = 'Selected from DreamShelf curated collection.';
+                const titleEnc = encodeURIComponent(card.dataset.title || '');
+                const authorEnc = encodeURIComponent(card.dataset.author || '');
+                const imgEnc = encodeURIComponent(card.dataset.img || '');
+                const yearEnc = encodeURIComponent(card.dataset.year || '');
+                document.getElementById('previewActions').innerHTML = `
+                    <a href="/quick_add_book?id=${id}&status=to_read&title=${titleEnc}&author=${authorEnc}&img_url=${imgEnc}&year=${yearEnc}" class="btn-preview-action to-read"><i class="fas fa-bookmark"></i> Add to Reading List</a>
+                    <a href="/quick_add_book?id=${id}&status=read&title=${titleEnc}&author=${authorEnc}&img_url=${imgEnc}&year=${yearEnc}" class="btn-preview-action read-done"><i class="fas fa-check"></i> Mark as Read</a>
+                `;
+                document.getElementById('previewLoading').style.display = 'none';
+                document.getElementById('previewContent').style.display = 'block';
+            } else {
+                document.getElementById('previewLoading').innerHTML = '<p style="color:var(--danger)">Failed to load details.</p>';
+            }
         });
 }
 
