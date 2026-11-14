@@ -1,13 +1,17 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
+from dotenv import load_dotenv
+load_dotenv()
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from wtforms import StringField, SubmitField, PasswordField, SelectField, TextAreaField
-from wtforms.validators import DataRequired, Email, Length, EqualTo
+from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests
 import os
+import secrets
+import urllib.parse
 from datetime import datetime, date, timedelta
 from collections import Counter, defaultdict
 import io
@@ -16,6 +20,20 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Date
 
 TMDB_API_KEY = "f319b185cd1af98f98b55a81304dfe9b"
+
+# =====================
+# --- Google OAuth Config ---
+# =====================
+# Set these in environment variables or a .env file before running.
+# In Google Cloud Console: APIs & Services → Credentials → OAuth 2.0 Client IDs
+# Authorized redirect URI must be: http://localhost:5000/auth/google/callback
+GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI  = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback")
+
+GOOGLE_AUTH_URL  = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7Y0sKR6b'
@@ -54,7 +72,8 @@ class User(UserMixin, db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=True)   # nullable → Google-only accounts have no password
+    google_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=True)  # Google OAuth sub claim
     avatar_color: Mapped[str] = mapped_column(String(20), nullable=False, default="#6c63ff")
     bio: Mapped[str] = mapped_column(String(500), nullable=True)
     avatar_url: Mapped[str] = mapped_column(String(500), nullable=True)
@@ -104,6 +123,41 @@ class Book(db.Model):
 
 with app.app_context():
     db.create_all()
+    # --- Schema migration: ensure google_id exists and password_hash is nullable ---
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+    existing_cols = {c["name"]: c for c in inspector.get_columns("user")}
+    
+    if "google_id" not in existing_cols:
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE user ADD COLUMN google_id VARCHAR(100)"))
+            conn.commit()
+
+    # In SQLite, if password_hash was originally NOT NULL, recreate table to make it nullable
+    if "password_hash" in existing_cols and not existing_cols["password_hash"].get("nullable", True):
+        with db.engine.connect() as conn:
+            conn.execute(text("PRAGMA foreign_keys=OFF"))
+            conn.execute(text("""
+                CREATE TABLE user_new (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    username VARCHAR(100) NOT NULL UNIQUE,
+                    email VARCHAR(150) NOT NULL UNIQUE,
+                    password_hash VARCHAR(256),
+                    avatar_color VARCHAR(20) NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    bio VARCHAR(500),
+                    avatar_url VARCHAR(500),
+                    google_id VARCHAR(100) UNIQUE
+                )
+            """))
+            conn.execute(text("""
+                INSERT INTO user_new (id, username, email, password_hash, avatar_color, created_at, bio, avatar_url, google_id)
+                SELECT id, username, email, password_hash, avatar_color, created_at, bio, avatar_url, google_id FROM user
+            """))
+            conn.execute(text("DROP TABLE user"))
+            conn.execute(text("ALTER TABLE user_new RENAME TO user"))
+            conn.execute(text("PRAGMA foreign_keys=ON"))
+            conn.commit()
 
 
 # =====================
@@ -155,11 +209,15 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and check_password_hash(user.password_hash, form.password.data):
+        if user and user.password_hash and check_password_hash(user.password_hash, form.password.data):
             login_user(user)
             next_page = request.args.get("next")
             return redirect(next_page or url_for("dashboard"))
-        flash("Invalid email or password.", "error")
+        elif user and not user.password_hash:
+            # Account exists but was created via Google — guide them
+            flash("This email is registered via Google Sign-In. Please use the \"Continue with Google\" button.", "error")
+        else:
+            flash("Invalid email or password.", "error")
     return render_template("login.html", form=form)
 
 
@@ -168,6 +226,174 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("landing"))
+
+
+# =====================
+# --- Google OAuth Routes ---
+# =====================
+
+@app.route("/auth/google/login")
+def google_login():
+    """Redirect the user to Google's OAuth consent screen."""
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        flash("Google Sign-In is not configured. Please contact the administrator.", "error")
+        return redirect(url_for("login"))
+
+    # Ensure host matches GOOGLE_REDIRECT_URI so session cookies are preserved
+    parsed_redirect = urllib.parse.urlparse(GOOGLE_REDIRECT_URI)
+    if parsed_redirect.netloc and request.host != parsed_redirect.netloc:
+        target = urllib.parse.urlunparse((
+            parsed_redirect.scheme or request.scheme,
+            parsed_redirect.netloc,
+            request.path,
+            '',
+            request.query_string.decode('utf-8') if request.query_string else '',
+            ''
+        ))
+        return redirect(target)
+
+    # Generate a random state token to protect against CSRF
+    state = secrets.token_urlsafe(32)
+    session["oauth_state"] = state
+
+    # Preserve the 'next' URL so we can redirect there after login
+    next_url = request.args.get("next", "")
+    if next_url:
+        session["oauth_next"] = next_url
+
+    params = {
+        "client_id":     GOOGLE_CLIENT_ID,
+        "redirect_uri":  GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope":         "openid email profile",
+        "state":         state,
+        "access_type":   "online",
+        "prompt":        "select_account",
+    }
+    auth_url = GOOGLE_AUTH_URL + "?" + urllib.parse.urlencode(params)
+    return redirect(auth_url)
+
+
+@app.route("/auth/google/callback")
+def google_callback():
+    """Handle the OAuth2 callback from Google."""
+    # --- CSRF state check ---
+    state_in_session = session.pop("oauth_state", None)
+    state_from_google = request.args.get("state")
+    if not state_in_session or state_in_session != state_from_google:
+        flash("Authentication session expired or invalid state. Please click 'Continue with Google' again.", "error")
+        return redirect(url_for("login"))
+
+    # --- Check for error from Google ---
+    error = request.args.get("error")
+    if error:
+        flash(f"Google Sign-In was cancelled or failed: {error}", "error")
+        return redirect(url_for("login"))
+
+    code = request.args.get("code")
+    if not code:
+        flash("Google Sign-In failed: no authorization code received.", "error")
+        return redirect(url_for("login"))
+
+    # --- Exchange code for tokens ---
+    try:
+        token_resp = requests.post(
+            GOOGLE_TOKEN_URL,
+            data={
+                "code":          code,
+                "client_id":     GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uri":  GOOGLE_REDIRECT_URI,
+                "grant_type":    "authorization_code",
+            },
+            timeout=10,
+        )
+        token_resp.raise_for_status()
+        token_data = token_resp.json()
+    except Exception as e:
+        flash("Google Sign-In failed: could not exchange authorization code.", "error")
+        return redirect(url_for("login"))
+
+    access_token = token_data.get("access_token")
+    if not access_token:
+        flash("Google Sign-In failed: no access token received.", "error")
+        return redirect(url_for("login"))
+
+    # --- Fetch user info from Google ---
+    try:
+        userinfo_resp = requests.get(
+            GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+        userinfo_resp.raise_for_status()
+        userinfo = userinfo_resp.json()
+    except Exception:
+        flash("Google Sign-In failed: could not retrieve user information.", "error")
+        return redirect(url_for("login"))
+
+    google_id    = userinfo.get("id")
+    email        = userinfo.get("email")
+    google_name  = userinfo.get("name", "")
+    avatar_url   = userinfo.get("picture", "")
+    email_verified = userinfo.get("verified_email", False)
+
+    if not google_id or not email:
+        flash("Google Sign-In failed: incomplete user information received.", "error")
+        return redirect(url_for("login"))
+
+    if not email_verified:
+        flash("Your Google account email is not verified. Please verify it and try again.", "error")
+        return redirect(url_for("login"))
+
+    # --- Look up or create the user ---
+    import random
+
+    try:
+        # 1. Find by google_id (fastest path — returning Google user)
+        user = User.query.filter_by(google_id=google_id).first()
+
+        if user is None:
+            # 2. Find by email — link Google to an existing email/password account
+            user = User.query.filter_by(email=email).first()
+            if user is not None:
+                # Link the Google ID to the existing account
+                user.google_id = google_id
+                if avatar_url and not user.avatar_url:
+                    user.avatar_url = avatar_url
+                db.session.commit()
+                flash(f"Your Google account has been linked to your existing CineShelf account. Welcome back, {user.username}!", "success")
+            else:
+                # 3. Brand-new user — create an account automatically
+                base_username = (google_name or email.split("@")[0]).replace(" ", "").lower()
+                base_username = "".join(c for c in base_username if c.isalnum() or c == "_")[:30] or "user"
+                username = base_username
+                suffix = 1
+                while User.query.filter_by(username=username).first():
+                    username = f"{base_username}{suffix}"
+                    suffix += 1
+
+                color = random.choice(AVATAR_COLORS)
+                user = User(
+                    username=username,
+                    email=email,
+                    password_hash=None,   # No password for Google-only accounts
+                    google_id=google_id,
+                    avatar_color=color,
+                    avatar_url=avatar_url or None,
+                )
+                db.session.add(user)
+                db.session.commit()
+                flash(f"Welcome to CineShelf, {user.username}! Your account has been created via Google.", "success")
+
+        login_user(user)
+    except Exception as e:
+        db.session.rollback()
+        flash("An error occurred while setting up your account. Please try again.", "error")
+        return redirect(url_for("login"))
+
+    next_url = session.pop("oauth_next", None)
+    return redirect(next_url or url_for("dashboard"))
 
 class SettingsForm(FlaskForm):
     bio = TextAreaField("Bio", validators=[Length(max=500)])
