@@ -18,6 +18,17 @@
             {% if profile_user.bio %}
             <p style="opacity: 0.8; max-width: 500px; margin: 0 auto; font-style: italic;">"{{ profile_user.bio }}"</p>
             {% endif %}
+            <div class="collection-stats-bar" style="justify-content: center; margin-top: 0.75rem;">
+                {% if tab == 'movies' %}
+                <span class="collection-stat-pill watched" title="Watched Movies"><i class="fas fa-check-circle"></i> <strong>{{ watched_count }}</strong> Watched</span>
+                <span class="collection-stat-pill to-watch" title="Movies To Watch"><i class="fas fa-clock"></i> <strong>{{ to_watch_count }}</strong> To Watch</span>
+                <span class="collection-stat-pill total" title="Total Movies"><i class="fas fa-film"></i> <strong>{{ total_movies_count }}</strong> Total</span>
+                {% else %}
+                <span class="collection-stat-pill read" title="Books Read"><i class="fas fa-check-circle"></i> <strong>{{ read_count }}</strong> Read</span>
+                <span class="collection-stat-pill to-read" title="Books To Read"><i class="fas fa-bookmark"></i> <strong>{{ to_read_count }}</strong> To Read</span>
+                <span class="collection-stat-pill total" title="Total Books"><i class="fas fa-book"></i> <strong>{{ total_books_count }}</strong> Total</span>
+                {% endif %}
+            </div>
         </div>
 
         <div class="collection-actions" style="margin-top: 1rem;">
@@ -33,11 +44,11 @@
     <div class="tab-bar">
         <a href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort) }}"
            class="tab-item {% if tab == 'movies' %}active{% endif %}">
-            <i class="fas fa-film"></i> Movies
+            <i class="fas fa-film"></i> Movies <span class="tab-badge">{{ total_movies_count }}</span>
         </a>
         <a href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort) }}"
            class="tab-item {% if tab == 'books' %}active{% endif %}">
-            <i class="fas fa-book"></i> Books
+            <i class="fas fa-book"></i> Books <span class="tab-badge">{{ total_books_count }}</span>
         </a>
     </div>
 
@@ -45,13 +56,13 @@
     <div class="collection-toolbar">
         <div class="filter-bar">
             {% if tab == 'movies' %}
-            <a class="filter-chip {% if status == 'all' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='all', sort=sort) }}">All</a>
-            <a class="filter-chip {% if status == 'watched' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='watched', sort=sort) }}">✅ Watched</a>
-            <a class="filter-chip {% if status == 'to_watch' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='to_watch', sort=sort) }}">🕐 To Watch</a>
+            <a class="filter-chip {% if status == 'all' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='all', sort=sort) }}">All <span class="chip-count">{{ total_movies_count }}</span></a>
+            <a class="filter-chip {% if status == 'watched' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='watched', sort=sort) }}">✅ Watched <span class="chip-count">{{ watched_count }}</span></a>
+            <a class="filter-chip {% if status == 'to_watch' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='to_watch', sort=sort) }}">🕐 To Watch <span class="chip-count">{{ to_watch_count }}</span></a>
             {% else %}
-            <a class="filter-chip {% if status == 'all' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='all', sort=sort) }}">All</a>
-            <a class="filter-chip {% if status == 'read' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='read', sort=sort) }}">✅ Read</a>
-            <a class="filter-chip {% if status == 'to_read' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='to_read', sort=sort) }}">📖 To Read</a>
+            <a class="filter-chip {% if status == 'all' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='all', sort=sort) }}">All <span class="chip-count">{{ total_books_count }}</span></a>
+            <a class="filter-chip {% if status == 'read' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='read', sort=sort) }}">✅ Read <span class="chip-count">{{ read_count }}</span></a>
+            <a class="filter-chip {% if status == 'to_read' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='to_read', sort=sort) }}">📖 To Read <span class="chip-count">{{ to_read_count }}</span></a>
             {% endif %}
         </div>
         <div class="sort-search-group">
@@ -80,7 +91,10 @@
                         <div class="card-front-info">
                             <div class="card-title">{{ movie.title }}</div>
                             <div class="card-meta">
-                                <span class="status-chip {{ movie.status }}">{{ '✅' if movie.status == 'watched' else '🕐' }}</span>
+                                <span class="status-chip {{ movie.status }}">
+                                    <i class="fas {{ 'fa-check' if movie.status == 'watched' else 'fa-clock' }}"></i>
+                                    {{ 'Watched' if movie.status == 'watched' else 'To Watch' }}
+                                </span>
                                 {% if movie.rating %}<span class="rating-chip">⭐ {{ movie.rating }}</span>{% endif %}
                             </div>
                         </div>
@@ -122,7 +136,10 @@
                             <div class="card-title">{{ book.title }}</div>
                             <div class="card-sub">{{ book.author }}</div>
                             <div class="card-meta">
-                                <span class="status-chip {{ book.status }}">{{ '✅' if book.status == 'read' else '📖' }}</span>
+                                <span class="status-chip {{ book.status }}">
+                                    <i class="fas {{ 'fa-check' if book.status == 'read' else 'fa-bookmark' }}"></i>
+                                    {{ 'Read' if book.status == 'read' else 'To Read' }}
+                                </span>
                                 {% if book.rating %}<span class="rating-chip">⭐ {{ book.rating }}</span>{% endif %}
                             </div>
                         </div>

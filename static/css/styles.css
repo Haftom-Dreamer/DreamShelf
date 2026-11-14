@@ -966,6 +966,52 @@ input:-webkit-autofill:active {
     margin-bottom: 1.5rem;
 }
 
+.collection-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.collection-stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+
+.collection-stat-pill strong {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.collection-stat-pill.watched {
+    border-color: rgba(0, 242, 254, 0.3);
+    background: rgba(0, 242, 254, 0.08);
+    color: var(--accent-cyan);
+}
+
+.collection-stat-pill.watched strong {
+    color: #fff;
+}
+
+.collection-stat-pill.read {
+    border-color: rgba(56, 239, 125, 0.3);
+    background: rgba(56, 239, 125, 0.08);
+    color: var(--accent-book);
+}
+
+.collection-stat-pill.read strong {
+    color: #fff;
+}
+
 .collection-actions { display: flex; gap: 0.8rem; }
 
 .tab-bar {
@@ -990,6 +1036,23 @@ input:-webkit-autofill:active {
 .tab-item:hover { color: var(--text); }
 .tab-item.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+.tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 7px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    margin-left: 0.35rem;
+}
+.tab-item.active .tab-badge {
+    background: rgba(124, 92, 255, 0.25);
+    color: var(--accent-dream);
+}
+
 .filter-bar {
     display: flex;
     gap: 0.5rem;
@@ -1005,9 +1068,29 @@ input:-webkit-autofill:active {
     font-weight: 500;
     color: var(--text-muted);
     transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
 }
 .filter-chip:hover { border-color: var(--accent); color: var(--accent); }
 .filter-chip.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+.chip-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 6px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    margin-left: 0.35rem;
+    color: var(--text-muted);
+    line-height: 1.2;
+}
+.filter-chip.active .chip-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
 
 /* Media Grid & Flip Cards */
 .media-grid {
@@ -1090,13 +1173,24 @@ input:-webkit-autofill:active {
 
 .status-chip {
     font-size: 0.75rem;
-    padding: 2px 7px;
+    padding: 3px 9px;
     border-radius: 50px;
     font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
 }
 
-.status-chip.watched, .status-chip.read { background: rgba(67,184,156,0.15); }
-.status-chip.to_watch, .status-chip.to_read { background: rgba(245,200,66,0.1); }
+.status-chip.watched, .status-chip.read {
+    background: rgba(56, 239, 125, 0.15);
+    color: var(--accent-book);
+    border: 1px solid rgba(56, 239, 125, 0.25);
+}
+.status-chip.to_watch, .status-chip.to_read {
+    background: rgba(255, 209, 102, 0.12);
+    color: var(--gold);
+    border: 1px solid rgba(255, 209, 102, 0.25);
+}
 
 .rating-chip {
     font-size: 0.75rem;

@@ -721,6 +721,15 @@ def collection():
     movies = movie_q.all()
     books = book_q.all()
 
+    # Counts for collection summary and filter badges
+    watched_count = Movie.query.filter_by(user_id=current_user.id, status="watched").count()
+    to_watch_count = Movie.query.filter_by(user_id=current_user.id, status="to_watch").count()
+    total_movies_count = watched_count + to_watch_count
+
+    read_count = Book.query.filter_by(user_id=current_user.id, status="read").count()
+    to_read_count = Book.query.filter_by(user_id=current_user.id, status="to_read").count()
+    total_books_count = read_count + to_read_count
+
     # Tag Processing
     all_tags = set()
     for m in movies:
@@ -736,7 +745,9 @@ def collection():
         books = [b for b in books if b.custom_tags and tag_filter in [t.strip() for t in b.custom_tags.split(",")]]
 
     return render_template("collection.html", movies=movies, books=books,
-                           tab=tab, status=status, sort=sort, all_tags=all_tags, current_tag=tag_filter)
+                           tab=tab, status=status, sort=sort, all_tags=all_tags, current_tag=tag_filter,
+                           watched_count=watched_count, to_watch_count=to_watch_count, total_movies_count=total_movies_count,
+                           read_count=read_count, to_read_count=to_read_count, total_books_count=total_books_count)
 
 @app.route("/u/<username>")
 def public_collection(username):
@@ -774,10 +785,20 @@ def public_collection(username):
     movies = movie_q.all()
     books = book_q.all()
     
+    watched_count = Movie.query.filter_by(user_id=user.id, status="watched").count()
+    to_watch_count = Movie.query.filter_by(user_id=user.id, status="to_watch").count()
+    total_movies_count = watched_count + to_watch_count
+
+    read_count = Book.query.filter_by(user_id=user.id, status="read").count()
+    to_read_count = Book.query.filter_by(user_id=user.id, status="to_read").count()
+    total_books_count = read_count + to_read_count
+
     return render_template("public_collection.html", 
                            profile_user=user, 
                            movies=movies, books=books,
-                           tab=tab, status=status, sort=sort)
+                           tab=tab, status=status, sort=sort,
+                           watched_count=watched_count, to_watch_count=to_watch_count, total_movies_count=total_movies_count,
+                           read_count=read_count, to_read_count=to_read_count, total_books_count=total_books_count)
 
 
 
