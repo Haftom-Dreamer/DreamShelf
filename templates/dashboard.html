@@ -97,6 +97,79 @@
         </a>
     </div>
 
+    <!-- All-Time Favorites Top 10 Spotlight -->
+    <div class="all-time-favorites-section" style="margin-top: 0; margin-bottom: 2.5rem;">
+        <div class="favorites-header-wrap">
+            <div class="favorites-title-group">
+                <div class="favorites-title">
+                    <i class="fas fa-crown crown-icon"></i> My All-Time Favorites Top 10
+                </div>
+                <div class="favorites-sub">
+                    Your personal pantheon of cinema. Rank #1 is your signature masterpiece.
+                </div>
+            </div>
+
+            <div class="favorites-actions-group">
+                <span class="favorites-counter-pill {% if all_time_favorites|length == 10 %}full{% endif %}">
+                    <i class="fas fa-film"></i> {{ all_time_favorites|length }}/10 Selected
+                </span>
+                <a href="{{ url_for('manage_favorites') }}" class="btn-edit-favorites">
+                    <i class="fas fa-sliders-h"></i> Manage Favorites
+                </a>
+                <a href="{{ url_for('public_collection', username=current_user.username) }}" class="btn-secondary" style="border-radius: 10px; font-size: 0.84rem; font-weight: 700; padding: 0.5rem 1rem;">
+                    <i class="fas fa-user-circle"></i> View on Profile
+                </a>
+            </div>
+        </div>
+
+        {% if all_time_favorites %}
+        <div class="favorites-showcase-grid">
+            {% for fav in all_time_favorites %}
+            {% set is_rank1 = fav.rank == 1 %}
+            <a href="{{ url_for('view_movie', item_id=fav.movie_id) }}" class="fav-showcase-card {% if is_rank1 %}rank-1{% endif %}" title="#{{ fav.rank }} - {{ fav.movie.title }}">
+                <div class="fav-poster-box">
+                    <div class="fav-rank-badge {% if is_rank1 %}rank-1{% endif %}">
+                        {% if is_rank1 %}<i class="fas fa-crown"></i> #1{% else %}#{{ fav.rank }}{% endif %}
+                    </div>
+                    {% if fav.movie.img_url %}
+                    <img src="{{ fav.movie.img_url }}" alt="{{ fav.movie.title }}" class="fav-poster-img" loading="lazy">
+                    {% else %}
+                    <div class="img-placeholder" style="height:100%;"><i class="fas fa-film"></i></div>
+                    {% endif %}
+                    <div class="fav-hover-overlay">
+                        <div class="fav-hover-title">{{ fav.movie.title }}</div>
+                        <div class="fav-hover-meta">{{ fav.movie.year or '—' }}</div>
+                        <span class="fav-hover-btn"><i class="fas fa-eye"></i> View Dossier</span>
+                    </div>
+                </div>
+                <div class="fav-showcase-info">
+                    <div class="fav-showcase-title">{{ fav.movie.title }}</div>
+                    <div class="fav-showcase-bottom">
+                        <span>{{ fav.movie.year or '—' }}</span>
+                        {% if fav.movie.rating and fav.movie.rating > 0 %}
+                        <span class="star">★ {{ fav.movie.rating }}</span>
+                        {% else %}
+                        <span style="opacity:0.5;">Unrated</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="fav-empty-box">
+            <i class="fas fa-crown fav-empty-icon"></i>
+            <div class="fav-empty-title">Showcase Your All-Time Favorites</div>
+            <p class="fav-empty-desc">
+                Select and rank up to 10 movies that define your personal taste in cinema.
+            </p>
+            <a href="{{ url_for('manage_favorites') }}" class="btn-edit-favorites">
+                <i class="fas fa-magic"></i> Curate Top 10 Now
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- 2-Column Dashboard Layout -->
     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; align-items: start;">
         
@@ -274,6 +347,17 @@
                         <div>
                             <div style="font-size: 0.88rem; font-weight: 700; color: #ffffff;">Reading List</div>
                             <div style="font-size: 0.74rem; color: var(--text-muted);">{{ to_read_count }} books waiting</div>
+                        </div>
+                        <i class="fas fa-chevron-right" style="margin-left: auto; color: var(--text-faint); font-size: 0.8rem;"></i>
+                    </a>
+
+                    <a href="{{ url_for('manage_favorites') }}" class="recent-card" style="padding: 0.8rem; text-decoration: none;">
+                        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(245,158,11,0.15); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.88rem; font-weight: 700; color: #ffffff;">Top 10 Favorites</div>
+                            <div style="font-size: 0.74rem; color: var(--text-muted);">{{ all_time_favorites|length }}/10 curated</div>
                         </div>
                         <i class="fas fa-chevron-right" style="margin-left: auto; color: var(--text-faint); font-size: 0.8rem;"></i>
                     </a>

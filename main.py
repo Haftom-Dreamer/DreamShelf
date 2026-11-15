@@ -80,6 +80,9 @@ class User(UserMixin, db.Model):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     movies: Mapped[list["Movie"]] = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")
     books: Mapped[list["Book"]] = relationship("Book", back_populates="owner", cascade="all, delete-orphan")
+    all_time_favorites: Mapped[list["AllTimeFavorite"]] = relationship(
+        "AllTimeFavorite", back_populates="user", cascade="all, delete-orphan", order_by="AllTimeFavorite.rank"
+    )
     followed: Mapped[list["User"]] = relationship(
         'User', secondary=followers_table,
         primaryjoin=(followers_table.c.follower_id == id),
@@ -103,6 +106,54 @@ class Movie(db.Model):
     date_watched: Mapped[date] = mapped_column(Date, nullable=True)
     media_type: Mapped[str] = mapped_column(String(30), nullable=False, default="movie")
     owner: Mapped["User"] = relationship("User", back_populates="movies")
+    all_time_entries: Mapped[list["AllTimeFavorite"]] = relationship(
+        "AllTimeFavorite", back_populates="movie", cascade="all, delete-orphan"
+    )
+
+class AllTimeFavorite(db.Model):
+    __tablename__ = "all_time_favorites"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
+    movie_id: Mapped[int] = mapped_column(Integer, ForeignKey("movie.id", ondelete="CASCADE"), nullable=False)
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)  # 1 to 10
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship("User", back_populates="all_time_favorites")
+    movie: Mapped["Movie"] = relationship("Movie", back_populates="all_time_entries")
+
+    @property
+    def title(self):
+        return self.movie.title if self.movie else "Unknown"
+
+    @property
+    def year(self):
+        return self.movie.year if self.movie else ""
+
+    @property
+    def img_url(self):
+        return self.movie.img_url if self.movie else ""
+
+    @property
+    def rating(self):
+        return self.movie.rating if self.movie else 0.0
+
+    @property
+    def description(self):
+        return self.movie.description if self.movie else ""
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "movie_id": self.movie_id,
+            "rank": self.rank,
+            "title": self.title,
+            "year": self.year,
+            "img_url": self.img_url,
+            "rating": self.rating,
+            "description": self.description,
+            "tmdb_id": self.movie.tmdb_id if self.movie else None
+        }
 
 class Book(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -761,6 +812,9 @@ def dashboard():
             rating_counts[r] += 1
     max_rating_freq = max(rating_counts.values()) if any(rating_counts.values()) else 1
 
+    # --- All-Time Favorites ---
+    all_time_favorites = AllTimeFavorite.query.filter_by(user_id=current_user.id).order_by(AllTimeFavorite.rank.asc()).all()
+
     return render_template("dashboard.html",
         watched_count=len(watched),
         to_watch_count=len(to_watch),
@@ -773,7 +827,8 @@ def dashboard():
         streak=streak,
         up_next=up_next_movies,
         rating_counts=rating_counts,
-        max_rating_freq=max_rating_freq
+        max_rating_freq=max_rating_freq,
+        all_time_favorites=all_time_favorites
     )
 
 @app.route("/analytics")
@@ -1115,6 +1170,8 @@ def public_collection(username):
         },
     }
 
+    all_time_favorites = AllTimeFavorite.query.filter_by(user_id=user.id).order_by(AllTimeFavorite.rank.asc()).all()
+
     return render_template("public_collection.html", 
                            profile_user=user, 
                            movies=movies, books=books,
@@ -1122,7 +1179,397 @@ def public_collection(username):
                            watched_count=watched_count, to_watch_count=to_watch_count, total_movies_count=total_movies_count,
                            read_count=read_count, to_read_count=to_read_count, total_books_count=total_books_count,
                            movie_type_counts=movie_type_counts, current_media_type=media_type_filter,
-                           book_category_counts=book_category_counts, current_book_category=book_category_filter)
+                           book_category_counts=book_category_counts, current_book_category=book_category_filter,
+                           all_time_favorites=all_time_favorites)
+
+
+# ================================================
+# --- All-Time Favorites Feature (Top 10) ---
+# ================================================
+
+def normalize_favorite_ranks(user_id):
+    """Normalize user's all-time favorites so ranks are sequential 1..N (strictly max 10)."""
+    favs = AllTimeFavorite.query.filter_by(user_id=user_id).order_by(AllTimeFavorite.rank.asc(), AllTimeFavorite.id.asc()).all()
+    if len(favs) > 10:
+        for excess in favs[10:]:
+            db.session.delete(excess)
+        favs = favs[:10]
+    for idx, fav in enumerate(favs):
+        fav.rank = idx + 1
+    db.session.commit()
+    return AllTimeFavorite.query.filter_by(user_id=user_id).order_by(AllTimeFavorite.rank.asc()).all()
+
+
+@app.route("/favorites/manage")
+@login_required
+def manage_favorites():
+    """Dedicated management view for curating and ranking All-Time Favorites."""
+    favs = AllTimeFavorite.query.filter_by(user_id=current_user.id).order_by(AllTimeFavorite.rank.asc()).all()
+    library_movies = Movie.query.filter_by(user_id=current_user.id).order_by(Movie.rating.desc(), Movie.date_added.desc()).all()
+    fav_movie_ids = {f.movie_id for f in favs}
+    return render_template("favorites_manage.html",
+                           favorites=favs,
+                           library_movies=library_movies,
+                           fav_movie_ids=fav_movie_ids)
+
+
+@app.route("/api/favorites/my")
+@login_required
+def api_my_favorites():
+    """Return JSON list of current user's All-Time Favorites."""
+    favs = AllTimeFavorite.query.filter_by(user_id=current_user.id).order_by(AllTimeFavorite.rank.asc()).all()
+    return jsonify({
+        "success": True,
+        "count": len(favs),
+        "max": 10,
+        "favorites": [f.to_dict() for f in favs]
+    })
+
+
+@app.route("/api/favorites/user/<username>")
+def api_user_favorites(username):
+    """Return public JSON list of any user's All-Time Favorites."""
+    u = User.query.filter_by(username=username).first()
+    if not u:
+        return jsonify({"success": False, "error": "User not found"}), 404
+    favs = AllTimeFavorite.query.filter_by(user_id=u.id).order_by(AllTimeFavorite.rank.asc()).all()
+    return jsonify({
+        "success": True,
+        "username": u.username,
+        "count": len(favs),
+        "favorites": [f.to_dict() for f in favs]
+    })
+
+
+@app.route("/api/favorites/library_candidates")
+@login_required
+def api_library_candidates():
+    """Return current user's movies with in_favorites indicator for selection."""
+    favs = AllTimeFavorite.query.filter_by(user_id=current_user.id).all()
+    fav_map = {f.movie_id: f.rank for f in favs}
+    movies = Movie.query.filter_by(user_id=current_user.id).order_by(Movie.rating.desc(), Movie.date_added.desc()).all()
+    results = []
+    for m in movies:
+        results.append({
+            "id": m.id,
+            "tmdb_id": m.tmdb_id,
+            "title": m.title,
+            "year": m.year,
+            "img_url": m.img_url,
+            "rating": m.rating,
+            "genre": m.genre or "",
+            "status": m.status,
+            "in_favorites": m.id in fav_map,
+            "favorite_rank": fav_map.get(m.id)
+        })
+    return jsonify(results)
+
+
+@app.route("/api/favorites/search_tmdb")
+@login_required
+def api_search_tmdb_favorites():
+    """Search TMDB for movies to directly add to All-Time Favorites."""
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify([])
+    try:
+        r = requests.get("https://api.themoviedb.org/3/search/movie",
+                         params={"api_key": TMDB_API_KEY, "query": query}, timeout=4)
+        if r.status_code != 200:
+            return jsonify([])
+        raw = r.json().get("results", [])[:10]
+
+        current_fav_tmdb_ids = {f.movie.tmdb_id for f in current_user.all_time_favorites if f.movie and f.movie.tmdb_id}
+
+        results = []
+        for i in raw:
+            tmdb_id_str = str(i.get("id"))
+            poster_path = i.get("poster_path")
+            poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else ""
+            vote_avg = round(float(i.get("vote_average", 0.0)), 1)
+            results.append({
+                "tmdb_id": tmdb_id_str,
+                "title": i.get("title", "Unknown"),
+                "year": (i.get("release_date") or "")[:4],
+                "img_url": poster_url,
+                "rating": vote_avg,
+                "overview": (i.get("overview") or "")[:150],
+                "in_favorites": tmdb_id_str in current_fav_tmdb_ids
+            })
+        return jsonify(results)
+    except Exception as e:
+        return jsonify([])
+
+
+@app.route("/api/favorites/add", methods=["POST"])
+@login_required
+def api_add_favorite():
+    """Add a movie from library or TMDB to user's All-Time Favorites (max 10)."""
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json
+    data = request.get_json(silent=True) or request.form
+
+    movie_id = data.get("movie_id")
+    tmdb_id = data.get("tmdb_id")
+    target_rank = data.get("rank")
+    if target_rank:
+        try:
+            target_rank = int(target_rank)
+        except ValueError:
+            target_rank = None
+
+    current_favs = AllTimeFavorite.query.filter_by(user_id=current_user.id).order_by(AllTimeFavorite.rank.asc()).all()
+    if len(current_favs) >= 10:
+        msg = "You have reached the maximum of 10 All-Time Favorites. Remove or replace one to add another."
+        if is_ajax:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("public_collection", username=current_user.username))
+
+    target_movie = None
+
+    # Option A: From existing library
+    if movie_id:
+        try:
+            target_movie = db.session.get(Movie, int(movie_id))
+        except (ValueError, TypeError):
+            target_movie = None
+        if not target_movie or target_movie.user_id != current_user.id:
+            msg = "Movie not found in your collection."
+            if is_ajax:
+                return jsonify({"success": False, "error": msg}), 404
+            flash(msg, "error")
+            return redirect(url_for("public_collection", username=current_user.username))
+
+    # Option B: From TMDB search
+    elif tmdb_id:
+        tmdb_id_str = str(tmdb_id)
+        # Check if user already has this movie in their library
+        existing_movie = Movie.query.filter_by(user_id=current_user.id, tmdb_id=tmdb_id_str).first()
+        if existing_movie:
+            target_movie = existing_movie
+        else:
+            # Fetch from TMDB and create movie record
+            try:
+                r = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id_str}",
+                                 params={"api_key": TMDB_API_KEY}, timeout=4)
+                if r.status_code == 200:
+                    d = r.json()
+                    poster_path = d.get("poster_path")
+                    img_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else ""
+                    vote_avg = round(float(d.get("vote_average", 0.0)), 1)
+                    rel_date = d.get("release_date") or ""
+                    year = rel_date[:4] if rel_date else ""
+                    genres = ", ".join([g.get("name", "") for g in d.get("genres", []) if g.get("name")])
+                    m_type = detect_media_type(d)
+                    target_movie = Movie(
+                        user_id=current_user.id,
+                        tmdb_id=tmdb_id_str,
+                        title=d.get("title", "Unknown"),
+                        year=year,
+                        img_url=img_url,
+                        rating=vote_avg,
+                        description=(d.get("overview") or "")[:950],
+                        genre=genres[:190],
+                        status="watched",
+                        media_type=m_type
+                    )
+                    db.session.add(target_movie)
+                    db.session.flush()
+            except Exception as e:
+                pass
+
+    if not target_movie:
+        msg = "Could not identify or add the selected movie."
+        if is_ajax:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("public_collection", username=current_user.username))
+
+    # Check for duplicate
+    duplicate = AllTimeFavorite.query.filter_by(user_id=current_user.id, movie_id=target_movie.id).first()
+    if duplicate:
+        msg = f'"{target_movie.title}" is already in your All-Time Favorites (Rank #{duplicate.rank}).'
+        if is_ajax:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("public_collection", username=current_user.username))
+
+    # Determine rank
+    next_rank = len(current_favs) + 1
+    assigned_rank = target_rank if (target_rank and 1 <= target_rank <= next_rank) else next_rank
+
+    new_fav = AllTimeFavorite(
+        user_id=current_user.id,
+        movie_id=target_movie.id,
+        rank=assigned_rank
+    )
+    db.session.add(new_fav)
+    db.session.commit()
+
+    normalized = normalize_favorite_ranks(current_user.id)
+    msg = f'Added "{target_movie.title}" to your All-Time Favorites!'
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "item": new_fav.to_dict(),
+            "favorites": [f.to_dict() for f in normalized]
+        })
+    flash(msg, "success")
+    return redirect(url_for("public_collection", username=current_user.username))
+
+
+@app.route("/api/favorites/remove/<int:fav_id>", methods=["POST", "DELETE"])
+@login_required
+def api_remove_favorite(fav_id):
+    """Remove a movie from All-Time Favorites and normalize ranks."""
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json
+    fav = db.session.get(AllTimeFavorite, fav_id)
+    if not fav or fav.user_id != current_user.id:
+        msg = "Favorite entry not found."
+        if is_ajax:
+            return jsonify({"success": False, "error": msg}), 404
+        flash(msg, "error")
+        return redirect(url_for("public_collection", username=current_user.username))
+
+    title = fav.title
+    db.session.delete(fav)
+    db.session.commit()
+
+    normalized = normalize_favorite_ranks(current_user.id)
+    msg = f'"{title}" removed from your All-Time Favorites.'
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "favorites": [f.to_dict() for f in normalized]
+        })
+    flash(msg, "success")
+    return redirect(url_for("public_collection", username=current_user.username))
+
+
+@app.route("/api/favorites/replace/<int:fav_id>", methods=["POST"])
+@login_required
+def api_replace_favorite(fav_id):
+    """Replace an existing All-Time Favorite slot with another movie."""
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json
+    fav = db.session.get(AllTimeFavorite, fav_id)
+    if not fav or fav.user_id != current_user.id:
+        msg = "Favorite entry not found."
+        if is_ajax:
+            return jsonify({"success": False, "error": msg}), 404
+        flash(msg, "error")
+        return redirect(url_for("public_collection", username=current_user.username))
+
+    data = request.get_json(silent=True) or request.form
+    new_movie_id = data.get("movie_id")
+    new_tmdb_id = data.get("tmdb_id")
+
+    replacement_movie = None
+    if new_movie_id:
+        try:
+            replacement_movie = db.session.get(Movie, int(new_movie_id))
+        except (ValueError, TypeError):
+            replacement_movie = None
+        if not replacement_movie or replacement_movie.user_id != current_user.id:
+            msg = "Replacement movie not found in your collection."
+            if is_ajax:
+                return jsonify({"success": False, "error": msg}), 404
+            flash(msg, "error")
+            return redirect(url_for("public_collection", username=current_user.username))
+    elif new_tmdb_id:
+        tmdb_id_str = str(new_tmdb_id)
+        existing = Movie.query.filter_by(user_id=current_user.id, tmdb_id=tmdb_id_str).first()
+        if existing:
+            replacement_movie = existing
+        else:
+            try:
+                r = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id_str}",
+                                 params={"api_key": TMDB_API_KEY}, timeout=4)
+                if r.status_code == 200:
+                    d = r.json()
+                    poster_path = d.get("poster_path")
+                    img_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else ""
+                    vote_avg = round(float(d.get("vote_average", 0.0)), 1)
+                    rel_date = d.get("release_date") or ""
+                    year = rel_date[:4] if rel_date else ""
+                    genres = ", ".join([g.get("name", "") for g in d.get("genres", []) if g.get("name")])
+                    m_type = detect_media_type(d)
+                    replacement_movie = Movie(
+                        user_id=current_user.id,
+                        tmdb_id=tmdb_id_str,
+                        title=d.get("title", "Unknown"),
+                        year=year,
+                        img_url=img_url,
+                        rating=vote_avg,
+                        description=(d.get("overview") or "")[:950],
+                        genre=genres[:190],
+                        status="watched",
+                        media_type=m_type
+                    )
+                    db.session.add(replacement_movie)
+                    db.session.flush()
+            except Exception as e:
+                pass
+
+    if not replacement_movie:
+        msg = "Could not identify replacement movie."
+        if is_ajax:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("public_collection", username=current_user.username))
+
+    # Check if replacement is already in another slot
+    duplicate = AllTimeFavorite.query.filter_by(user_id=current_user.id, movie_id=replacement_movie.id).first()
+    if duplicate and duplicate.id != fav.id:
+        msg = f'"{replacement_movie.title}" is already in your All-Time Favorites at Rank #{duplicate.rank}.'
+        if is_ajax:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("public_collection", username=current_user.username))
+
+    old_title = fav.title
+    fav.movie_id = replacement_movie.id
+    db.session.commit()
+
+    normalized = normalize_favorite_ranks(current_user.id)
+    msg = f'Replaced "{old_title}" with "{replacement_movie.title}" at Rank #{fav.rank}.'
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "favorites": [f.to_dict() for f in normalized]
+        })
+    flash(msg, "success")
+    return redirect(url_for("public_collection", username=current_user.username))
+
+
+@app.route("/api/favorites/reorder", methods=["POST"])
+@login_required
+def api_reorder_favorites():
+    """Update order of All-Time Favorites from drag & drop or move buttons."""
+    data = request.get_json(silent=True) or {}
+    order = data.get("order", [])
+    if not order or not isinstance(order, list):
+        return jsonify({"success": False, "error": "Invalid order list"}), 400
+
+    user_favs = {f.id: f for f in AllTimeFavorite.query.filter_by(user_id=current_user.id).all()}
+
+    for idx, fav_id in enumerate(order[:10]):
+        try:
+            fav_id_int = int(fav_id)
+        except (ValueError, TypeError):
+            continue
+        if fav_id_int in user_favs:
+            user_favs[fav_id_int].rank = idx + 1
+
+    db.session.commit()
+    normalized = normalize_favorite_ranks(current_user.id)
+    return jsonify({
+        "success": True,
+        "message": "Favorites reordered successfully.",
+        "favorites": [f.to_dict() for f in normalized]
+    })
 
 
 

@@ -1,0 +1,597 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage All-Time Favorites — DreamShelf{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width: 1200px;">
+    <!-- Header -->
+    <div class="dashboard-header" style="align-items: center;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <h1 class="page-title" style="margin-bottom: 0;">
+                    <i class="fas fa-crown" style="color:var(--gold);"></i> Manage All-Time Favorites
+                </h1>
+                <span class="favorites-counter-pill {% if favorites|length == 10 %}full{% endif %}" id="manageCountPill">
+                    <span id="manageCountNum">{{ favorites|length }}</span> / 10 Selected
+                </span>
+            </div>
+            <p class="page-subtitle">Rank your top 10 films from #1 to #10. Drag cards or use the arrows to reorder. The #1 movie is your signature favorite.</p>
+        </div>
+
+        <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+            <a href="{{ url_for('public_collection', username=current_user.username) }}" class="btn-secondary" style="border-radius: 10px; font-weight: 600;">
+                <i class="fas fa-user-circle"></i> View on Profile
+            </a>
+            <a href="{{ url_for('dashboard') }}" class="btn-secondary" style="border-radius: 10px; font-weight: 600;">
+                <i class="fas fa-th-large"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Alert / Toast Banner Container -->
+    <div id="favAlertBox" style="display: none; margin-bottom: 1.5rem; padding: 0.9rem 1.2rem; border-radius: 12px; font-size: 0.88rem; font-weight: 600;"></div>
+
+    <!-- 2-Column Curation Cockpit -->
+    <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 2rem; align-items: start;">
+        
+        <!-- Left Column: The 10 Slots (Drag & Drop + Up/Down) -->
+        <div class="fav-slots-panel">
+            <div class="fav-slots-header">
+                <span style="font-size: 0.95rem; font-weight: 800; color: #ffffff;">
+                    <i class="fas fa-list-ol" style="color:var(--accent);"></i> Your Ranked Top 10 List
+                </span>
+                <span style="font-size: 0.76rem; color: var(--text-muted);">
+                    Drag rows or use ▲ ▼ to arrange
+                </span>
+            </div>
+
+            <div class="fav-slots-list" id="manageSlotsList">
+                <!-- Dynamically rendered by JS -->
+            </div>
+        </div>
+
+        <!-- Right Column: Add Movie (Library & TMDB Search) -->
+        <div class="fav-add-section">
+            <div style="margin-bottom: 1.2rem;">
+                <h3 style="font-size: 1.05rem; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-plus-circle" style="color:var(--accent);"></i> Add to Your Top 10
+                </h3>
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">
+                    Choose a movie from your library or search TMDB to add it directly.
+                </p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="fav-tab-nav">
+                <button type="button" class="fav-tab-btn active" id="tabBtnLibrary" onclick="switchAddTab('library')">
+                    <i class="fas fa-layer-group"></i> From My Library
+                </button>
+                <button type="button" class="fav-tab-btn" id="tabBtnTmdb" onclick="switchAddTab('tmdb')">
+                    <i class="fas fa-search"></i> Search TMDB (API)
+                </button>
+            </div>
+
+            <!-- Tab 1: Library Candidates -->
+            <div id="panelLibrary">
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="librarySearchInput" class="search-inline" style="width: 100%; border-radius: 10px;"
+                           placeholder="Filter library movies by title..." oninput="filterLibraryCandidates(this.value)">
+                </div>
+                <div class="fav-candidates-scroll" id="libraryCandidatesList" style="max-height: 480px;">
+                    <div style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem;">
+                        <i class="fas fa-spinner fa-spin"></i> Loading your movie library...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: TMDB Direct Search -->
+            <div id="panelTmdb" style="display: none;">
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="tmdbSearchInput" class="search-inline" style="width: 100%; border-radius: 10px;"
+                           placeholder="Type movie title to search TMDB..." oninput="handleTmdbSearch(this.value)">
+                </div>
+                <div class="fav-candidates-scroll" id="tmdbCandidatesList" style="max-height: 480px;">
+                    <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.85rem;">
+                        <i class="fas fa-film" style="font-size: 2rem; opacity: 0.3; margin-bottom: 0.6rem; display: block;"></i>
+                        Type a movie title above to search millions of films on TMDB.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Responsive breakdown for 2-column layout on smaller screens -->
+<style>
+@media (max-width: 900px) {
+    div[style*="grid-template-columns: 1.15fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+
+<script>
+let currentFavorites = [];
+let libraryCandidates = [];
+let draggedIndex = null;
+let replacingSlotId = null;
+let tmdbDebounceTimer = null;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadFavorites();
+    loadLibraryCandidates();
+});
+
+// Load user favorites from API
+function loadFavorites() {
+    fetch('/api/favorites/my', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                currentFavorites = data.favorites || [];
+                renderSlots();
+                updateCounter();
+                updateLibraryInFavoritesStatus();
+            }
+        })
+        .catch(err => console.error('Failed to load favorites', err));
+}
+
+// Load user library movies
+function loadLibraryCandidates() {
+    fetch('/api/favorites/library_candidates', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json())
+        .then(data => {
+            libraryCandidates = data || [];
+            renderLibraryCandidates(libraryCandidates);
+        })
+        .catch(err => console.error('Failed to load library candidates', err));
+}
+
+// Render the 10 slots
+function renderSlots() {
+    const container = document.getElementById('manageSlotsList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Render up to 10 slots
+    for (let i = 0; i < 10; i++) {
+        const rank = i + 1;
+        const fav = currentFavorites[i];
+
+        if (fav) {
+            const isRank1 = rank === 1;
+            const row = document.createElement('div');
+            row.className = 'fav-slot-row';
+            row.draggable = true;
+            row.dataset.index = i;
+            row.dataset.id = fav.id;
+
+            row.innerHTML = `
+                <div class="fav-slot-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></div>
+                <div class="fav-slot-rank-pill ${isRank1 ? 'rank-1' : ''}">${isRank1 ? '<i class="fas fa-crown"></i> 1' : '#' + rank}</div>
+                ${fav.img_url ? `<img src="${fav.img_url}" class="fav-slot-poster" alt="${fav.title}" loading="lazy">` : `<div class="fav-slot-poster" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.8rem;"><i class="fas fa-film"></i></div>`}
+                <div class="fav-slot-info">
+                    <div class="fav-slot-title" title="${fav.title}">${fav.title}</div>
+                    <div class="fav-slot-sub">${fav.year || '—'} ${fav.rating && fav.rating > 0 ? `• <span style="color:var(--gold);">★ ${fav.rating}</span>` : ''}</div>
+                </div>
+                <div class="fav-slot-actions">
+                    <button type="button" class="btn-slot-icon" onclick="moveFavorite(${i}, -1)" title="Move Up" ${i === 0 ? 'disabled style="opacity:0.25; cursor:not-allowed;"' : ''}><i class="fas fa-chevron-up"></i></button>
+                    <button type="button" class="btn-slot-icon" onclick="moveFavorite(${i}, 1)" title="Move Down" ${i === currentFavorites.length - 1 ? 'disabled style="opacity:0.25; cursor:not-allowed;"' : ''}><i class="fas fa-chevron-down"></i></button>
+                    <button type="button" class="btn-slot-icon" onclick="promptReplaceSlot(${fav.id}, '${fav.title.replace(/'/g, "\\'")}')" title="Replace Movie"><i class="fas fa-sync-alt"></i></button>
+                    <button type="button" class="btn-slot-icon remove" onclick="removeFavorite(${fav.id})" title="Remove"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+
+            // HTML5 Drag & Drop handlers
+            row.addEventListener('dragstart', handleDragStart);
+            row.addEventListener('dragover', handleDragOver);
+            row.addEventListener('drop', handleDrop);
+            row.addEventListener('dragend', handleDragEnd);
+
+            container.appendChild(row);
+        } else {
+            // Empty slot placeholder
+            const empty = document.createElement('div');
+            empty.className = 'fav-slot-empty';
+            empty.innerHTML = `
+                <div style="width:32px; height:32px; border-radius:8px; border:1px dashed rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text-faint); font-size:0.75rem;">#${rank}</div>
+                <span style="flex:1;">Empty Slot #${rank}</span>
+                <span style="font-size:0.72rem; color:var(--text-faint);"><i class="fas fa-arrow-right"></i> Select from right panel to fill</span>
+            `;
+            container.appendChild(empty);
+        }
+    }
+}
+
+// Drag & Drop logic
+function handleDragStart(e) {
+    draggedIndex = parseInt(this.dataset.index);
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const row = e.target.closest('.fav-slot-row');
+    if (row && row !== this) {
+        document.querySelectorAll('.fav-slot-row').forEach(r => r.classList.remove('drag-over'));
+        row.classList.add('drag-over');
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    const targetRow = e.target.closest('.fav-slot-row');
+    if (!targetRow) return;
+    const targetIndex = parseInt(targetRow.dataset.index);
+
+    if (draggedIndex !== null && draggedIndex !== targetIndex) {
+        // Swap or reorder array
+        const item = currentFavorites.splice(draggedIndex, 1)[0];
+        currentFavorites.splice(targetIndex, 0, item);
+        renderSlots();
+        syncReorder();
+    }
+}
+
+function handleDragEnd() {
+    this.classList.remove('dragging');
+    document.querySelectorAll('.fav-slot-row').forEach(r => r.classList.remove('drag-over'));
+}
+
+// Move up or down
+function moveFavorite(index, direction) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= currentFavorites.length) return;
+    const item = currentFavorites.splice(index, 1)[0];
+    currentFavorites.splice(targetIndex, 0, item);
+    renderSlots();
+    syncReorder();
+}
+
+// Sync reordered list to backend
+function syncReorder() {
+    const order = currentFavorites.map(f => f.id);
+    fetch('/api/favorites/reorder', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ order: order })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            currentFavorites = data.favorites || [];
+            renderSlots();
+            showAlert('Ranks updated and saved.', 'success');
+        } else {
+            showAlert(data.error || 'Failed to update ranks', 'error');
+        }
+    })
+    .catch(() => showAlert('Failed to update ranks', 'error'));
+}
+
+// Remove favorite
+function removeFavorite(favId) {
+    fetch(`/api/favorites/remove/${favId}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            currentFavorites = data.favorites || [];
+            renderSlots();
+            updateCounter();
+            updateLibraryInFavoritesStatus();
+            showAlert(data.message || 'Removed from All-Time Favorites.', 'success');
+        } else {
+            showAlert(data.error || 'Failed to remove', 'error');
+        }
+    })
+    .catch(() => showAlert('Failed to remove favorite', 'error'));
+}
+
+// Prompt replace slot
+function promptReplaceSlot(favId, movieTitle) {
+    replacingSlotId = favId;
+    showAlert(`Select a replacement for "${movieTitle}" from the panel on the right.`, 'info');
+    // Scroll right panel into view on mobile
+    const panel = document.querySelector('.fav-add-section');
+    if (panel) panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Add favorite from Library
+function addFavoriteFromLibrary(movieId) {
+    if (replacingSlotId) {
+        // Replace existing slot
+        replaceFavorite(replacingSlotId, { movie_id: movieId });
+        return;
+    }
+
+    if (currentFavorites.length >= 10) {
+        showAlert('Your Top 10 is full! Remove or replace a movie to add another.', 'error');
+        return;
+    }
+
+    fetch('/api/favorites/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ movie_id: movieId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            currentFavorites = data.favorites || [];
+            renderSlots();
+            updateCounter();
+            updateLibraryInFavoritesStatus();
+            showAlert(data.message, 'success');
+        } else {
+            showAlert(data.error || 'Failed to add', 'error');
+        }
+    })
+    .catch(() => showAlert('Failed to add movie', 'error'));
+}
+
+// Add favorite from TMDB
+function addFavoriteFromTmdb(tmdbId) {
+    if (replacingSlotId) {
+        replaceFavorite(replacingSlotId, { tmdb_id: tmdbId });
+        return;
+    }
+
+    if (currentFavorites.length >= 10) {
+        showAlert('Your Top 10 is full! Remove or replace a movie to add another.', 'error');
+        return;
+    }
+
+    const btn = document.getElementById(`tmdb-add-btn-${tmdbId}`);
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+    }
+
+    fetch('/api/favorites/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ tmdb_id: tmdbId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            currentFavorites = data.favorites || [];
+            renderSlots();
+            updateCounter();
+            loadLibraryCandidates(); // Refresh library candidates since a new movie might have been created
+            showAlert(data.message, 'success');
+            if (btn) {
+                btn.innerHTML = '✓ In Top 10';
+            }
+        } else {
+            showAlert(data.error || 'Failed to add', 'error');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '+ Add';
+            }
+        }
+    })
+    .catch(() => {
+        showAlert('Failed to add movie', 'error');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '+ Add';
+        }
+    });
+}
+
+// Execute replacement
+function replaceFavorite(favId, payload) {
+    fetch(`/api/favorites/replace/${favId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        replacingSlotId = null;
+        if (data.success) {
+            currentFavorites = data.favorites || [];
+            renderSlots();
+            updateCounter();
+            updateLibraryInFavoritesStatus();
+            loadLibraryCandidates();
+            showAlert(data.message, 'success');
+        } else {
+            showAlert(data.error || 'Failed to replace', 'error');
+        }
+    })
+    .catch(() => {
+        replacingSlotId = null;
+        showAlert('Failed to replace movie', 'error');
+    });
+}
+
+// Switch between Library and TMDB tabs
+function switchAddTab(tab) {
+    const btnLib = document.getElementById('tabBtnLibrary');
+    const btnTmdb = document.getElementById('tabBtnTmdb');
+    const panelLib = document.getElementById('panelLibrary');
+    const panelTmdb = document.getElementById('panelTmdb');
+
+    if (tab === 'library') {
+        btnLib.classList.add('active');
+        btnTmdb.classList.remove('active');
+        panelLib.style.display = 'block';
+        panelTmdb.style.display = 'none';
+    } else {
+        btnTmdb.classList.add('active');
+        btnLib.classList.remove('active');
+        panelTmdb.style.display = 'block';
+        panelLib.style.display = 'none';
+    }
+}
+
+// Render Library Candidates
+function renderLibraryCandidates(items) {
+    const container = document.getElementById('libraryCandidatesList');
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem;">
+                No matching movies found in your collection.
+            </div>
+        `;
+        return;
+    }
+
+    const favMovieIds = new Set(currentFavorites.map(f => f.movie_id));
+
+    container.innerHTML = items.map(m => {
+        const inFav = favMovieIds.has(m.id);
+        return `
+            <div class="candidate-item-card">
+                ${m.img_url ? `<img src="${m.img_url}" class="candidate-poster" alt="${m.title}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-surface); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
+                <div class="candidate-info">
+                    <div class="candidate-title" title="${m.title}">${m.title}</div>
+                    <div class="candidate-sub">${m.year || '—'} ${m.rating && m.rating > 0 ? `• <span style="color:var(--gold);">★ ${m.rating}</span>` : ''}</div>
+                </div>
+                <button type="button" class="btn-candidate-add" onclick="addFavoriteFromLibrary(${m.id})" ${inFav ? 'disabled' : ''}>
+                    ${inFav ? '✓ In Top 10' : '+ Add'}
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Filter library candidates
+function filterLibraryCandidates(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+        renderLibraryCandidates(libraryCandidates);
+        return;
+    }
+    const filtered = libraryCandidates.filter(m => (m.title || '').toLowerCase().includes(q));
+    renderLibraryCandidates(filtered);
+}
+
+// Update library candidate buttons
+function updateLibraryInFavoritesStatus() {
+    renderLibraryCandidates(libraryCandidates);
+}
+
+// TMDB Live Search with debounce
+function handleTmdbSearch(val) {
+    clearTimeout(tmdbDebounceTimer);
+    const query = val.trim();
+    const container = document.getElementById('tmdbCandidatesList');
+    if (!query) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.85rem;">
+                <i class="fas fa-film" style="font-size: 2rem; opacity: 0.3; margin-bottom: 0.6rem; display: block;"></i>
+                Type a movie title above to search millions of films on TMDB.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem;">
+            <i class="fas fa-spinner fa-spin"></i> Searching TMDB for "${query}"...
+        </div>
+    `;
+
+    tmdbDebounceTimer = setTimeout(() => {
+        fetch(`/api/favorites/search_tmdb?q=${encodeURIComponent(query)}`)
+            .then(r => r.json())
+            .then(results => {
+                if (!results || results.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--text-muted); font-size:0.85rem;">No films found on TMDB for "${query}".</div>`;
+                    return;
+                }
+
+                const currentTmdbIds = new Set(currentFavorites.map(f => f.tmdb_id).filter(Boolean));
+
+                container.innerHTML = results.map(i => {
+                    const inFav = currentTmdbIds.has(i.tmdb_id) || i.in_favorites;
+                    return `
+                        <div class="candidate-item-card">
+                            ${i.img_url ? `<img src="${i.img_url}" class="candidate-poster" alt="${i.title}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-surface); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
+                            <div class="candidate-info">
+                                <div class="candidate-title" title="${i.title}">${i.title}</div>
+                                <div class="candidate-sub">${i.year || '—'} ${i.rating && i.rating > 0 ? `• <span style="color:var(--gold);">★ ${i.rating}</span>` : ''}</div>
+                            </div>
+                            <button type="button" class="btn-candidate-add" id="tmdb-add-btn-${i.tmdb_id}" onclick="addFavoriteFromTmdb('${i.tmdb_id}')" ${inFav ? 'disabled' : ''}>
+                                ${inFav ? '✓ In Top 10' : '+ Add'}
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            })
+            .catch(() => {
+                container.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--text-muted); font-size:0.85rem;">Failed to fetch from TMDB. Check connection.</div>`;
+            });
+    }, 350);
+}
+
+// Update slot counter
+function updateCounter() {
+    const pill = document.getElementById('manageCountPill');
+    const num = document.getElementById('manageCountNum');
+    if (num) num.textContent = currentFavorites.length;
+    if (pill) {
+        if (currentFavorites.length === 10) {
+            pill.classList.add('full');
+        } else {
+            pill.classList.remove('full');
+        }
+    }
+}
+
+// Alert banner display
+function showAlert(msg, type = 'info') {
+    const box = document.getElementById('favAlertBox');
+    if (!box) return;
+    box.style.display = 'block';
+
+    if (type === 'success') {
+        box.style.background = 'rgba(16, 185, 129, 0.15)';
+        box.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+        box.style.color = '#34d399';
+    } else if (type === 'error') {
+        box.style.background = 'rgba(239, 68, 68, 0.15)';
+        box.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+        box.style.color = '#f87171';
+    } else {
+        box.style.background = 'rgba(37, 99, 235, 0.15)';
+        box.style.border = '1px solid rgba(59, 130, 246, 0.4)';
+        box.style.color = '#93c5fd';
+    }
+
+    box.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i> ${msg}`;
+
+    if (type !== 'info') {
+        setTimeout(() => {
+            box.style.display = 'none';
+        }, 4000);
+    }
+}
+</script>
+{% endblock %}
+
