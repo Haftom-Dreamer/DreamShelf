@@ -319,7 +319,7 @@
                                 {% else %}
                                 <span class="type-tag movie"><i class="fas fa-film"></i> Movie</span>
                                 {% endif %}
-                                {% if movie.rating %}<span class="rating-chip">⭐ {{ movie.rating }}</span>{% endif %}
+                                {% if movie.rating and movie.rating > 0 %}<span class="rating-chip">⭐ {{ movie.rating }}</span>{% endif %}
                             </div>
                         </div>
                     </div>
@@ -364,7 +364,7 @@
                                     <i class="fas {{ 'fa-check' if book.status == 'read' else 'fa-bookmark' }}"></i>
                                     {{ 'Read' if book.status == 'read' else 'To Read' }}
                                 </span>
-                                {% if book.rating %}<span class="rating-chip">⭐ {{ book.rating }}</span>{% endif %}
+                                {% if book.rating and book.rating > 0 %}<span class="rating-chip">⭐ {{ book.rating }}</span>{% endif %}
                             </div>
                         </div>
                     </div>

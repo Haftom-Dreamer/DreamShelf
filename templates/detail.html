@@ -43,9 +43,15 @@
                 <span class="type-tag fiction"><i class="fas fa-book"></i> Fiction</span>
                 {% endif %}
             {% endif %}
+            {% if item.rating and item.rating > 0 %}
             <div style="background:rgba(255,255,255,0.1); padding:0.2rem 0.8rem; border-radius:30px; font-weight:bold; color:#ffb703;">
                 ⭐ {{ item.rating }}/10
             </div>
+            {% else %}
+            <div style="background:rgba(255,255,255,0.06); padding:0.2rem 0.8rem; border-radius:30px; font-weight:500; color:var(--text-muted);">
+                Not rated yet
+            </div>
+            {% endif %}
         </div>
 
         <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem;">{{ item.owner.username }}'s Review</h3>

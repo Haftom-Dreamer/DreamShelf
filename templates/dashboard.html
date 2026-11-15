@@ -68,7 +68,7 @@
         <a href="{{ url_for('collection', tab='movies', sort='rating') }}" class="stat-card rating-avg" title="View Rated Movies">
             <div class="stat-icon"><i class="fas fa-star"></i></div>
             <div class="stat-body">
-                <div class="stat-number">{{ avg_movie_rating }}</div>
+                <div class="stat-number">{% if avg_movie_rating and avg_movie_rating > 0 %}{{ avg_movie_rating }}{% else %}—{% endif %}</div>
                 <div class="stat-label">Avg Movie Rating</div>
             </div>
             <div class="stat-arrow"><i class="fas fa-arrow-right"></i></div>
@@ -116,7 +116,7 @@
                             {% if entry.item.status in ['watched', 'read'] %}✅{% else %}🕐{% endif %}
                             {{ entry.item.status | replace('_', ' ') | title }}
                         </span>
-                        {% if entry.item.rating %}
+                        {% if entry.item.rating and entry.item.rating > 0 %}
                         <span class="star-mini">⭐ {{ entry.item.rating }}/10</span>
                         {% endif %}
                     </div>

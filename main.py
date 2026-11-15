@@ -640,11 +640,17 @@ def feed():
         for m in u.movies:
             feed_items.append({"action": "added the movie", "item": m, "user": u, "date": m.date_added})
             if m.status == "watched" and m.date_watched:
-                feed_items.append({"action": f"watched and rated ⭐ {m.rating}", "item": m, "user": u, "date": m.date_watched})
+                if m.rating and m.rating > 0:
+                    feed_items.append({"action": f"watched and rated ⭐ {m.rating}", "item": m, "user": u, "date": m.date_watched})
+                else:
+                    feed_items.append({"action": "watched", "item": m, "user": u, "date": m.date_watched})
         for b in u.books:
             feed_items.append({"action": "added the book", "item": b, "user": u, "date": b.date_added})
             if b.status == "read" and b.date_read:
-                feed_items.append({"action": f"read and rated ⭐ {b.rating}", "item": b, "user": u, "date": b.date_read})
+                if b.rating and b.rating > 0:
+                    feed_items.append({"action": f"read and rated ⭐ {b.rating}", "item": b, "user": u, "date": b.date_read})
+                else:
+                    feed_items.append({"action": "read", "item": b, "user": u, "date": b.date_read})
     
     feed_items.sort(key=lambda x: x["date"] or date.min, reverse=True)
     return render_template("feed.html", feed_items=feed_items[:50])
@@ -740,6 +746,10 @@ def dashboard():
     all_items.sort(key=lambda x: x["date"] or date.min, reverse=True)
     recent = all_items[:6]
 
+    # --- Average rating (strictly exclude unrated items where rating is 0 or None) ---
+    rated_movies = [m for m in watched if m.rating is not None and m.rating > 0]
+    avg_movie_rating = round(sum(m.rating for m in rated_movies) / len(rated_movies), 1) if rated_movies else 0.0
+
     return render_template("dashboard.html",
         watched_count=len(watched),
         to_watch_count=len(to_watch),
@@ -748,7 +758,7 @@ def dashboard():
         movies_this_month=len(movies_this_month),
         books_this_month=len(books_this_month),
         recent=recent,
-        avg_movie_rating=round(sum(m.rating for m in watched if m.rating) / max(len(watched), 1), 1),
+        avg_movie_rating=avg_movie_rating,
         streak=streak
     )
 
@@ -821,7 +831,8 @@ def analytics():
     era_labels = list(era_counts.keys())
     era_data = list(era_counts.values())
     
-    top_items = sorted(watched + read_books, key=lambda x: x.rating or 0, reverse=True)[:5]
+    rated_items = [x for x in (watched + read_books) if x.rating is not None and x.rating > 0]
+    top_items = sorted(rated_items, key=lambda x: x.rating, reverse=True)[:5]
 
     return render_template("analytics.html",
         watched_count=len(watched),
@@ -1990,7 +2001,7 @@ def quick_add_movie():
     if not tmdb_id:
         if is_ajax:
             return jsonify({"success": False, "message": "Missing movie ID"}), 400
-        return redirect(url_for("discover", tab="movies"))
+        return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="movies"))
 
     # Don't add duplicates
     existing = Movie.query.filter_by(user_id=current_user.id, tmdb_id=str(tmdb_id)).first()
@@ -1998,7 +2009,7 @@ def quick_add_movie():
         if is_ajax:
             return jsonify({"success": False, "already_exists": True, "message": f'"{existing.title}" is already in your collection.'})
         flash(f'"{existing.title}" is already in your collection.', "error")
-        return redirect(url_for("discover", tab="movies"))
+        return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="movies"))
 
     try:
         is_tv = req_type == "series"
@@ -2054,7 +2065,7 @@ def quick_add_movie():
             return jsonify({"success": False, "message": str(e)}), 500
         flash(f"Could not add movie: {str(e)}", "error")
 
-    return redirect(url_for("discover", tab="movies"))
+    return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="movies"))
 
 
 @app.route("/quick_add_book")
@@ -2073,7 +2084,7 @@ def quick_add_book():
     if not google_id and not title:
         if is_ajax:
             return jsonify({"success": False, "message": "Missing book ID or title"}), 400
-        return redirect(url_for("discover", tab="books"))
+        return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="books"))
 
     # Check duplicates by id or title
     existing = None
@@ -2086,7 +2097,7 @@ def quick_add_book():
         if is_ajax:
             return jsonify({"success": False, "already_exists": True, "message": f'"{existing.title}" is already in your collection.'})
         flash(f'"{existing.title}" is already in your collection.', "error")
-        return redirect(url_for("discover", tab="books"))
+        return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="books"))
 
     # If parameters passed directly from card, add immediately
     if title and author and img_url:
@@ -2115,7 +2126,7 @@ def quick_add_book():
                 "message": f'"{new_book.title}" added to your collection!'
             })
         flash(f'"{new_book.title}" added to your collection!', "success")
-        return redirect(url_for("discover", tab="books"))
+        return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="books"))
 
     # If in curated bank, use curated details
     for b in CURATED_BOOKS:
@@ -2145,7 +2156,7 @@ def quick_add_book():
                     "message": f'"{new_book.title}" added to your collection!'
                 })
             flash(f'"{new_book.title}" added to your collection!', "success")
-            return redirect(url_for("discover", tab="books"))
+            return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="books"))
 
     # Otherwise fetch from Open Library or Google Books
     try:
@@ -2215,7 +2226,7 @@ def quick_add_book():
             return jsonify({"success": False, "message": str(e)}), 500
         flash(f"Could not add book: {str(e)}", "error")
 
-    return redirect(url_for("discover", tab="books"))
+    return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="books"))
 
 
 # =====================
@@ -2258,7 +2269,7 @@ def select():
     existing = Movie.query.filter_by(user_id=current_user.id, tmdb_id=str(tmdb_id)).first()
     if existing:
         flash(f'"{existing.title}" is already in your collection.', "error")
-        return redirect(url_for("collection", tab="movies"))
+        return redirect(request.args.get("return_url") or request.referrer or url_for("collection", tab="movies"))
 
     is_tv = req_type == "series"
     d = None
@@ -2301,8 +2312,8 @@ def select():
     db.session.commit()
     if status == "to_watch":
         flash(f'"{new_movie.title}" added to your watchlist!', "success")
-        return redirect(url_for("collection", tab="movies"))
-    return redirect(url_for("edit", movie_id=new_movie.id))
+        return redirect(request.args.get("return_url") or url_for("collection", tab="movies", status="to_watch"))
+    return redirect(request.args.get("return_url") or url_for("edit", movie_id=new_movie.id))
 
 
 @app.route("/edit/<int:movie_id>", methods=["GET", "POST"])
@@ -2352,15 +2363,116 @@ def edit(movie_id):
     return render_template("edit.html", item=movie, form=form, item_type="Movie")
 
 
-@app.route("/delete/<int:movie_id>")
+@app.route("/delete/<int:movie_id>", methods=["GET", "POST", "DELETE"])
 @login_required
 def delete(movie_id):
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
     movie = db.session.get(Movie, movie_id)
     if movie and movie.user_id == current_user.id:
+        title = movie.title
         db.session.delete(movie)
         db.session.commit()
-        flash("Movie removed.", "success")
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "item_id": movie_id,
+                "item_type": "movie",
+                "message": f'"{title}" removed from collection.',
+                "watched_count": Movie.query.filter_by(user_id=current_user.id, status="watched").count(),
+                "to_watch_count": Movie.query.filter_by(user_id=current_user.id, status="to_watch").count(),
+                "total_count": Movie.query.filter_by(user_id=current_user.id).count(),
+            })
+        flash(f'"{title}" removed.', "success")
+    else:
+        if is_ajax:
+            return jsonify({"success": False, "error": "Movie not found"}), 404
+        flash("Movie not found.", "error")
+
+    return_url = request.args.get("return_url") or request.referrer
+    if return_url:
+        return redirect(return_url)
     return redirect(url_for("collection", tab="movies"))
+
+
+@app.route("/toggle_status/<string:item_type>/<int:item_id>", methods=["GET", "POST"])
+@login_required
+def toggle_status(item_type, item_id):
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
+
+    if item_type == "movie":
+        movie = db.session.get(Movie, item_id)
+        if not movie or movie.user_id != current_user.id:
+            if is_ajax:
+                return jsonify({"success": False, "error": "Movie not found"}), 404
+            flash("Movie not found.", "error")
+            return redirect(url_for("collection", tab="movies"))
+
+        new_status = "to_watch" if movie.status == "watched" else "watched"
+        movie.status = new_status
+        if new_status == "watched":
+            if not movie.date_watched:
+                movie.date_watched = date.today()
+        else:
+            movie.date_watched = None
+        db.session.commit()
+
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "item_type": "movie",
+                "item_id": item_id,
+                "new_status": new_status,
+                "label": "Watched" if new_status == "watched" else "To Watch",
+                "icon": "fa-check" if new_status == "watched" else "fa-clock",
+                "toggle_title": "Mark as To Watch" if new_status == "watched" else "Mark as Watched",
+                "message": f'Marked "{movie.title}" as {"Watched" if new_status == "watched" else "To Watch"}',
+                "watched_count": Movie.query.filter_by(user_id=current_user.id, status="watched").count(),
+                "to_watch_count": Movie.query.filter_by(user_id=current_user.id, status="to_watch").count(),
+                "total_count": Movie.query.filter_by(user_id=current_user.id).count(),
+            })
+        flash(f'Marked "{movie.title}" as {"Watched" if new_status == "watched" else "To Watch"}.', "success")
+
+    elif item_type == "book":
+        book = db.session.get(Book, item_id)
+        if not book or book.user_id != current_user.id:
+            if is_ajax:
+                return jsonify({"success": False, "error": "Book not found"}), 404
+            flash("Book not found.", "error")
+            return redirect(url_for("collection", tab="books"))
+
+        new_status = "to_read" if book.status == "read" else "read"
+        book.status = new_status
+        if new_status == "read":
+            if not book.date_read:
+                book.date_read = date.today()
+        else:
+            book.date_read = None
+        db.session.commit()
+
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "item_type": "book",
+                "item_id": item_id,
+                "new_status": new_status,
+                "label": "Read" if new_status == "read" else "To Read",
+                "icon": "fa-check" if new_status == "read" else "fa-bookmark",
+                "toggle_title": "Mark as To Read" if new_status == "read" else "Mark as Read",
+                "message": f'Marked "{book.title}" as {"Read" if new_status == "read" else "To Read"}',
+                "read_count": Book.query.filter_by(user_id=current_user.id, status="read").count(),
+                "to_read_count": Book.query.filter_by(user_id=current_user.id, status="to_read").count(),
+                "total_count": Book.query.filter_by(user_id=current_user.id).count(),
+            })
+        flash(f'Marked "{book.title}" as {"Read" if new_status == "read" else "To Read"}.', "success")
+    else:
+        if is_ajax:
+            return jsonify({"success": False, "error": "Invalid item type"}), 400
+        return redirect(url_for("collection"))
+
+    return_url = request.args.get("return_url") or request.referrer
+    if return_url:
+        return redirect(return_url)
+    return redirect(url_for("collection", tab="movies" if item_type == "movie" else "books"))
 
 
 # =====================
@@ -2462,7 +2574,7 @@ def select_book():
     existing = Book.query.filter_by(user_id=current_user.id, google_id=book_id).first()
     if existing:
         flash(f'"{existing.title}" is already in your collection.', "error")
-        return redirect(url_for("collection", tab="books"))
+        return redirect(request.args.get("return_url") or request.referrer or url_for("collection", tab="books"))
 
     # 1. Check curated bank
     for b in CURATED_BOOKS:
@@ -2486,8 +2598,8 @@ def select_book():
             db.session.commit()
             if status == "to_read":
                 flash(f'"{new_book.title}" added to your reading list!', "success")
-                return redirect(url_for("collection", tab="books"))
-            return redirect(url_for("edit_book", book_id=new_book.id))
+                return redirect(request.args.get("return_url") or url_for("collection", tab="books", status="to_read"))
+            return redirect(request.args.get("return_url") or url_for("edit_book", book_id=new_book.id))
 
     # 2. Check Open Library
     if book_id.startswith("OL"):
@@ -2521,8 +2633,8 @@ def select_book():
             db.session.commit()
             if status == "to_read":
                 flash(f'"{new_book.title}" added to your reading list!', "success")
-                return redirect(url_for("collection", tab="books"))
-            return redirect(url_for("edit_book", book_id=new_book.id))
+                return redirect(request.args.get("return_url") or url_for("collection", tab="books", status="to_read"))
+            return redirect(request.args.get("return_url") or url_for("edit_book", book_id=new_book.id))
         except Exception:
             pass
 
@@ -2564,8 +2676,8 @@ def select_book():
 
         if status == "to_read":
             flash(f'"{new_book.title}" added to your reading list!', "success")
-            return redirect(url_for("collection", tab="books"))
-        return redirect(url_for("edit_book", book_id=new_book.id))
+            return redirect(request.args.get("return_url") or url_for("collection", tab="books", status="to_read"))
+        return redirect(request.args.get("return_url") or url_for("edit_book", book_id=new_book.id))
     except Exception as e:
         flash(f"Could not fetch book details: {str(e)}", "error")
         return redirect(url_for("add_book"))
@@ -2619,14 +2731,34 @@ def edit_book(book_id):
     return render_template("edit.html", item=book, form=form, item_type="Book")
 
 
-@app.route("/delete_book/<int:book_id>")
+@app.route("/delete_book/<int:book_id>", methods=["GET", "POST", "DELETE"])
 @login_required
 def delete_book(book_id):
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
     book = db.session.get(Book, book_id)
     if book and book.user_id == current_user.id:
+        title = book.title
         db.session.delete(book)
         db.session.commit()
-        flash("Book removed.", "success")
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "item_id": book_id,
+                "item_type": "book",
+                "message": f'"{title}" removed from collection.',
+                "read_count": Book.query.filter_by(user_id=current_user.id, status="read").count(),
+                "to_read_count": Book.query.filter_by(user_id=current_user.id, status="to_read").count(),
+                "total_count": Book.query.filter_by(user_id=current_user.id).count(),
+            })
+        flash(f'"{title}" removed.', "success")
+    else:
+        if is_ajax:
+            return jsonify({"success": False, "error": "Book not found"}), 404
+        flash("Book not found.", "error")
+
+    return_url = request.args.get("return_url") or request.referrer
+    if return_url:
+        return redirect(return_url)
     return redirect(url_for("collection", tab="books"))
 
 @app.route("/api/search_movie")

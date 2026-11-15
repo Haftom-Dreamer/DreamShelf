@@ -472,8 +472,9 @@ function quickAdd(event, btn, type, id, status) {
             }
         })
         .catch(err => {
-            // Fallback to standard navigation if fetch fails
-            window.location.href = btn.getAttribute('href') || url;
+            // Fallback to standard navigation if fetch fails, preserving page URL
+            const navUrl = btn.getAttribute('href') || url;
+            window.location.href = navUrl + (navUrl.includes('?') ? '&' : '?') + 'return_url=' + encodeURIComponent(window.location.href);
         });
 }
 
