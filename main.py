@@ -118,9 +118,53 @@ class Book(db.Model):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="to_read")
     genre: Mapped[str] = mapped_column(String(200), nullable=True, default="")
     custom_tags: Mapped[str] = mapped_column(String(250), nullable=True, default="")
+    category: Mapped[str] = mapped_column(String(50), nullable=False, default="fiction")
     date_added: Mapped[date] = mapped_column(Date, default=date.today)
     date_read: Mapped[date] = mapped_column(Date, nullable=True)
     owner: Mapped["User"] = relationship("User", back_populates="books")
+
+BOOK_CATEGORIES = {
+    "fiction": {
+        "label": "Fiction & Literature",
+        "icon": "fa-book",
+        "emoji": "📖",
+        "keywords": ["fiction", "fantasy", "sci-fi", "science fiction", "novel", "classic", "literature", "dystopian", "adventure", "mystery", "thriller", "drama", "romance", "poetry"]
+    },
+    "philosophy": {
+        "label": "Philosophy & Ethics",
+        "icon": "fa-brain",
+        "emoji": "🧠",
+        "keywords": ["philosophy", "stoic", "stoicism", "wisdom", "ethics", "morality", "meditations", "epistemology", "existential", "logic", "theology"]
+    },
+    "self_help": {
+        "label": "Self-Help & Growth",
+        "icon": "fa-seedling",
+        "emoji": "🌱",
+        "keywords": ["self-help", "habits", "productivity", "growth", "motivation", "success", "happiness", "discipline", "mindset", "personal growth", "self-management", "lifestyle"]
+    },
+    "business": {
+        "label": "Business & Finance",
+        "icon": "fa-chart-line",
+        "emoji": "💼",
+        "keywords": ["finance", "money", "business", "investing", "economics", "strategy", "management", "entrepreneur", "wealth", "marketing", "leadership"]
+    },
+    "non_fiction": {
+        "label": "Non-Fiction & Science",
+        "icon": "fa-globe",
+        "emoji": "🌍",
+        "keywords": ["non-fiction", "biography", "history", "science", "physics", "technology", "society", "politics", "psychology", "memoir", "culture", "nature", "anthropology"]
+    }
+}
+
+def detect_book_category(title="", genre="", description="", explicit_category=None):
+    if explicit_category in BOOK_CATEGORIES:
+        return explicit_category
+    text = f"{title or ''} {genre or ''} {description or ''}".lower()
+    for cat in ["philosophy", "self_help", "business", "non_fiction"]:
+        keywords = BOOK_CATEGORIES[cat]["keywords"]
+        if any(k in text for k in keywords):
+            return cat
+    return "fiction"
 
 with app.app_context():
     db.create_all()
@@ -137,6 +181,13 @@ with app.app_context():
     if "media_type" not in movie_cols:
         with db.engine.connect() as conn:
             conn.execute(text("ALTER TABLE movie ADD COLUMN media_type VARCHAR(30) NOT NULL DEFAULT 'movie'"))
+            conn.commit()
+
+    # Add category column to book table if missing
+    book_cols = [c["name"] for c in inspector.get_columns("book")]
+    if "category" not in book_cols:
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE book ADD COLUMN category VARCHAR(50) NOT NULL DEFAULT 'fiction'"))
             conn.commit()
 
     # One-time smart auto-categorization for existing animation/anime movies in DB
@@ -166,9 +217,69 @@ with app.app_context():
                 WHERE media_type = 'movie' 
                   AND LOWER(genre) LIKE '%animation%'
             """))
+
+            # Smart auto-categorization for existing books
+            conn.execute(text("""
+                UPDATE book
+                SET category = 'philosophy'
+                WHERE LOWER(genre) LIKE '%philosophy%'
+                   OR LOWER(genre) LIKE '%stoic%'
+                   OR LOWER(genre) LIKE '%ethics%'
+                   OR LOWER(genre) LIKE '%wisdom%'
+                   OR LOWER(title) LIKE '%courage to be disliked%'
+                   OR LOWER(title) LIKE '%meditations%'
+                   OR LOWER(title) LIKE '%beyond good and evil%'
+                   OR LOWER(title) LIKE '%48 laws of power%'
+            """))
+            conn.execute(text("""
+                UPDATE book
+                SET category = 'self_help'
+                WHERE (category = 'fiction' OR category IS NULL)
+                  AND (LOWER(genre) LIKE '%self-help%'
+                   OR LOWER(genre) LIKE '%habits%'
+                   OR LOWER(genre) LIKE '%productivity%'
+                   OR LOWER(genre) LIKE '%growth%'
+                   OR LOWER(genre) LIKE '%motivation%'
+                   OR LOWER(title) LIKE '%atomic habits%'
+                   OR LOWER(title) LIKE '%subtle art%'
+                   OR LOWER(title) LIKE '%deep work%'
+                   OR LOWER(title) LIKE '%can\'t hurt me%')
+            """))
+            conn.execute(text("""
+                UPDATE book
+                SET category = 'business'
+                WHERE (category = 'fiction' OR category IS NULL)
+                  AND (LOWER(genre) LIKE '%finance%'
+                   OR LOWER(genre) LIKE '%business%'
+                   OR LOWER(genre) LIKE '%money%'
+                   OR LOWER(genre) LIKE '%economics%'
+                   OR LOWER(genre) LIKE '%investing%'
+                   OR LOWER(title) LIKE '%psychology of money%'
+                   OR LOWER(title) LIKE '%rich dad%')
+            """))
+            conn.execute(text("""
+                UPDATE book
+                SET category = 'non_fiction'
+                WHERE (category = 'fiction' OR category IS NULL)
+                  AND (LOWER(genre) LIKE '%history%'
+                   OR LOWER(genre) LIKE '%science%'
+                   OR LOWER(genre) LIKE '%biography%'
+                   OR LOWER(genre) LIKE '%non-fiction%'
+                   OR LOWER(title) LIKE '%sapiens%'
+                   OR LOWER(title) LIKE '%thinking, fast and slow%')
+            """))
             conn.commit()
         except Exception:
             pass
+
+    try:
+        for b in Book.query.all():
+            det = detect_book_category(b.title, b.genre, b.description)
+            if b.category != det:
+                b.category = det
+        db.session.commit()
+    except Exception:
+        pass
     # Make password_hash nullable in SQLite (SQLite ignores NOT NULL on ALTER,
     # so existing rows stay intact; new Google-only rows will have NULL).
 
@@ -542,29 +653,35 @@ def feed():
 @app.route("/view/movie/<int:item_id>")
 def view_movie(item_id):
     movie = Movie.query.get_or_404(item_id)
-    tmdb_url = f"https://api.themoviedb.org/3/movie/{movie.tmdb_id}?api_key={TMDB_API_KEY}&append_to_response=credits,videos"
-    response = requests.get(tmdb_url).json()
-    
+    response = {}
     trailer_key = None
-    if "videos" in response and "results" in response["videos"]:
-        for video in response["videos"]["results"]:
-            if video["type"] == "Trailer" and video["site"] == "YouTube":
-                trailer_key = video["key"]
-                break
-                
     cast = []
-    if "credits" in response and "cast" in response["credits"]:
-        cast = response["credits"]["cast"][:6]
-        
     director = None
-    if "credits" in response and "crew" in response["credits"]:
-        for crew_member in response["credits"]["crew"]:
-            if crew_member["job"] == "Director":
-                director = crew_member["name"]
-                break
+    backdrop_url = movie.img_url
 
-    backdrop_path = response.get("backdrop_path")
-    backdrop_url = f"https://image.tmdb.org/t/p/original{backdrop_path}" if backdrop_path else movie.img_url
+    if movie.tmdb_id:
+        try:
+            tmdb_url = f"https://api.themoviedb.org/3/movie/{movie.tmdb_id}?api_key={TMDB_API_KEY}&append_to_response=credits,videos"
+            r = requests.get(tmdb_url, timeout=3)
+            if r.status_code == 200:
+                response = r.json()
+                if "videos" in response and "results" in response["videos"]:
+                    for video in response["videos"]["results"]:
+                        if video["type"] == "Trailer" and video["site"] == "YouTube":
+                            trailer_key = video["key"]
+                            break
+                if "credits" in response and "cast" in response["credits"]:
+                    cast = response["credits"]["cast"][:6]
+                if "credits" in response and "crew" in response["credits"]:
+                    for crew_member in response["credits"]["crew"]:
+                        if crew_member["job"] == "Director":
+                            director = crew_member["name"]
+                            break
+                backdrop_path = response.get("backdrop_path")
+                if backdrop_path:
+                    backdrop_url = f"https://image.tmdb.org/t/p/original{backdrop_path}"
+        except Exception:
+            pass
 
     return render_template("detail.html", item=movie, trailer_key=trailer_key, cast=cast, director=director, backdrop_url=backdrop_url, item_type="movie")
 
@@ -734,6 +851,7 @@ def collection():
     sort = request.args.get("sort", "newest")
     tag_filter = request.args.get("tag")
     media_type_filter = request.args.get("media_type")
+    book_category_filter = request.args.get("category") or (request.args.get("media_type") if tab == "books" else None) or (request.args.get("type") if tab == "books" else None)
 
     movie_q = Movie.query.filter_by(user_id=current_user.id)
     book_q = Book.query.filter_by(user_id=current_user.id)
@@ -747,8 +865,11 @@ def collection():
     elif status == "to_read":
         book_q = book_q.filter_by(status="to_read")
 
-    if media_type_filter:
+    if media_type_filter and media_type_filter != "all":
         movie_q = movie_q.filter_by(media_type=media_type_filter)
+
+    if book_category_filter and book_category_filter != "all":
+        book_q = book_q.filter_by(category=book_category_filter)
 
     if sort == "rating":
         movie_q = movie_q.order_by(Movie.rating.desc())
@@ -796,6 +917,45 @@ def collection():
         },
     }
 
+    # Book category counts with read/total breakdown (from full collection)
+    book_category_counts = {
+        "fiction": {
+            "label": "Fiction & Literature",
+            "emoji": "📖",
+            "total": Book.query.filter_by(user_id=current_user.id, category="fiction").count(),
+            "read": Book.query.filter_by(user_id=current_user.id, category="fiction", status="read").count(),
+            "to_read": Book.query.filter_by(user_id=current_user.id, category="fiction", status="to_read").count(),
+        },
+        "philosophy": {
+            "label": "Philosophy",
+            "emoji": "🧠",
+            "total": Book.query.filter_by(user_id=current_user.id, category="philosophy").count(),
+            "read": Book.query.filter_by(user_id=current_user.id, category="philosophy", status="read").count(),
+            "to_read": Book.query.filter_by(user_id=current_user.id, category="philosophy", status="to_read").count(),
+        },
+        "self_help": {
+            "label": "Self-Help",
+            "emoji": "🌱",
+            "total": Book.query.filter_by(user_id=current_user.id, category="self_help").count(),
+            "read": Book.query.filter_by(user_id=current_user.id, category="self_help", status="read").count(),
+            "to_read": Book.query.filter_by(user_id=current_user.id, category="self_help", status="to_read").count(),
+        },
+        "business": {
+            "label": "Business & Finance",
+            "emoji": "💼",
+            "total": Book.query.filter_by(user_id=current_user.id, category="business").count(),
+            "read": Book.query.filter_by(user_id=current_user.id, category="business", status="read").count(),
+            "to_read": Book.query.filter_by(user_id=current_user.id, category="business", status="to_read").count(),
+        },
+        "non_fiction": {
+            "label": "Non-Fiction",
+            "emoji": "🌍",
+            "total": Book.query.filter_by(user_id=current_user.id, category="non_fiction").count(),
+            "read": Book.query.filter_by(user_id=current_user.id, category="non_fiction", status="read").count(),
+            "to_read": Book.query.filter_by(user_id=current_user.id, category="non_fiction", status="to_read").count(),
+        },
+    }
+
     # Tag Processing
     all_tags = set()
     for m in movies:
@@ -814,7 +974,8 @@ def collection():
                            tab=tab, status=status, sort=sort, all_tags=all_tags, current_tag=tag_filter,
                            watched_count=watched_count, to_watch_count=to_watch_count, total_movies_count=total_movies_count,
                            read_count=read_count, to_read_count=to_read_count, total_books_count=total_books_count,
-                           movie_type_counts=movie_type_counts, current_media_type=media_type_filter)
+                           movie_type_counts=movie_type_counts, current_media_type=media_type_filter,
+                           book_category_counts=book_category_counts, current_book_category=book_category_filter)
 
 @app.route("/u/<username>")
 def public_collection(username):
@@ -827,6 +988,7 @@ def public_collection(username):
     status = request.args.get("status", "all")
     sort = request.args.get("sort", "newest")
     media_type_filter = request.args.get("media_type")
+    book_category_filter = request.args.get("category") or (request.args.get("media_type") if tab == "books" else None) or (request.args.get("type") if tab == "books" else None)
 
     movie_q = Movie.query.filter_by(user_id=user.id)
     book_q = Book.query.filter_by(user_id=user.id)
@@ -840,8 +1002,11 @@ def public_collection(username):
     elif status == "to_read":
         book_q = book_q.filter_by(status="to_read")
 
-    if media_type_filter:
+    if media_type_filter and media_type_filter != "all":
         movie_q = movie_q.filter_by(media_type=media_type_filter)
+
+    if book_category_filter and book_category_filter != "all":
+        book_q = book_q.filter_by(category=book_category_filter)
 
     if sort == "rating":
         movie_q = movie_q.order_by(Movie.rating.desc())
@@ -887,13 +1052,52 @@ def public_collection(username):
         },
     }
 
+    book_category_counts = {
+        "fiction": {
+            "label": "Fiction & Literature",
+            "emoji": "📖",
+            "total": Book.query.filter_by(user_id=user.id, category="fiction").count(),
+            "read": Book.query.filter_by(user_id=user.id, category="fiction", status="read").count(),
+            "to_read": Book.query.filter_by(user_id=user.id, category="fiction", status="to_read").count(),
+        },
+        "philosophy": {
+            "label": "Philosophy",
+            "emoji": "🧠",
+            "total": Book.query.filter_by(user_id=user.id, category="philosophy").count(),
+            "read": Book.query.filter_by(user_id=user.id, category="philosophy", status="read").count(),
+            "to_read": Book.query.filter_by(user_id=user.id, category="philosophy", status="to_read").count(),
+        },
+        "self_help": {
+            "label": "Self-Help",
+            "emoji": "🌱",
+            "total": Book.query.filter_by(user_id=user.id, category="self_help").count(),
+            "read": Book.query.filter_by(user_id=user.id, category="self_help", status="read").count(),
+            "to_read": Book.query.filter_by(user_id=user.id, category="self_help", status="to_read").count(),
+        },
+        "business": {
+            "label": "Business & Finance",
+            "emoji": "💼",
+            "total": Book.query.filter_by(user_id=user.id, category="business").count(),
+            "read": Book.query.filter_by(user_id=user.id, category="business", status="read").count(),
+            "to_read": Book.query.filter_by(user_id=user.id, category="business", status="to_read").count(),
+        },
+        "non_fiction": {
+            "label": "Non-Fiction",
+            "emoji": "🌍",
+            "total": Book.query.filter_by(user_id=user.id, category="non_fiction").count(),
+            "read": Book.query.filter_by(user_id=user.id, category="non_fiction", status="read").count(),
+            "to_read": Book.query.filter_by(user_id=user.id, category="non_fiction", status="to_read").count(),
+        },
+    }
+
     return render_template("public_collection.html", 
                            profile_user=user, 
                            movies=movies, books=books,
                            tab=tab, status=status, sort=sort,
                            watched_count=watched_count, to_watch_count=to_watch_count, total_movies_count=total_movies_count,
                            read_count=read_count, to_read_count=to_read_count, total_books_count=total_books_count,
-                           movie_type_counts=movie_type_counts, current_media_type=media_type_filter)
+                           movie_type_counts=movie_type_counts, current_media_type=media_type_filter,
+                           book_category_counts=book_category_counts, current_book_category=book_category_filter)
 
 
 
@@ -1486,17 +1690,32 @@ def get_trending_movies(movie_in_collection, page=1, category="all"):
     return trending
 
 
-def get_diverse_book_recommendations(user_books, book_in_collection, book_titles_in_collection, seed=0):
+def get_diverse_book_recommendations(user_books, book_in_collection, book_titles_in_collection, seed=0, category="all"):
     import random
     if not user_books:
         return []
 
+    rng = random.Random(seed) if seed else random.Random()
+
+    if category and category != "all":
+        matching = []
+        for b in CURATED_BOOKS:
+            title_clean = b["title"].lower().strip()
+            if title_clean in book_titles_in_collection or b["google_id"] in book_in_collection:
+                continue
+            cat = b.get("category") or detect_book_category(b["title"], b["genre"], b["overview"])
+            if cat == category:
+                matching.append(b)
+        rng.shuffle(matching)
+        return matching[:12]
+
     # Bucket candidate books by theme
     buckets = {
         "philosophy": [],
-        "fiction_scifi": [],
+        "fiction": [],
         "self_help": [],
-        "psychology_finance": []
+        "business": [],
+        "non_fiction": []
     }
 
     for b in CURATED_BOOKS:
@@ -1504,23 +1723,18 @@ def get_diverse_book_recommendations(user_books, book_in_collection, book_titles
         if title_clean in book_titles_in_collection or b["google_id"] in book_in_collection:
             continue
 
-        bg = b["genre"].lower()
-        if any(k in bg for k in BOOK_BUCKETS["philosophy"]):
-            buckets["philosophy"].append(b)
-        elif any(k in bg for k in BOOK_BUCKETS["fiction_scifi"]):
-            buckets["fiction_scifi"].append(b)
-        elif any(k in bg for k in BOOK_BUCKETS["self_help"]):
-            buckets["self_help"].append(b)
+        cat = b.get("category") or detect_book_category(b["title"], b["genre"], b["overview"])
+        if cat in buckets:
+            buckets[cat].append(b)
         else:
-            buckets["psychology_finance"].append(b)
+            buckets["fiction"].append(b)
 
     # Shuffle each bucket using seed
-    rng = random.Random(seed) if seed else random.Random()
     for k in buckets:
         rng.shuffle(buckets[k])
 
-    # Interleave across all 4 categories so the list contains a balanced blend
-    bucket_keys = ["philosophy", "fiction_scifi", "self_help", "psychology_finance"]
+    # Interleave across categories so the list contains a balanced blend
+    bucket_keys = ["philosophy", "fiction", "self_help", "business", "non_fiction"]
     if seed:
         shift = seed % len(bucket_keys)
         bucket_keys = bucket_keys[shift:] + bucket_keys[:shift]
@@ -1535,17 +1749,26 @@ def get_diverse_book_recommendations(user_books, book_in_collection, book_titles
     return blended
 
 
-def get_trending_books(book_in_collection, book_titles_in_collection, seed=0):
+def get_trending_books(book_in_collection, book_titles_in_collection, seed=0, category="all"):
     import random
     rng = random.Random(seed) if seed else random.Random()
 
-    pool = [b for b in CURATED_BOOKS if b["title"].lower().strip() not in book_titles_in_collection and b["google_id"] not in book_in_collection]
+    pool = []
+    for b in CURATED_BOOKS:
+        if b["title"].lower().strip() in book_titles_in_collection or b["google_id"] in book_in_collection:
+            continue
+        if category and category != "all":
+            cat = b.get("category") or detect_book_category(b["title"], b["genre"], b["overview"])
+            if cat != category:
+                continue
+        pool.append(b)
+
     rng.shuffle(pool)
 
     # Also try to fetch daily trending from Open Library
     live_books = []
     try:
-        r = requests.get("https://openlibrary.org/trending/daily.json", params={"limit": 10}, timeout=4)
+        r = requests.get("https://openlibrary.org/trending/daily.json", params={"limit": 15}, timeout=4)
         for w in r.json().get("works", []):
             w_title = w.get("title", "").strip()
             if not w_title or w_title.lower() in book_titles_in_collection:
@@ -1559,13 +1782,18 @@ def get_trending_books(book_in_collection, book_titles_in_collection, seed=0):
                 continue
             authors = w.get("author_name", ["Unknown"])
             author_str = ", ".join(authors[:2]) if isinstance(authors, list) else str(authors)
+            subjects = ", ".join(w.get("subject", [])[:5]) if "subject" in w else ""
+            detected_cat = detect_book_category(w_title, subjects)
+            if category and category != "all" and detected_cat != category:
+                continue
             live_books.append({
                 "google_id": w_key,
                 "title": w_title,
                 "author": author_str,
                 "year": str(w.get("first_publish_year", "")),
                 "img_url": thumb,
-                "overview": ""
+                "overview": "",
+                "category": detected_cat
             })
     except Exception:
         pass
@@ -1612,8 +1840,8 @@ def discover():
         user_books = Book.query.filter_by(user_id=current_user.id).all()
         is_personalized_books = bool(user_books)
         if is_personalized_books:
-            recommended_books = get_diverse_book_recommendations(user_books, book_in_collection, book_titles_in_collection, seed=rec_page)
-        trending_books = get_trending_books(book_in_collection, book_titles_in_collection, seed=trend_page)
+            recommended_books = get_diverse_book_recommendations(user_books, book_in_collection, book_titles_in_collection, seed=rec_page, category=category)
+        trending_books = get_trending_books(book_in_collection, book_titles_in_collection, seed=trend_page, category=category)
 
     return render_template("discover.html",
         tab=tab,
@@ -1648,9 +1876,9 @@ def api_discover_section():
     else:
         if section == "recommended":
             user_books = Book.query.filter_by(user_id=current_user.id).all()
-            items = get_diverse_book_recommendations(user_books, book_in_collection, book_titles_in_collection, seed=seed)
+            items = get_diverse_book_recommendations(user_books, book_in_collection, book_titles_in_collection, seed=seed, category=category)
         else:
-            items = get_trending_books(book_in_collection, book_titles_in_collection, seed=seed)
+            items = get_trending_books(book_in_collection, book_titles_in_collection, seed=seed, category=category)
 
     return jsonify({"success": True, "items": items, "tab": tab, "section": section, "category": category})
 
@@ -1862,6 +2090,7 @@ def quick_add_book():
 
     # If parameters passed directly from card, add immediately
     if title and author and img_url:
+        cat = request.args.get("category") or detect_book_category(title, genre, overview)
         new_book = Book(
             user_id=current_user.id,
             google_id=google_id or f"book_{secrets.token_hex(6)}",
@@ -1872,6 +2101,7 @@ def quick_add_book():
             description=overview[:1000] if overview else "",
             genre=genre,
             img_url=img_url,
+            category=cat,
             status=status,
             date_read=date.today() if status == "read" else None,
         )
@@ -1890,6 +2120,7 @@ def quick_add_book():
     # If in curated bank, use curated details
     for b in CURATED_BOOKS:
         if b["google_id"] == google_id:
+            cat = b.get("category") or detect_book_category(b["title"], b["genre"], b["overview"])
             new_book = Book(
                 user_id=current_user.id,
                 google_id=google_id,
@@ -1900,6 +2131,7 @@ def quick_add_book():
                 description=b["overview"],
                 genre=b["genre"],
                 img_url=b["img_url"],
+                category=cat,
                 status=status,
                 date_read=date.today() if status == "read" else None,
             )
@@ -1928,6 +2160,7 @@ def quick_add_book():
             cover_id = covers[0] if covers else None
             thumb = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else ""
             genres = ", ".join(data.get("subjects", [])[:3])
+            cat = detect_book_category(b_title, genres, desc)
             new_book = Book(
                 user_id=current_user.id,
                 google_id=google_id,
@@ -1938,6 +2171,7 @@ def quick_add_book():
                 description=desc[:1000] if desc else "",
                 genre=genres,
                 img_url=thumb,
+                category=cat,
                 status=status,
                 date_read=date.today() if status == "read" else None,
             )
@@ -1948,16 +2182,21 @@ def quick_add_book():
             thumb = ""
             if "imageLinks" in vol:
                 thumb = vol["imageLinks"].get("thumbnail", "").replace("http://", "https://")
+            vol_genre = ", ".join(vol.get("categories", []))
+            vol_title = vol.get("title", "Unknown")
+            vol_desc = (vol.get("description") or "")[:1000]
+            cat = detect_book_category(vol_title, vol_genre, vol_desc)
             new_book = Book(
                 user_id=current_user.id,
                 google_id=google_id,
-                title=vol.get("title", "Unknown"),
+                title=vol_title,
                 author=", ".join(vol.get("authors", ["Unknown"])),
                 year=(vol.get("publishedDate") or "")[:4],
                 rating=0.0,
-                description=(vol.get("description") or "")[:1000],
-                genre=", ".join(vol.get("categories", [])),
+                description=vol_desc,
+                genre=vol_genre,
                 img_url=thumb,
+                category=cat,
                 status=status,
                 date_read=date.today() if status == "read" else None,
             )
@@ -2228,6 +2467,7 @@ def select_book():
     # 1. Check curated bank
     for b in CURATED_BOOKS:
         if b["google_id"] == book_id:
+            cat = b.get("category") or detect_book_category(b["title"], b["genre"], b["overview"])
             new_book = Book(
                 user_id=current_user.id,
                 google_id=book_id,
@@ -2238,6 +2478,7 @@ def select_book():
                 description=b["overview"],
                 genre=b["genre"],
                 img_url=b["img_url"],
+                category=cat,
                 status=status,
                 date_read=date.today() if status == "read" else None,
             )
@@ -2261,6 +2502,7 @@ def select_book():
             cover_id = covers[0] if covers else None
             thumb = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else ""
             genres = ", ".join(data.get("subjects", [])[:3])
+            cat = detect_book_category(b_title, genres, desc)
             new_book = Book(
                 user_id=current_user.id,
                 google_id=book_id,
@@ -2271,6 +2513,7 @@ def select_book():
                 description=desc[:1000] if desc else "",
                 genre=genres,
                 img_url=thumb,
+                category=cat,
                 status=status,
                 date_read=date.today() if status == "read" else None,
             )
@@ -2298,17 +2541,21 @@ def select_book():
         if "imageLinks" in vol:
             thumb = vol["imageLinks"].get("thumbnail", "").replace("http://", "https://")
         categories = ", ".join(vol.get("categories", []))
+        vol_title = vol.get("title", "Unknown")
+        vol_desc = (vol.get("description") or "")[:1000]
+        cat = detect_book_category(vol_title, categories, vol_desc)
 
         new_book = Book(
             user_id=current_user.id,
             google_id=book_id,
-            title=vol.get("title", "Unknown"),
+            title=vol_title,
             author=authors,
             year=year,
             rating=0.0,
-            description=(vol.get("description") or "")[:1000],
+            description=vol_desc,
             genre=categories,
             img_url=thumb,
+            category=cat,
             status=status,
             date_read=date.today() if status == "read" else None,
         )
@@ -2332,6 +2579,13 @@ def edit_book(book_id):
         return redirect(url_for("collection"))
     class EditForm(FlaskForm):
         title = StringField("Title", validators=[DataRequired()])
+        category = SelectField("Category", choices=[
+            ("fiction", "📖 Fiction & Literature"),
+            ("philosophy", "🧠 Philosophy & Ethics"),
+            ("self_help", "🌱 Self-Help & Growth"),
+            ("business", "💼 Business & Finance"),
+            ("non_fiction", "🌍 Non-Fiction & Science"),
+        ])
         rating = StringField("Your Rating (0–10)")
         custom_tags = StringField("Custom Tags (comma separated)")
         review = TextAreaField("Your Review")
@@ -2341,6 +2595,7 @@ def edit_book(book_id):
     form = EditForm()
     if form.validate_on_submit():
         book.title = form.title.data
+        book.category = form.category.data
         try:
             book.rating = float(form.rating.data or 0)
         except ValueError:
@@ -2355,6 +2610,7 @@ def edit_book(book_id):
         flash("Saved!", "success")
         return redirect(url_for("collection", tab="books"))
     form.title.data = book.title
+    form.category.data = book.category or "fiction"
     form.rating.data = str(book.rating)
     form.custom_tags.data = book.custom_tags
     form.review.data = book.review

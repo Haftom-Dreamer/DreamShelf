@@ -46,6 +46,39 @@
                 </a>
                 {% endif %}
             </div>
+            {% elif tab == 'books' and book_category_counts %}
+            <div class="category-breakdown-bar">
+                <a class="cat-pill fiction {% if current_book_category == 'fiction' %}active{% endif %}"
+                   href="{{ url_for('collection', tab='books', status=status, sort=sort, category='fiction', tag=current_tag) }}"
+                   title="Filter to Fiction & Literature">
+                    📖 <strong>{{ book_category_counts.fiction.read }}</strong>/{{ book_category_counts.fiction.total }} Fiction
+                </a>
+                <a class="cat-pill philosophy {% if current_book_category == 'philosophy' %}active{% endif %}"
+                   href="{{ url_for('collection', tab='books', status=status, sort=sort, category='philosophy', tag=current_tag) }}"
+                   title="Filter to Philosophy">
+                    🧠 <strong>{{ book_category_counts.philosophy.read }}</strong>/{{ book_category_counts.philosophy.total }} Philosophy
+                </a>
+                <a class="cat-pill self_help {% if current_book_category == 'self_help' %}active{% endif %}"
+                   href="{{ url_for('collection', tab='books', status=status, sort=sort, category='self_help', tag=current_tag) }}"
+                   title="Filter to Self-Help">
+                    🌱 <strong>{{ book_category_counts.self_help.read }}</strong>/{{ book_category_counts.self_help.total }} Self-Help
+                </a>
+                <a class="cat-pill business {% if current_book_category == 'business' %}active{% endif %}"
+                   href="{{ url_for('collection', tab='books', status=status, sort=sort, category='business', tag=current_tag) }}"
+                   title="Filter to Business & Finance">
+                    💼 <strong>{{ book_category_counts.business.read }}</strong>/{{ book_category_counts.business.total }} Business
+                </a>
+                <a class="cat-pill non_fiction {% if current_book_category == 'non_fiction' %}active{% endif %}"
+                   href="{{ url_for('collection', tab='books', status=status, sort=sort, category='non_fiction', tag=current_tag) }}"
+                   title="Filter to Non-Fiction">
+                    🌍 <strong>{{ book_category_counts.non_fiction.read }}</strong>/{{ book_category_counts.non_fiction.total }} Non-Fiction
+                </a>
+                {% if current_book_category %}
+                <a class="cat-pill" style="border-style:dashed;" href="{{ url_for('collection', tab='books', status=status, sort=sort, tag=current_tag) }}" title="Show All Categories">
+                    <i class="fas fa-times"></i> All Themes
+                </a>
+                {% endif %}
+            </div>
             {% endif %}
         </div>
         <div class="collection-actions">
@@ -114,6 +147,54 @@
                     </a>
                 </div>
             </div>
+            <!-- Minimized Category Dropdown (for Books) -->
+            {% elif tab == 'books' and book_category_counts %}
+            <div class="filter-dropdown" id="bookCategoryFilterDropdown">
+                <button type="button" class="filter-dropdown-btn {% if current_book_category %}active {{ current_book_category }}{% endif %}" onclick="toggleFilterDropdown('bookCategoryFilterDropdown', event)">
+                    <i class="fas fa-shapes"></i>
+                    <span>
+                        {% if current_book_category == 'fiction' %}📖 Fiction ({{ book_category_counts.fiction.read }}/{{ book_category_counts.fiction.total }})
+                        {% elif current_book_category == 'philosophy' %}🧠 Philosophy ({{ book_category_counts.philosophy.read }}/{{ book_category_counts.philosophy.total }})
+                        {% elif current_book_category == 'self_help' %}🌱 Self-Help ({{ book_category_counts.self_help.read }}/{{ book_category_counts.self_help.total }})
+                        {% elif current_book_category == 'business' %}💼 Business ({{ book_category_counts.business.read }}/{{ book_category_counts.business.total }})
+                        {% elif current_book_category == 'non_fiction' %}🌍 Non-Fiction ({{ book_category_counts.non_fiction.read }}/{{ book_category_counts.non_fiction.total }})
+                        {% else %}Category: All Themes{% endif %}
+                    </span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+                <div class="filter-dropdown-menu">
+                    <a class="filter-dropdown-item {% if not current_book_category %}active{% endif %}"
+                       href="{{ url_for('collection', tab='books', status=status, sort=sort, tag=current_tag) }}">
+                       <span>All Themes</span>
+                       <span class="chip-count">{{ total_books_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item fiction {% if current_book_category == 'fiction' %}active{% endif %}"
+                       href="{{ url_for('collection', tab='books', status=status, sort=sort, category='fiction', tag=current_tag) }}">
+                       <span>📖 Fiction &amp; Literature</span>
+                       <span class="chip-count">{{ book_category_counts.fiction.read }}/{{ book_category_counts.fiction.total }}</span>
+                    </a>
+                    <a class="filter-dropdown-item philosophy {% if current_book_category == 'philosophy' %}active{% endif %}"
+                       href="{{ url_for('collection', tab='books', status=status, sort=sort, category='philosophy', tag=current_tag) }}">
+                       <span>🧠 Philosophy &amp; Ethics</span>
+                       <span class="chip-count">{{ book_category_counts.philosophy.read }}/{{ book_category_counts.philosophy.total }}</span>
+                    </a>
+                    <a class="filter-dropdown-item self_help {% if current_book_category == 'self_help' %}active{% endif %}"
+                       href="{{ url_for('collection', tab='books', status=status, sort=sort, category='self_help', tag=current_tag) }}">
+                       <span>🌱 Self-Help &amp; Growth</span>
+                       <span class="chip-count">{{ book_category_counts.self_help.read }}/{{ book_category_counts.self_help.total }}</span>
+                    </a>
+                    <a class="filter-dropdown-item business {% if current_book_category == 'business' %}active{% endif %}"
+                       href="{{ url_for('collection', tab='books', status=status, sort=sort, category='business', tag=current_tag) }}">
+                       <span>💼 Business &amp; Finance</span>
+                       <span class="chip-count">{{ book_category_counts.business.read }}/{{ book_category_counts.business.total }}</span>
+                    </a>
+                    <a class="filter-dropdown-item non_fiction {% if current_book_category == 'non_fiction' %}active{% endif %}"
+                       href="{{ url_for('collection', tab='books', status=status, sort=sort, category='non_fiction', tag=current_tag) }}">
+                       <span>🌍 Non-Fiction &amp; Science</span>
+                       <span class="chip-count">{{ book_category_counts.non_fiction.read }}/{{ book_category_counts.non_fiction.total }}</span>
+                    </a>
+                </div>
+            </div>
             {% endif %}
 
             <!-- Minimized Status Dropdown -->
@@ -148,15 +229,15 @@
                         <span class="chip-count">{{ to_watch_count }}</span>
                     </a>
                     {% else %}
-                    <a class="filter-dropdown-item {% if status == 'all' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='all', sort=sort, tag=current_tag) }}">
+                    <a class="filter-dropdown-item {% if status == 'all' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='all', sort=sort, category=current_book_category, tag=current_tag) }}">
                         <span>All Books</span>
                         <span class="chip-count">{{ total_books_count }}</span>
                     </a>
-                    <a class="filter-dropdown-item {% if status == 'read' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='read', sort=sort, tag=current_tag) }}">
+                    <a class="filter-dropdown-item {% if status == 'read' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='read', sort=sort, category=current_book_category, tag=current_tag) }}">
                         <span>✅ Read</span>
                         <span class="chip-count">{{ read_count }}</span>
                     </a>
-                    <a class="filter-dropdown-item {% if status == 'to_read' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='to_read', sort=sort, tag=current_tag) }}">
+                    <a class="filter-dropdown-item {% if status == 'to_read' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='to_read', sort=sort, category=current_book_category, tag=current_tag) }}">
                         <span>📖 To Read</span>
                         <span class="chip-count">{{ to_read_count }}</span>
                     </a>
@@ -176,13 +257,13 @@
                     <i class="fas fa-chevron-down dropdown-arrow"></i>
                 </button>
                 <div class="filter-dropdown-menu">
-                    <a class="filter-dropdown-item {% if sort == 'newest' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='newest', media_type=current_media_type, tag=current_tag) }}">
+                    <a class="filter-dropdown-item {% if sort == 'newest' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='newest', media_type=current_media_type, category=current_book_category, tag=current_tag) }}">
                         <span>🕒 Newest Added</span>
                     </a>
-                    <a class="filter-dropdown-item {% if sort == 'rating' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='rating', media_type=current_media_type, tag=current_tag) }}">
+                    <a class="filter-dropdown-item {% if sort == 'rating' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='rating', media_type=current_media_type, category=current_book_category, tag=current_tag) }}">
                         <span>⭐ Highest Rating</span>
                     </a>
-                    <a class="filter-dropdown-item {% if sort == 'title' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='title', media_type=current_media_type, tag=current_tag) }}">
+                    <a class="filter-dropdown-item {% if sort == 'title' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='title', media_type=current_media_type, category=current_book_category, tag=current_tag) }}">
                         <span>🔤 Alphabetical (A–Z)</span>
                     </a>
                 </div>
@@ -197,11 +278,11 @@
                     <i class="fas fa-chevron-down dropdown-arrow"></i>
                 </button>
                 <div class="filter-dropdown-menu" style="max-height: 220px; overflow-y: auto;">
-                    <a class="filter-dropdown-item {% if not current_tag %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort=sort, media_type=current_media_type) }}">
+                    <a class="filter-dropdown-item {% if not current_tag %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort=sort, media_type=current_media_type, category=current_book_category) }}">
                         <span>All Tags</span>
                     </a>
                     {% for tag in all_tags %}
-                    <a class="filter-dropdown-item {% if current_tag == tag %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort=sort, media_type=current_media_type, tag=tag) }}">
+                    <a class="filter-dropdown-item {% if current_tag == tag %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort=sort, media_type=current_media_type, category=current_book_category, tag=tag) }}">
                         <span>#{{ tag }}</span>
                     </a>
                     {% endfor %}
@@ -210,7 +291,7 @@
             {% endif %}
 
             <!-- Quick Clear Button when any filter is active -->
-            {% if (status != 'all') or current_media_type or current_tag %}
+            {% if (status != 'all') or current_media_type or current_book_category or current_tag %}
             <a href="{{ url_for('collection', tab=tab, status='all', sort='newest') }}" class="btn-clear-filters" title="Reset all filters">
                 <i class="fas fa-times"></i> Reset
             </a>
@@ -326,7 +407,20 @@
                         </div>
                     </div>
                     <div class="card-back">
-                        <div class="card-back-title">{{ book.title }}</div>
+                        <div class="card-back-title" style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.4rem;">
+                            <span>{{ book.title }}</span>
+                            {% if book.category == 'philosophy' %}
+                            <span class="type-tag philosophy" title="Philosophy"><i class="fas fa-brain"></i></span>
+                            {% elif book.category == 'self_help' %}
+                            <span class="type-tag self_help" title="Self-Help"><i class="fas fa-seedling"></i></span>
+                            {% elif book.category == 'business' %}
+                            <span class="type-tag business" title="Business"><i class="fas fa-chart-line"></i></span>
+                            {% elif book.category == 'non_fiction' %}
+                            <span class="type-tag non_fiction" title="Non-Fiction"><i class="fas fa-globe"></i></span>
+                            {% else %}
+                            <span class="type-tag fiction" title="Fiction"><i class="fas fa-book"></i></span>
+                            {% endif %}
+                        </div>
                         <div class="card-genre">by {{ book.author }} {% if book.year %}· {{ book.year }}{% endif %}</div>
                         {% if book.custom_tags %}
                         <div style="font-size: 0.75rem; margin: 0.5rem 0;">
@@ -337,9 +431,10 @@
                         {% endif %}
                         <p class="card-review">{{ book.review if book.review else 'No review yet.' }}</p>
                         <p class="card-desc">{{ book.description[:120] }}{% if book.description | length > 120 %}...{% endif %}</p>
-                        <div class="card-actions">
-                            <a href="{{ url_for('edit_book', book_id=book.id) }}" class="btn-card-edit"><i class="fas fa-pen"></i> Edit</a>
-                            <a href="{{ url_for('delete_book', book_id=book.id) }}" class="btn-card-delete" onclick="return confirm('Delete this book?')"><i class="fas fa-trash"></i></a>
+                        <div class="card-actions" style="display:flex; justify-content:center; gap:0.5rem;">
+                            <a href="{{ url_for('view_book', item_id=book.id) }}" class="btn-card-edit" style="background:#43b89c;" title="View Details"><i class="fas fa-eye"></i></a>
+                            <a href="{{ url_for('edit_book', book_id=book.id) }}" class="btn-card-edit" title="Edit"><i class="fas fa-pen"></i></a>
+                            <a href="{{ url_for('delete_book', book_id=book.id) }}" class="btn-card-delete" onclick="return confirm('Delete this book?');" title="Delete"><i class="fas fa-trash"></i></a>
                             <button class="btn-card-flip" onclick="flipCard('book', {{ book.id }})"><i class="fas fa-undo"></i></button>
                         </div>
                     </div>

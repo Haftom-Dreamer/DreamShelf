@@ -177,6 +177,57 @@
         </div>
 
     {% else %}
+        <!-- Minimized Book Category Filter Dropdown -->
+        <div class="discover-filter-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.8rem; margin: 1.5rem 0 1rem 0;">
+            <div class="filter-dropdown" id="discoverBookCategoryDropdown">
+                <button type="button" class="filter-dropdown-btn {% if current_category and current_category != 'all' %}active {{ current_category }}{% endif %}" onclick="toggleFilterDropdown('discoverBookCategoryDropdown', event)">
+                    <i class="fas fa-shapes"></i>
+                    <span id="discoverBookCategoryLabel">
+                        {% if current_category == 'fiction' %}📖 Fiction &amp; Sci-Fi
+                        {% elif current_category == 'philosophy' %}🧠 Philosophy
+                        {% elif current_category == 'self_help' %}🌱 Self-Help
+                        {% elif current_category == 'business' %}💼 Business &amp; Finance
+                        {% elif current_category == 'non_fiction' %}🌍 Non-Fiction
+                        {% else %}Category: All Themes{% endif %}
+                    </span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+                <div class="filter-dropdown-menu">
+                    <a class="filter-dropdown-item {% if current_category == 'all' or not current_category %}active{% endif %}"
+                       href="{{ url_for('discover', tab='books', category='all') }}"
+                       onclick="filterDiscoverCategory(event, 'all', 'All Themes')" data-cat="all">
+                       <span>All Themes</span>
+                    </a>
+                    <a class="filter-dropdown-item fiction {% if current_category == 'fiction' %}active{% endif %}"
+                       href="{{ url_for('discover', tab='books', category='fiction') }}"
+                       onclick="filterDiscoverCategory(event, 'fiction', '📖 Fiction &amp; Sci-Fi')" data-cat="fiction">
+                       <span>📖 Fiction &amp; Literature</span>
+                    </a>
+                    <a class="filter-dropdown-item philosophy {% if current_category == 'philosophy' %}active{% endif %}"
+                       href="{{ url_for('discover', tab='books', category='philosophy') }}"
+                       onclick="filterDiscoverCategory(event, 'philosophy', '🧠 Philosophy')" data-cat="philosophy">
+                       <span>🧠 Philosophy &amp; Ethics</span>
+                    </a>
+                    <a class="filter-dropdown-item self_help {% if current_category == 'self_help' %}active{% endif %}"
+                       href="{{ url_for('discover', tab='books', category='self_help') }}"
+                       onclick="filterDiscoverCategory(event, 'self_help', '🌱 Self-Help')" data-cat="self_help">
+                       <span>🌱 Self-Help &amp; Growth</span>
+                    </a>
+                    <a class="filter-dropdown-item business {% if current_category == 'business' %}active{% endif %}"
+                       href="{{ url_for('discover', tab='books', category='business') }}"
+                       onclick="filterDiscoverCategory(event, 'business', '💼 Business &amp; Finance')" data-cat="business">
+                       <span>💼 Business &amp; Finance</span>
+                    </a>
+                    <a class="filter-dropdown-item non_fiction {% if current_category == 'non_fiction' %}active{% endif %}"
+                       href="{{ url_for('discover', tab='books', category='non_fiction') }}"
+                       onclick="filterDiscoverCategory(event, 'non_fiction', '🌍 Non-Fiction')" data-cat="non_fiction">
+                       <span>🌍 Non-Fiction &amp; Science</span>
+                    </a>
+                </div>
+            </div>
+            <span style="font-size: 0.8rem; opacity: 0.6;"><i class="fas fa-magic"></i> Curated algorithms tailored to your reading journey</span>
+        </div>
+
         <!-- Books Section -->
         {% if is_personalized_books and recommended_books %}
         <div class="dashboard-section" style="margin-top:2rem;">
@@ -246,6 +297,7 @@
 
 <script>
 // Keep track of section page/seed counts so each refresh fetches fresh data
+const currentTab = '{{ tab }}';
 const refreshState = {
     recPage: 1,
     trendPage: 1,
@@ -289,17 +341,20 @@ function filterDiscoverCategory(event, cat, label) {
     // Close dropdown
     document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
 
+    const dropdownId = currentTab === 'movies' ? 'discoverCategoryDropdown' : 'discoverBookCategoryDropdown';
+    const labelId = currentTab === 'movies' ? 'discoverCategoryLabel' : 'discoverBookCategoryLabel';
+
     // Update active dropdown item UI
-    document.querySelectorAll('#discoverCategoryDropdown .filter-dropdown-item').forEach(c => {
+    document.querySelectorAll(`#${dropdownId} .filter-dropdown-item`).forEach(c => {
         c.classList.toggle('active', c.dataset.cat === cat);
     });
-    const labelEl = document.getElementById('discoverCategoryLabel');
+    const labelEl = document.getElementById(labelId);
     if (labelEl) {
-        labelEl.textContent = cat === 'all' ? 'Category: All Types' : label;
+        labelEl.textContent = cat === 'all' ? (currentTab === 'movies' ? 'Category: All Types' : 'Category: All Themes') : label;
     }
-    const btn = document.querySelector('#discoverCategoryDropdown .filter-dropdown-btn');
+    const btn = document.querySelector(`#${dropdownId} .filter-dropdown-btn`);
     if (btn) {
-        btn.classList.remove('active', 'movie', 'series', 'animation', 'anime');
+        btn.classList.remove('active', 'movie', 'series', 'animation', 'anime', 'fiction', 'philosophy', 'self_help', 'business', 'non_fiction');
         if (cat !== 'all') {
             btn.classList.add('active', cat);
         }
@@ -308,21 +363,29 @@ function filterDiscoverCategory(event, cat, label) {
     refreshState.category = cat;
     refreshState.recPage = 1;
     refreshState.trendPage = 1;
+    refreshState.recSeed = 1;
+    refreshState.trendSeed = 1;
 
     // Update browser URL query string without reloading
     const newUrl = new URL(window.location);
-    newUrl.searchParams.set('tab', 'movies');
+    newUrl.searchParams.set('tab', currentTab);
     newUrl.searchParams.set('category', cat);
     window.history.pushState({}, '', newUrl);
 
     // Refresh both Recommended and Trending grids
-    refreshSectionDirect('recommended', 'movies', cat);
-    refreshSectionDirect('trending', 'movies', cat);
+    refreshSectionDirect('recommended', currentTab, cat);
+    refreshSectionDirect('trending', currentTab, cat);
 }
 
 function refreshSectionDirect(section, tab, cat) {
-    const gridId = section === 'recommended' ? 'gridRecommendedMovies' : 'gridTrendingMovies';
-    const btnId = section === 'recommended' ? 'btnRefreshRecMovies' : 'btnRefreshTrendingMovies';
+    let gridId, btnId;
+    if (tab === 'movies') {
+        gridId = section === 'recommended' ? 'gridRecommendedMovies' : 'gridTrendingMovies';
+        btnId = section === 'recommended' ? 'btnRefreshRecMovies' : 'btnRefreshTrendingMovies';
+    } else {
+        gridId = section === 'recommended' ? 'gridRecommendedBooks' : 'gridTrendingBooks';
+        btnId = section === 'recommended' ? 'btnRefreshRecBooks' : 'btnRefreshTrendingBooks';
+    }
     const grid = document.getElementById(gridId);
     const btn = document.getElementById(btnId);
     if (!grid) return;
@@ -334,14 +397,17 @@ function refreshSectionDirect(section, tab, cat) {
     grid.style.opacity = '0.4';
     grid.style.transition = 'opacity 0.2s ease';
 
-    const page = section === 'recommended' ? refreshState.recPage : refreshState.trendPage;
-    fetch(`/api/discover_section?tab=${tab}&section=${section}&category=${cat}&page=${page}`)
+    const pageOrSeed = tab === 'movies'
+        ? (section === 'recommended' ? `page=${refreshState.recPage}` : `page=${refreshState.trendPage}`)
+        : (section === 'recommended' ? `seed=${refreshState.recSeed}` : `seed=${refreshState.trendSeed}`);
+
+    fetch(`/api/discover_section?tab=${tab}&section=${section}&category=${cat}&${pageOrSeed}`)
         .then(r => r.json())
         .then(data => {
             if (data.success && data.items) {
                 let html = '';
                 data.items.forEach(item => {
-                    html += buildMovieCard(item);
+                    html += tab === 'movies' ? buildMovieCard(item) : buildBookCard(item);
                 });
                 grid.innerHTML = html || '<div class="empty-state" style="grid-column: 1/-1; padding: 2rem;"><p>No items found for this category.</p></div>';
             }
@@ -450,7 +516,7 @@ function refreshSection(section, tab) {
     grid.style.opacity = '0.5';
     grid.style.transition = 'opacity 0.2s ease';
 
-    const catParam = tab === 'movies' ? `&category=${refreshState.category}` : '';
+    const catParam = refreshState.category && refreshState.category !== 'all' ? `&category=${refreshState.category}` : '';
     fetch(`/api/discover_section?tab=${tab}&section=${section}&${pageParam}${catParam}`)
         .then(r => r.json())
         .then(data => {

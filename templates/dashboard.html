@@ -17,62 +17,70 @@
 
     <!-- Stat Cards -->
     <div class="stats-grid">
-        <div class="stat-card watched">
+        <a href="{{ url_for('collection', tab='movies', status='watched') }}" class="stat-card watched" title="View Watched Movies">
             <div class="stat-icon"><i class="fas fa-film"></i></div>
             <div class="stat-body">
                 <div class="stat-number" data-target="{{ watched_count }}">0</div>
                 <div class="stat-label">Movies Watched</div>
             </div>
-        </div>
-        <div class="stat-card to-watch">
+            <div class="stat-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+        <a href="{{ url_for('collection', tab='movies', status='to_watch') }}" class="stat-card to-watch" title="View Watchlist">
             <div class="stat-icon"><i class="fas fa-clock"></i></div>
             <div class="stat-body">
                 <div class="stat-number" data-target="{{ to_watch_count }}">0</div>
                 <div class="stat-label">To Watch</div>
             </div>
-        </div>
-        <div class="stat-card read">
+            <div class="stat-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+        <a href="{{ url_for('collection', tab='books', status='read') }}" class="stat-card read" title="View Books Read">
             <div class="stat-icon"><i class="fas fa-book-open"></i></div>
             <div class="stat-body">
                 <div class="stat-number" data-target="{{ read_count }}">0</div>
                 <div class="stat-label">Books Read</div>
             </div>
-        </div>
-        <div class="stat-card to-read">
+            <div class="stat-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+        <a href="{{ url_for('collection', tab='books', status='to_read') }}" class="stat-card to-read" title="View Reading List">
             <div class="stat-icon"><i class="fas fa-bookmark"></i></div>
             <div class="stat-body">
                 <div class="stat-number" data-target="{{ to_read_count }}">0</div>
                 <div class="stat-label">To Read</div>
             </div>
-        </div>
-        <div class="stat-card monthly">
+            <div class="stat-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+        <a href="{{ url_for('collection', tab='movies') }}" class="stat-card monthly" title="View Movies">
             <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
             <div class="stat-body">
                 <div class="stat-number" data-target="{{ movies_this_month }}">0</div>
                 <div class="stat-label">Movies This Month</div>
             </div>
-        </div>
-        <div class="stat-card monthly-book">
+            <div class="stat-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+        <a href="{{ url_for('collection', tab='books') }}" class="stat-card monthly-book" title="View Books">
             <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
             <div class="stat-body">
                 <div class="stat-number" data-target="{{ books_this_month }}">0</div>
                 <div class="stat-label">Books This Month</div>
             </div>
-        </div>
-        <div class="stat-card rating-avg">
+            <div class="stat-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+        <a href="{{ url_for('collection', tab='movies', sort='rating') }}" class="stat-card rating-avg" title="View Rated Movies">
             <div class="stat-icon"><i class="fas fa-star"></i></div>
             <div class="stat-body">
                 <div class="stat-number">{{ avg_movie_rating }}</div>
                 <div class="stat-label">Avg Movie Rating</div>
             </div>
-        </div>
-        <div class="stat-card streak-card">
+            <div class="stat-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
+        <a href="{{ url_for('analytics') }}" class="stat-card streak-card" title="View Analytics">
             <div class="stat-icon"><i class="fas fa-fire"></i></div>
             <div class="stat-body">
                 <div class="stat-number" data-target="{{ streak }}">0</div>
                 <div class="stat-label">Day Streak 🔥</div>
             </div>
-        </div>
+            <div class="stat-arrow"><i class="fas fa-arrow-right"></i></div>
+        </a>
     </div>
 
 
@@ -85,7 +93,9 @@
         {% if recent %}
         <div class="recent-grid">
             {% for entry in recent %}
-            <div class="recent-card">
+            {% set target_url = url_for('view_movie', item_id=entry.item.id) if entry.type == 'movie' else url_for('view_book', item_id=entry.item.id) %}
+            {% set edit_url = url_for('edit', movie_id=entry.item.id) if entry.type == 'movie' else url_for('edit_book', book_id=entry.item.id) %}
+            <a href="{{ target_url }}" class="recent-card" title="View details for {{ entry.item.title }}">
                 <div class="recent-poster">
                     {% if entry.item.img_url %}
                     <img src="{{ entry.item.img_url }}" alt="{{ entry.item.title }}">
@@ -98,6 +108,8 @@
                     <div class="recent-title">{{ entry.item.title }}</div>
                     {% if entry.type == 'book' %}
                     <div class="recent-sub">{{ entry.item.author }}</div>
+                    {% elif entry.item.genre %}
+                    <div class="recent-sub">{{ entry.item.genre[:35] }}</div>
                     {% endif %}
                     <div class="recent-meta">
                         <span class="status-badge {{ entry.item.status }}">
@@ -109,7 +121,13 @@
                         {% endif %}
                     </div>
                 </div>
-            </div>
+                <div class="recent-card-side">
+                    <span class="btn-recent-edit" onclick="event.preventDefault(); event.stopPropagation(); window.location='{{ edit_url }}';" title="Edit">
+                        <i class="fas fa-pen"></i>
+                    </span>
+                    <span class="recent-arrow"><i class="fas fa-chevron-right"></i></span>
+                </div>
+            </a>
             {% endfor %}
         </div>
         {% else %}

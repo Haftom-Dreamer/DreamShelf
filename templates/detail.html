@@ -30,6 +30,18 @@
                 {% else %}
                 <span class="type-tag movie"><i class="fas fa-film"></i> Movie</span>
                 {% endif %}
+            {% elif item_type == 'book' and item.category %}
+                {% if item.category == 'philosophy' %}
+                <span class="type-tag philosophy"><i class="fas fa-brain"></i> Philosophy</span>
+                {% elif item.category == 'self_help' %}
+                <span class="type-tag self_help"><i class="fas fa-seedling"></i> Self-Help</span>
+                {% elif item.category == 'business' %}
+                <span class="type-tag business"><i class="fas fa-chart-line"></i> Business</span>
+                {% elif item.category == 'non_fiction' %}
+                <span class="type-tag non_fiction"><i class="fas fa-globe"></i> Non-Fiction</span>
+                {% else %}
+                <span class="type-tag fiction"><i class="fas fa-book"></i> Fiction</span>
+                {% endif %}
             {% endif %}
             <div style="background:rgba(255,255,255,0.1); padding:0.2rem 0.8rem; border-radius:30px; font-weight:bold; color:#ffb703;">
                 ⭐ {{ item.rating }}/10

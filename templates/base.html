@@ -29,11 +29,19 @@
                         <a href="{{ url_for('add_book') }}" class="btn-nav-add book"><i class="fas fa-book"></i> Book</a>
                     </li>
                 </ul>
-                <div class="nav-avatar" title="{{ current_user.username }}" style="background:{{ current_user.avatar_color }};">
+                <div class="nav-avatar" id="navAvatar" title="{{ current_user.username }}" style="background:{{ current_user.avatar_color }};" onclick="toggleAvatarDropdown(event)">
                     {{ current_user.username[0].upper() }}
-                    <div class="avatar-dropdown">
-                        <span class="avatar-name">{{ current_user.username }}</span>
-                        <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+                    <div class="avatar-dropdown" id="avatarDropdown" onclick="event.stopPropagation();">
+                        <div class="avatar-user-header">
+                            <span class="avatar-name">{{ current_user.username }}</span>
+                            <span class="avatar-email">{{ current_user.email }}</span>
+                        </div>
+                        <div class="avatar-dropdown-divider"></div>
+                        <a href="{{ url_for('public_collection', username=current_user.username) }}"><i class="fas fa-user-circle"></i> Public Profile</a>
+                        <a href="{{ url_for('collection') }}"><i class="fas fa-layer-group"></i> My Collection</a>
+                        <a href="{{ url_for('analytics') }}"><i class="fas fa-chart-pie"></i> Analytics</a>
+                        <div class="avatar-dropdown-divider"></div>
+                        <a href="{{ url_for('logout') }}" class="avatar-logout-link"><i class="fas fa-sign-out-alt"></i> Log Out</a>
                     </div>
                 </div>
                 <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.add('open')" aria-label="Menu">
@@ -105,6 +113,25 @@
     // Navbar scroll
     window.addEventListener('scroll', () => {
         document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // Avatar Dropdown Toggle
+    function toggleAvatarDropdown(e) {
+        if (e) e.stopPropagation();
+        const avatar = document.getElementById('navAvatar');
+        if (avatar) avatar.classList.toggle('open');
+    }
+    document.addEventListener('click', function(e) {
+        const avatar = document.getElementById('navAvatar');
+        if (avatar && !avatar.contains(e.target)) {
+            avatar.classList.remove('open');
+        }
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const avatar = document.getElementById('navAvatar');
+            if (avatar) avatar.classList.remove('open');
+        }
     });
     </script>
 </body>
