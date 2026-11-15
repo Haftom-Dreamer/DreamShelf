@@ -25,6 +25,13 @@
                 {{ form.title(class="form-control") }}
                 {% if form.title.errors %}<span class="field-error">{{ form.title.errors[0] }}</span>{% endif %}
             </div>
+            {% if form.media_type %}
+            <div class="form-group">
+                <label class="form-label"><i class="fas fa-shapes" style="color:var(--accent);"></i> {{ form.media_type.label.text }}</label>
+                {{ form.media_type(class="form-control") }}
+                {% if form.media_type.errors %}<span class="field-error">{{ form.media_type.errors[0] }}</span>{% endif %}
+            </div>
+            {% endif %}
             <div class="form-group">
                 <label class="form-label">{{ form.status.label.text }}</label>
                 {{ form.status(class="form-control") }}

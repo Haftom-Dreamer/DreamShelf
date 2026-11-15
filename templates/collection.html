@@ -18,6 +18,35 @@
                 <span class="collection-stat-pill total" title="Total Books"><i class="fas fa-book"></i> <strong>{{ total_books_count }}</strong> Total</span>
                 {% endif %}
             </div>
+            {% if tab == 'movies' and movie_type_counts %}
+            <div class="category-breakdown-bar">
+                <a class="cat-pill movie {% if current_media_type == 'movie' %}active{% endif %}"
+                   href="{{ url_for('collection', tab='movies', status=status, sort=sort, media_type='movie', tag=current_tag) }}"
+                   title="Filter to Normal Movies">
+                    🎬 <strong>{{ movie_type_counts.movie.watched }}</strong>/{{ movie_type_counts.movie.total }} Movies
+                </a>
+                <a class="cat-pill series {% if current_media_type == 'series' %}active{% endif %}"
+                   href="{{ url_for('collection', tab='movies', status=status, sort=sort, media_type='series', tag=current_tag) }}"
+                   title="Filter to Series">
+                    📺 <strong>{{ movie_type_counts.series.watched }}</strong>/{{ movie_type_counts.series.total }} Series
+                </a>
+                <a class="cat-pill animation {% if current_media_type == 'animation' %}active{% endif %}"
+                   href="{{ url_for('collection', tab='movies', status=status, sort=sort, media_type='animation', tag=current_tag) }}"
+                   title="Filter to Animation">
+                    🎨 <strong>{{ movie_type_counts.animation.watched }}</strong>/{{ movie_type_counts.animation.total }} Animation
+                </a>
+                <a class="cat-pill anime {% if current_media_type == 'anime' %}active{% endif %}"
+                   href="{{ url_for('collection', tab='movies', status=status, sort=sort, media_type='anime', tag=current_tag) }}"
+                   title="Filter to Anime">
+                    ⛩️ <strong>{{ movie_type_counts.anime.watched }}</strong>/{{ movie_type_counts.anime.total }} Anime
+                </a>
+                {% if current_media_type %}
+                <a class="cat-pill" style="border-style:dashed;" href="{{ url_for('collection', tab='movies', status=status, sort=sort, tag=current_tag) }}" title="Show All Types">
+                    <i class="fas fa-times"></i> All Types
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
         <div class="collection-actions">
             <button class="btn-secondary" onclick="copyShareLink('{{ url_for('public_collection', username=current_user.username, _external=True) }}')"><i class="fas fa-share-alt"></i> Share</button>
@@ -38,42 +67,161 @@
         </a>
     </div>
 
-    <!-- Toolbar: filters + sort + search -->
+    <!-- Toolbar: Minimized filter dropdowns + sort + search -->
     <div class="collection-toolbar">
-        <div class="filter-bar">
-            {% if tab == 'movies' %}
-            <a class="filter-chip {% if status == 'all' %}active{% endif %}" href="{{ url_for('collection', tab='movies', status='all', sort=sort) }}">All <span class="chip-count">{{ total_movies_count }}</span></a>
-            <a class="filter-chip {% if status == 'watched' %}active{% endif %}" href="{{ url_for('collection', tab='movies', status='watched', sort=sort) }}">✅ Watched <span class="chip-count">{{ watched_count }}</span></a>
-            <a class="filter-chip {% if status == 'to_watch' %}active{% endif %}" href="{{ url_for('collection', tab='movies', status='to_watch', sort=sort) }}">🕐 To Watch <span class="chip-count">{{ to_watch_count }}</span></a>
-            {% else %}
-            <a class="filter-chip {% if status == 'all' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='all', sort=sort) }}">All <span class="chip-count">{{ total_books_count }}</span></a>
-            <a class="filter-chip {% if status == 'read' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='read', sort=sort) }}">✅ Read <span class="chip-count">{{ read_count }}</span></a>
-            <a class="filter-chip {% if status == 'to_read' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='to_read', sort=sort) }}">📖 To Read <span class="chip-count">{{ to_read_count }}</span></a>
+        <div class="filter-controls-group">
+            <input type="text" id="searchInput" class="search-inline" placeholder="🔍 Filter by title..." oninput="filterCards(this.value)">
+
+            <!-- Minimized Category Dropdown (for Movies) -->
+            {% if tab == 'movies' and movie_type_counts %}
+            <div class="filter-dropdown" id="categoryFilterDropdown">
+                <button type="button" class="filter-dropdown-btn {% if current_media_type %}active {{ current_media_type }}{% endif %}" onclick="toggleFilterDropdown('categoryFilterDropdown', event)">
+                    <i class="fas fa-shapes"></i>
+                    <span>
+                        {% if current_media_type == 'movie' %}🎬 Movies ({{ movie_type_counts.movie.watched }}/{{ movie_type_counts.movie.total }})
+                        {% elif current_media_type == 'series' %}📺 Series ({{ movie_type_counts.series.watched }}/{{ movie_type_counts.series.total }})
+                        {% elif current_media_type == 'animation' %}🎨 Animation ({{ movie_type_counts.animation.watched }}/{{ movie_type_counts.animation.total }})
+                        {% elif current_media_type == 'anime' %}⛩️ Anime ({{ movie_type_counts.anime.watched }}/{{ movie_type_counts.anime.total }})
+                        {% else %}Category: All Types{% endif %}
+                    </span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+                <div class="filter-dropdown-menu">
+                    <a class="filter-dropdown-item {% if not current_media_type %}active{% endif %}"
+                       href="{{ url_for('collection', tab='movies', status=status, sort=sort, tag=current_tag) }}">
+                       <span>All Types</span>
+                       <span class="chip-count">{{ total_movies_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item movie {% if current_media_type == 'movie' %}active{% endif %}"
+                       href="{{ url_for('collection', tab='movies', status=status, sort=sort, media_type='movie', tag=current_tag) }}">
+                       <span>🎬 Normal Movies</span>
+                       <span class="chip-count">{{ movie_type_counts.movie.watched }}/{{ movie_type_counts.movie.total }}</span>
+                    </a>
+                    <a class="filter-dropdown-item series {% if current_media_type == 'series' %}active{% endif %}"
+                       href="{{ url_for('collection', tab='movies', status=status, sort=sort, media_type='series', tag=current_tag) }}">
+                       <span>📺 Series</span>
+                       <span class="chip-count">{{ movie_type_counts.series.watched }}/{{ movie_type_counts.series.total }}</span>
+                    </a>
+                    <a class="filter-dropdown-item animation {% if current_media_type == 'animation' %}active{% endif %}"
+                       href="{{ url_for('collection', tab='movies', status=status, sort=sort, media_type='animation', tag=current_tag) }}">
+                       <span>🎨 Animation</span>
+                       <span class="chip-count">{{ movie_type_counts.animation.watched }}/{{ movie_type_counts.animation.total }}</span>
+                    </a>
+                    <a class="filter-dropdown-item anime {% if current_media_type == 'anime' %}active{% endif %}"
+                       href="{{ url_for('collection', tab='movies', status=status, sort=sort, media_type='anime', tag=current_tag) }}">
+                       <span>⛩️ Anime</span>
+                       <span class="chip-count">{{ movie_type_counts.anime.watched }}/{{ movie_type_counts.anime.total }}</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Minimized Status Dropdown -->
+            <div class="filter-dropdown" id="statusFilterDropdown">
+                <button type="button" class="filter-dropdown-btn {% if status != 'all' %}active{% endif %}" onclick="toggleFilterDropdown('statusFilterDropdown', event)">
+                    <i class="fas fa-check-circle"></i>
+                    <span>
+                        {% if tab == 'movies' %}
+                            {% if status == 'watched' %}✅ Watched ({{ watched_count }})
+                            {% elif status == 'to_watch' %}🕐 To Watch ({{ to_watch_count }})
+                            {% else %}Status: All{% endif %}
+                        {% else %}
+                            {% if status == 'read' %}✅ Read ({{ read_count }})
+                            {% elif status == 'to_read' %}📖 To Read ({{ to_read_count }})
+                            {% else %}Status: All{% endif %}
+                        {% endif %}
+                    </span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+                <div class="filter-dropdown-menu">
+                    {% if tab == 'movies' %}
+                    <a class="filter-dropdown-item {% if status == 'all' %}active{% endif %}" href="{{ url_for('collection', tab='movies', status='all', sort=sort, media_type=current_media_type, tag=current_tag) }}">
+                        <span>All Movies</span>
+                        <span class="chip-count">{{ total_movies_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if status == 'watched' %}active{% endif %}" href="{{ url_for('collection', tab='movies', status='watched', sort=sort, media_type=current_media_type, tag=current_tag) }}">
+                        <span>✅ Watched</span>
+                        <span class="chip-count">{{ watched_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if status == 'to_watch' %}active{% endif %}" href="{{ url_for('collection', tab='movies', status='to_watch', sort=sort, media_type=current_media_type, tag=current_tag) }}">
+                        <span>🕐 To Watch</span>
+                        <span class="chip-count">{{ to_watch_count }}</span>
+                    </a>
+                    {% else %}
+                    <a class="filter-dropdown-item {% if status == 'all' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='all', sort=sort, tag=current_tag) }}">
+                        <span>All Books</span>
+                        <span class="chip-count">{{ total_books_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if status == 'read' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='read', sort=sort, tag=current_tag) }}">
+                        <span>✅ Read</span>
+                        <span class="chip-count">{{ read_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if status == 'to_read' %}active{% endif %}" href="{{ url_for('collection', tab='books', status='to_read', sort=sort, tag=current_tag) }}">
+                        <span>📖 To Read</span>
+                        <span class="chip-count">{{ to_read_count }}</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Minimized Sort Dropdown -->
+            <div class="filter-dropdown" id="sortFilterDropdown">
+                <button type="button" class="filter-dropdown-btn" onclick="toggleFilterDropdown('sortFilterDropdown', event)">
+                    <i class="fas fa-sort-amount-down"></i>
+                    <span>
+                        {% if sort == 'rating' %}Sort: Rating
+                        {% elif sort == 'title' %}Sort: A–Z
+                        {% else %}Sort: Newest{% endif %}
+                    </span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+                <div class="filter-dropdown-menu">
+                    <a class="filter-dropdown-item {% if sort == 'newest' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='newest', media_type=current_media_type, tag=current_tag) }}">
+                        <span>🕒 Newest Added</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if sort == 'rating' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='rating', media_type=current_media_type, tag=current_tag) }}">
+                        <span>⭐ Highest Rating</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if sort == 'title' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='title', media_type=current_media_type, tag=current_tag) }}">
+                        <span>🔤 Alphabetical (A–Z)</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Minimized Tags Dropdown -->
+            {% if all_tags %}
+            <div class="filter-dropdown" id="tagFilterDropdown">
+                <button type="button" class="filter-dropdown-btn {% if current_tag %}active{% endif %}" onclick="toggleFilterDropdown('tagFilterDropdown', event)">
+                    <i class="fas fa-tags"></i>
+                    <span>{% if current_tag %}#{{ current_tag }}{% else %}Tags ({{ all_tags|length }}){% endif %}</span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+                <div class="filter-dropdown-menu" style="max-height: 220px; overflow-y: auto;">
+                    <a class="filter-dropdown-item {% if not current_tag %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort=sort, media_type=current_media_type) }}">
+                        <span>All Tags</span>
+                    </a>
+                    {% for tag in all_tags %}
+                    <a class="filter-dropdown-item {% if current_tag == tag %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort=sort, media_type=current_media_type, tag=tag) }}">
+                        <span>#{{ tag }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Clear Button when any filter is active -->
+            {% if (status != 'all') or current_media_type or current_tag %}
+            <a href="{{ url_for('collection', tab=tab, status='all', sort='newest') }}" class="btn-clear-filters" title="Reset all filters">
+                <i class="fas fa-times"></i> Reset
+            </a>
             {% endif %}
         </div>
-        <div class="sort-search-group">
-            <input type="text" id="searchInput" class="search-inline" placeholder="🔍 Filter by title..." oninput="filterCards(this.value)">
-            <div class="sort-group">
-                <a class="sort-chip {% if sort == 'newest' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='newest') }}">Newest</a>
-                <a class="sort-chip {% if sort == 'rating' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='rating') }}">Rating</a>
-                <a class="sort-chip {% if sort == 'title' %}active{% endif %}" href="{{ url_for('collection', tab=tab, status=status, sort='title') }}">A–Z</a>
-            </div>
-            <div class="grid-controls" style="display:flex; gap:0.3rem; margin-left:0.5rem;">
-                <button class="sort-chip" onclick="setGridSize('small')" title="Small Size" style="padding:0.4rem 0.6rem;"><i class="fas fa-th"></i></button>
-                <button class="sort-chip" onclick="setGridSize('medium')" title="Medium Size" style="padding:0.4rem 0.6rem;"><i class="fas fa-th-large"></i></button>
-                <button class="sort-chip" onclick="setGridSize('large')" title="Large Size" style="padding:0.4rem 0.6rem;"><i class="fas fa-square"></i></button>
-            </div>
-        </div>
 
-        {% if all_tags %}
-        <div class="tag-filters" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:1rem;">
-            <span style="font-size:0.8rem; opacity:0.6; align-self:center;">Tags:</span>
-            <a href="{{ url_for('collection', tab=tab, status=status, sort=sort) }}" class="sort-chip {% if not current_tag %}active{% endif %}" style="padding:0.2rem 0.6rem; font-size:0.8rem;">All</a>
-            {% for tag in all_tags %}
-            <a href="{{ url_for('collection', tab=tab, status=status, sort=sort, tag=tag) }}" class="sort-chip {% if current_tag == tag %}active{% endif %}" style="padding:0.2rem 0.6rem; font-size:0.8rem;">{{ tag }}</a>
-            {% endfor %}
+        <div class="grid-controls" style="display:flex; gap:0.3rem;">
+            <button class="sort-chip" onclick="setGridSize('small')" title="Small Size" style="padding:0.4rem 0.6rem;"><i class="fas fa-th"></i></button>
+            <button class="sort-chip" onclick="setGridSize('medium')" title="Medium Size" style="padding:0.4rem 0.6rem;"><i class="fas fa-th-large"></i></button>
+            <button class="sort-chip" onclick="setGridSize('large')" title="Large Size" style="padding:0.4rem 0.6rem;"><i class="fas fa-square"></i></button>
         </div>
-        {% endif %}
     </div>
 
     <!-- Grid -->
@@ -96,12 +244,30 @@
                                     <i class="fas {{ 'fa-check' if movie.status == 'watched' else 'fa-clock' }}"></i>
                                     {{ 'Watched' if movie.status == 'watched' else 'To Watch' }}
                                 </span>
+                                {% if movie.media_type == 'series' %}
+                                <span class="type-tag series"><i class="fas fa-tv"></i> Series</span>
+                                {% elif movie.media_type == 'animation' %}
+                                <span class="type-tag animation"><i class="fas fa-paint-brush"></i> Animation</span>
+                                {% elif movie.media_type == 'anime' %}
+                                <span class="type-tag anime"><i class="fas fa-torii-gate"></i> Anime</span>
+                                {% else %}
+                                <span class="type-tag movie"><i class="fas fa-film"></i> Movie</span>
+                                {% endif %}
                                 {% if movie.rating %}<span class="rating-chip">⭐ {{ movie.rating }}</span>{% endif %}
                             </div>
                         </div>
                     </div>
                     <div class="card-back">
-                        <div class="card-back-title">{{ movie.title }}</div>
+                        <div class="card-back-title" style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.4rem;">
+                            <span>{{ movie.title }}</span>
+                            {% if movie.media_type == 'series' %}
+                            <span class="type-tag series"><i class="fas fa-tv"></i></span>
+                            {% elif movie.media_type == 'animation' %}
+                            <span class="type-tag animation"><i class="fas fa-paint-brush"></i></span>
+                            {% elif movie.media_type == 'anime' %}
+                            <span class="type-tag anime"><i class="fas fa-torii-gate"></i></span>
+                            {% endif %}
+                        </div>
                         {% if movie.genre %}<div class="card-genre">{{ movie.genre[:40] }}</div>{% endif %}
                         {% if movie.custom_tags %}
                         <div style="font-size: 0.75rem; margin: 0.5rem 0;">
@@ -227,6 +393,33 @@ function setGridSize(size) {
     grid.classList.add('grid-' + size);
     localStorage.setItem('dreamshelf_gridSize', size);
 }
+
+// Filter Dropdown Toggling
+function toggleFilterDropdown(id, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    const target = document.getElementById(id);
+    if (!target) return;
+    const isOpen = target.classList.contains('open');
+    document.querySelectorAll('.filter-dropdown.open').forEach(d => {
+        if (d !== target) d.classList.remove('open');
+    });
+    target.classList.toggle('open', !isOpen);
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.filter-dropdown')) {
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     const size = localStorage.getItem('dreamshelf_gridSize') || localStorage.getItem('cineshelf_gridSize') || 'medium';

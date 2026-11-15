@@ -5,7 +5,7 @@
 {% block content %}
 
 {% macro render_movie(movie) %}
-<div class="discover-card" data-tmdb="{{ movie.tmdb_id }}" data-title="{{ movie.title }}">
+<div class="discover-card" data-tmdb="{{ movie.tmdb_id }}" data-title="{{ movie.title }}" data-media-type="{{ movie.media_type or 'movie' }}">
     <div class="discover-poster">
         <img src="{{ movie.img_url }}" alt="{{ movie.title }}" loading="lazy">
         <div class="discover-overlay">
@@ -14,17 +14,24 @@
             </button>
         </div>
         <div class="tmdb-rating">⭐ {{ movie.rating }}</div>
+        {% if movie.media_type == 'series' %}
+        <span class="type-tag series" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-tv"></i> Series</span>
+        {% elif movie.media_type == 'animation' %}
+        <span class="type-tag animation" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-paint-brush"></i> Animation</span>
+        {% elif movie.media_type == 'anime' %}
+        <span class="type-tag anime" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-torii-gate"></i> Anime</span>
+        {% endif %}
     </div>
     <div class="discover-info">
         <div class="discover-title" title="{{ movie.title }}">{{ movie.title }}</div>
         <div class="discover-year">{{ movie.year }}</div>
         <div class="quick-add-row">
-            <a href="{{ url_for('quick_add_movie', id=movie.tmdb_id, status='to_watch') }}"
+            <a href="{{ url_for('quick_add_movie', id=movie.tmdb_id, status='to_watch', media_type=movie.media_type or 'movie') }}"
                onclick="quickAdd(event, this, 'movie', '{{ movie.tmdb_id }}', 'to_watch')"
                class="btn-quick to-watch" title="Add to Watchlist">
                 <i class="fas fa-clock"></i> To Watch
             </a>
-            <a href="{{ url_for('quick_add_movie', id=movie.tmdb_id, status='watched') }}"
+            <a href="{{ url_for('quick_add_movie', id=movie.tmdb_id, status='watched', media_type=movie.media_type or 'movie') }}"
                onclick="quickAdd(event, this, 'movie', '{{ movie.tmdb_id }}', 'watched')"
                class="btn-quick watched" title="Mark as Watched">
                 <i class="fas fa-check"></i> Watched
@@ -91,6 +98,51 @@
     </div>
 
     {% if tab == 'movies' %}
+        <!-- Minimized Category Filter Dropdown -->
+        <div class="discover-filter-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.8rem; margin: 1.5rem 0 1rem 0;">
+            <div class="filter-dropdown" id="discoverCategoryDropdown">
+                <button type="button" class="filter-dropdown-btn {% if current_category and current_category != 'all' %}active {{ current_category }}{% endif %}" onclick="toggleFilterDropdown('discoverCategoryDropdown', event)">
+                    <i class="fas fa-shapes"></i>
+                    <span id="discoverCategoryLabel">
+                        {% if current_category == 'movie' %}🎬 Movies
+                        {% elif current_category == 'series' %}📺 Series
+                        {% elif current_category == 'animation' %}🎨 Animation
+                        {% elif current_category == 'anime' %}⛩️ Anime
+                        {% else %}Category: All Types{% endif %}
+                    </span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+                <div class="filter-dropdown-menu">
+                    <a class="filter-dropdown-item {% if current_category == 'all' or not current_category %}active{% endif %}"
+                       href="{{ url_for('discover', tab='movies', category='all') }}"
+                       onclick="filterDiscoverCategory(event, 'all', 'All Types')" data-cat="all">
+                       <span>All Types</span>
+                    </a>
+                    <a class="filter-dropdown-item movie {% if current_category == 'movie' %}active{% endif %}"
+                       href="{{ url_for('discover', tab='movies', category='movie') }}"
+                       onclick="filterDiscoverCategory(event, 'movie', '🎬 Movies')" data-cat="movie">
+                       <span>🎬 Normal Movies</span>
+                    </a>
+                    <a class="filter-dropdown-item series {% if current_category == 'series' %}active{% endif %}"
+                       href="{{ url_for('discover', tab='movies', category='series') }}"
+                       onclick="filterDiscoverCategory(event, 'series', '📺 Series')" data-cat="series">
+                       <span>📺 Series / TV Shows</span>
+                    </a>
+                    <a class="filter-dropdown-item animation {% if current_category == 'animation' %}active{% endif %}"
+                       href="{{ url_for('discover', tab='movies', category='animation') }}"
+                       onclick="filterDiscoverCategory(event, 'animation', '🎨 Animation')" data-cat="animation">
+                       <span>🎨 Animation</span>
+                    </a>
+                    <a class="filter-dropdown-item anime {% if current_category == 'anime' %}active{% endif %}"
+                       href="{{ url_for('discover', tab='movies', category='anime') }}"
+                       onclick="filterDiscoverCategory(event, 'anime', '⛩️ Anime')" data-cat="anime">
+                       <span>⛩️ Anime</span>
+                    </a>
+                </div>
+            </div>
+            <span style="font-size: 0.8rem; opacity: 0.6;"><i class="fas fa-magic"></i> Curated algorithms tailored to your library</span>
+        </div>
+
         <!-- Movies Section -->
         {% if is_personalized_movies and recommended_movies %}
         <div class="dashboard-section" style="margin-top:2rem;">
@@ -198,8 +250,111 @@ const refreshState = {
     recPage: 1,
     trendPage: 1,
     recSeed: Math.floor(Math.random() * 100) + 1,
-    trendSeed: Math.floor(Math.random() * 100) + 1
+    trendSeed: Math.floor(Math.random() * 100) + 1,
+    category: '{{ current_category or "all" }}'
 };
+
+// Filter Dropdown Toggling
+function toggleFilterDropdown(id, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    const target = document.getElementById(id);
+    if (!target) return;
+    const isOpen = target.classList.contains('open');
+    document.querySelectorAll('.filter-dropdown.open').forEach(d => {
+        if (d !== target) d.classList.remove('open');
+    });
+    target.classList.toggle('open', !isOpen);
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.filter-dropdown')) {
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+});
+
+// Category Filter in Discover
+function filterDiscoverCategory(event, cat, label) {
+    if (event) {
+        event.preventDefault();
+    }
+    // Close dropdown
+    document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+
+    // Update active dropdown item UI
+    document.querySelectorAll('#discoverCategoryDropdown .filter-dropdown-item').forEach(c => {
+        c.classList.toggle('active', c.dataset.cat === cat);
+    });
+    const labelEl = document.getElementById('discoverCategoryLabel');
+    if (labelEl) {
+        labelEl.textContent = cat === 'all' ? 'Category: All Types' : label;
+    }
+    const btn = document.querySelector('#discoverCategoryDropdown .filter-dropdown-btn');
+    if (btn) {
+        btn.classList.remove('active', 'movie', 'series', 'animation', 'anime');
+        if (cat !== 'all') {
+            btn.classList.add('active', cat);
+        }
+    }
+
+    refreshState.category = cat;
+    refreshState.recPage = 1;
+    refreshState.trendPage = 1;
+
+    // Update browser URL query string without reloading
+    const newUrl = new URL(window.location);
+    newUrl.searchParams.set('tab', 'movies');
+    newUrl.searchParams.set('category', cat);
+    window.history.pushState({}, '', newUrl);
+
+    // Refresh both Recommended and Trending grids
+    refreshSectionDirect('recommended', 'movies', cat);
+    refreshSectionDirect('trending', 'movies', cat);
+}
+
+function refreshSectionDirect(section, tab, cat) {
+    const gridId = section === 'recommended' ? 'gridRecommendedMovies' : 'gridTrendingMovies';
+    const btnId = section === 'recommended' ? 'btnRefreshRecMovies' : 'btnRefreshTrendingMovies';
+    const grid = document.getElementById(gridId);
+    const btn = document.getElementById(btnId);
+    if (!grid) return;
+
+    const icon = btn ? btn.querySelector('i') : null;
+    if (icon) icon.classList.add('fa-spin');
+    if (btn) btn.style.pointerEvents = 'none';
+
+    grid.style.opacity = '0.4';
+    grid.style.transition = 'opacity 0.2s ease';
+
+    const page = section === 'recommended' ? refreshState.recPage : refreshState.trendPage;
+    fetch(`/api/discover_section?tab=${tab}&section=${section}&category=${cat}&page=${page}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.items) {
+                let html = '';
+                data.items.forEach(item => {
+                    html += buildMovieCard(item);
+                });
+                grid.innerHTML = html || '<div class="empty-state" style="grid-column: 1/-1; padding: 2rem;"><p>No items found for this category.</p></div>';
+            }
+            grid.style.opacity = '1';
+            if (icon) icon.classList.remove('fa-spin');
+            if (btn) btn.style.pointerEvents = '';
+        })
+        .catch(err => {
+            grid.style.opacity = '1';
+            if (icon) icon.classList.remove('fa-spin');
+            if (btn) btn.style.pointerEvents = '';
+        });
+}
 
 // 1. ASYNC QUICK-ADD (Prevents page reload and preserving the lists / scroll position)
 function quickAdd(event, btn, type, id, status) {
@@ -215,7 +370,8 @@ function quickAdd(event, btn, type, id, status) {
     let url = btn.getAttribute('href');
     if (!url) {
         if (type === 'movie') {
-            url = `/quick_add_movie?id=${id}&status=${status}`;
+            const mType = card ? (card.dataset.mediaType || 'movie') : 'movie';
+            url = `/quick_add_movie?id=${id}&status=${status}&media_type=${mType}`;
         } else {
             const titleEnc = card ? encodeURIComponent(card.dataset.title || '') : '';
             const authorEnc = card ? encodeURIComponent(card.dataset.author || '') : '';
@@ -294,7 +450,8 @@ function refreshSection(section, tab) {
     grid.style.opacity = '0.5';
     grid.style.transition = 'opacity 0.2s ease';
 
-    fetch(`/api/discover_section?tab=${tab}&section=${section}&${pageParam}`)
+    const catParam = tab === 'movies' ? `&category=${refreshState.category}` : '';
+    fetch(`/api/discover_section?tab=${tab}&section=${section}&${pageParam}${catParam}`)
         .then(r => r.json())
         .then(data => {
             if (data.success && data.items && data.items.length > 0) {
@@ -318,8 +475,17 @@ function refreshSection(section, tab) {
 // Dynamic Card Builders for Refresh
 function buildMovieCard(m) {
     const titleEsc = escapeHtml(m.title);
+    const mType = m.media_type || 'movie';
+    let typeBadge = '';
+    if (mType === 'series') {
+        typeBadge = '<span class="type-tag series" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-tv"></i> Series</span>';
+    } else if (mType === 'animation') {
+        typeBadge = '<span class="type-tag animation" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-paint-brush"></i> Animation</span>';
+    } else if (mType === 'anime') {
+        typeBadge = '<span class="type-tag anime" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-torii-gate"></i> Anime</span>';
+    }
     return `
-    <div class="discover-card" data-tmdb="${m.tmdb_id}" data-title="${titleEsc}">
+    <div class="discover-card" data-tmdb="${m.tmdb_id}" data-title="${titleEsc}" data-media-type="${mType}">
         <div class="discover-poster">
             <img src="${m.img_url}" alt="${titleEsc}" loading="lazy">
             <div class="discover-overlay">
@@ -328,19 +494,26 @@ function buildMovieCard(m) {
                 </button>
             </div>
             <div class="tmdb-rating">⭐ ${m.rating}</div>
+            ${typeBadge}
         </div>
         <div class="discover-info">
             <div class="discover-title" title="${titleEsc}">${titleEsc}</div>
             <div class="discover-year">${m.year || ''}</div>
             <div class="quick-add-row">
-                <a href="/quick_add_movie?id=${m.tmdb_id}&status=to_watch"
+                <a href="/quick_add_movie?id=${m.tmdb_id}&status=to_watch&media_type=${mType}"
                    onclick="quickAdd(event, this, 'movie', '${m.tmdb_id}', 'to_watch')"
                    class="btn-quick to-watch" title="Add to Watchlist">
                     <i class="fas fa-clock"></i> To Watch
                 </a>
-                <a href="/quick_add_movie?id=${m.tmdb_id}&status=watched"
+                <a href="/quick_add_movie?id=${m.tmdb_id}&status=watched&media_type=${mType}"
                    onclick="quickAdd(event, this, 'movie', '${m.tmdb_id}', 'watched')"
                    class="btn-quick watched" title="Mark as Watched">
+                    <i class="fas fa-check"></i> Watched
+                </a>
+            </div>
+        </div>
+    </div>`;
+}
                     <i class="fas fa-check"></i> Watched
                 </a>
             </div>

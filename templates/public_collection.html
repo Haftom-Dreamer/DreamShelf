@@ -29,6 +29,35 @@
                 <span class="collection-stat-pill total" title="Total Books"><i class="fas fa-book"></i> <strong>{{ total_books_count }}</strong> Total</span>
                 {% endif %}
             </div>
+            {% if tab == 'movies' and movie_type_counts %}
+            <div class="category-breakdown-bar" style="justify-content: center;">
+                <a class="cat-pill movie {% if current_media_type == 'movie' %}active{% endif %}"
+                   href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='movie') }}"
+                   title="Filter to Normal Movies">
+                    🎬 <strong>{{ movie_type_counts.movie.watched }}</strong>/{{ movie_type_counts.movie.total }} Movies
+                </a>
+                <a class="cat-pill series {% if current_media_type == 'series' %}active{% endif %}"
+                   href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='series') }}"
+                   title="Filter to Series">
+                    📺 <strong>{{ movie_type_counts.series.watched }}</strong>/{{ movie_type_counts.series.total }} Series
+                </a>
+                <a class="cat-pill animation {% if current_media_type == 'animation' %}active{% endif %}"
+                   href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='animation') }}"
+                   title="Filter to Animation">
+                    🎨 <strong>{{ movie_type_counts.animation.watched }}</strong>/{{ movie_type_counts.animation.total }} Animation
+                </a>
+                <a class="cat-pill anime {% if current_media_type == 'anime' %}active{% endif %}"
+                   href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='anime') }}"
+                   title="Filter to Anime">
+                    ⛩️ <strong>{{ movie_type_counts.anime.watched }}</strong>/{{ movie_type_counts.anime.total }} Anime
+                </a>
+                {% if current_media_type %}
+                <a class="cat-pill" style="border-style:dashed;" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort) }}" title="Show All Types">
+                    <i class="fas fa-times"></i> All Types
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
 
         <div class="collection-actions" style="margin-top: 1rem;">
@@ -52,26 +81,132 @@
         </a>
     </div>
 
-    <!-- Toolbar: filters + sort + search -->
+    <!-- Toolbar: Minimized filter dropdowns + sort + search -->
     <div class="collection-toolbar">
-        <div class="filter-bar">
-            {% if tab == 'movies' %}
-            <a class="filter-chip {% if status == 'all' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='all', sort=sort) }}">All <span class="chip-count">{{ total_movies_count }}</span></a>
-            <a class="filter-chip {% if status == 'watched' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='watched', sort=sort) }}">✅ Watched <span class="chip-count">{{ watched_count }}</span></a>
-            <a class="filter-chip {% if status == 'to_watch' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='to_watch', sort=sort) }}">🕐 To Watch <span class="chip-count">{{ to_watch_count }}</span></a>
-            {% else %}
-            <a class="filter-chip {% if status == 'all' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='all', sort=sort) }}">All <span class="chip-count">{{ total_books_count }}</span></a>
-            <a class="filter-chip {% if status == 'read' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='read', sort=sort) }}">✅ Read <span class="chip-count">{{ read_count }}</span></a>
-            <a class="filter-chip {% if status == 'to_read' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='to_read', sort=sort) }}">📖 To Read <span class="chip-count">{{ to_read_count }}</span></a>
-            {% endif %}
-        </div>
-        <div class="sort-search-group">
+        <div class="filter-controls-group">
             <input type="text" id="searchInput" class="search-inline" placeholder="🔍 Filter by title..." oninput="filterCards(this.value)">
-            <div class="sort-group">
-                <a class="sort-chip {% if sort == 'newest' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='newest') }}">Newest</a>
-                <a class="sort-chip {% if sort == 'rating' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='rating') }}">Rating</a>
-                <a class="sort-chip {% if sort == 'title' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='title') }}">A–Z</a>
+
+            <!-- Minimized Category Dropdown -->
+            {% if tab == 'movies' and movie_type_counts %}
+            <div class="filter-dropdown" id="pubCategoryFilterDropdown">
+                <button type="button" class="filter-dropdown-btn {% if current_media_type %}active {{ current_media_type }}{% endif %}" onclick="toggleFilterDropdown('pubCategoryFilterDropdown', event)">
+                    <i class="fas fa-shapes"></i>
+                    <span>
+                        {% if current_media_type == 'movie' %}🎬 Movies ({{ movie_type_counts.movie.watched }}/{{ movie_type_counts.movie.total }})
+                        {% elif current_media_type == 'series' %}📺 Series ({{ movie_type_counts.series.watched }}/{{ movie_type_counts.series.total }})
+                        {% elif current_media_type == 'animation' %}🎨 Animation ({{ movie_type_counts.animation.watched }}/{{ movie_type_counts.animation.total }})
+                        {% elif current_media_type == 'anime' %}⛩️ Anime ({{ movie_type_counts.anime.watched }}/{{ movie_type_counts.anime.total }})
+                        {% else %}Category: All Types{% endif %}
+                    </span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+                <div class="filter-dropdown-menu">
+                    <a class="filter-dropdown-item {% if not current_media_type %}active{% endif %}"
+                       href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort) }}">
+                       <span>All Types</span>
+                       <span class="chip-count">{{ total_movies_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item movie {% if current_media_type == 'movie' %}active{% endif %}"
+                       href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='movie') }}">
+                       <span>🎬 Normal Movies</span>
+                       <span class="chip-count">{{ movie_type_counts.movie.watched }}/{{ movie_type_counts.movie.total }}</span>
+                    </a>
+                    <a class="filter-dropdown-item series {% if current_media_type == 'series' %}active{% endif %}"
+                       href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='series') }}">
+                       <span>📺 Series</span>
+                       <span class="chip-count">{{ movie_type_counts.series.watched }}/{{ movie_type_counts.series.total }}</span>
+                    </a>
+                    <a class="filter-dropdown-item animation {% if current_media_type == 'animation' %}active{% endif %}"
+                       href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='animation') }}">
+                       <span>🎨 Animation</span>
+                       <span class="chip-count">{{ movie_type_counts.animation.watched }}/{{ movie_type_counts.animation.total }}</span>
+                    </a>
+                    <a class="filter-dropdown-item anime {% if current_media_type == 'anime' %}active{% endif %}"
+                       href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='anime') }}">
+                       <span>⛩️ Anime</span>
+                       <span class="chip-count">{{ movie_type_counts.anime.watched }}/{{ movie_type_counts.anime.total }}</span>
+                    </a>
+                </div>
             </div>
+            {% endif %}
+
+            <!-- Minimized Status Dropdown -->
+            <div class="filter-dropdown" id="pubStatusFilterDropdown">
+                <button type="button" class="filter-dropdown-btn {% if status != 'all' %}active{% endif %}" onclick="toggleFilterDropdown('pubStatusFilterDropdown', event)">
+                    <i class="fas fa-check-circle"></i>
+                    <span>
+                        {% if tab == 'movies' %}
+                            {% if status == 'watched' %}✅ Watched ({{ watched_count }})
+                            {% elif status == 'to_watch' %}🕐 To Watch ({{ to_watch_count }})
+                            {% else %}Status: All{% endif %}
+                        {% else %}
+                            {% if status == 'read' %}✅ Read ({{ read_count }})
+                            {% elif status == 'to_read' %}📖 To Read ({{ to_read_count }})
+                            {% else %}Status: All{% endif %}
+                        {% endif %}
+                    </span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+                <div class="filter-dropdown-menu">
+                    {% if tab == 'movies' %}
+                    <a class="filter-dropdown-item {% if status == 'all' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='all', sort=sort, media_type=current_media_type) }}">
+                        <span>All Movies</span>
+                        <span class="chip-count">{{ total_movies_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if status == 'watched' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='watched', sort=sort, media_type=current_media_type) }}">
+                        <span>✅ Watched</span>
+                        <span class="chip-count">{{ watched_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if status == 'to_watch' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='to_watch', sort=sort, media_type=current_media_type) }}">
+                        <span>🕐 To Watch</span>
+                        <span class="chip-count">{{ to_watch_count }}</span>
+                    </a>
+                    {% else %}
+                    <a class="filter-dropdown-item {% if status == 'all' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='all', sort=sort) }}">
+                        <span>All Books</span>
+                        <span class="chip-count">{{ total_books_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if status == 'read' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='read', sort=sort) }}">
+                        <span>✅ Read</span>
+                        <span class="chip-count">{{ read_count }}</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if status == 'to_read' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='to_read', sort=sort) }}">
+                        <span>📖 To Read</span>
+                        <span class="chip-count">{{ to_read_count }}</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Minimized Sort Dropdown -->
+            <div class="filter-dropdown" id="pubSortFilterDropdown">
+                <button type="button" class="filter-dropdown-btn" onclick="toggleFilterDropdown('pubSortFilterDropdown', event)">
+                    <i class="fas fa-sort-amount-down"></i>
+                    <span>
+                        {% if sort == 'rating' %}Sort: Rating
+                        {% elif sort == 'title' %}Sort: A–Z
+                        {% else %}Sort: Newest{% endif %}
+                    </span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </button>
+                <div class="filter-dropdown-menu">
+                    <a class="filter-dropdown-item {% if sort == 'newest' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='newest', media_type=current_media_type) }}">
+                        <span>🕒 Newest Added</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if sort == 'rating' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='rating', media_type=current_media_type) }}">
+                        <span>⭐ Highest Rating</span>
+                    </a>
+                    <a class="filter-dropdown-item {% if sort == 'title' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='title', media_type=current_media_type) }}">
+                        <span>🔤 Alphabetical (A–Z)</span>
+                    </a>
+                </div>
+            </div>
+
+            {% if (status != 'all') or current_media_type %}
+            <a href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status='all', sort='newest') }}" class="btn-clear-filters" title="Reset all filters">
+                <i class="fas fa-times"></i> Reset
+            </a>
+            {% endif %}
         </div>
     </div>
 
@@ -95,6 +230,15 @@
                                     <i class="fas {{ 'fa-check' if movie.status == 'watched' else 'fa-clock' }}"></i>
                                     {{ 'Watched' if movie.status == 'watched' else 'To Watch' }}
                                 </span>
+                                {% if movie.media_type == 'series' %}
+                                <span class="type-tag series"><i class="fas fa-tv"></i> Series</span>
+                                {% elif movie.media_type == 'animation' %}
+                                <span class="type-tag animation"><i class="fas fa-paint-brush"></i> Animation</span>
+                                {% elif movie.media_type == 'anime' %}
+                                <span class="type-tag anime"><i class="fas fa-torii-gate"></i> Anime</span>
+                                {% else %}
+                                <span class="type-tag movie"><i class="fas fa-film"></i> Movie</span>
+                                {% endif %}
                                 {% if movie.rating %}<span class="rating-chip">⭐ {{ movie.rating }}</span>{% endif %}
                             </div>
                         </div>
@@ -190,5 +334,32 @@ function filterCards(query) {
     const noRes = document.getElementById('noResults');
     if (noRes) noRes.style.display = visible === 0 ? 'block' : 'none';
 }
+
+// Filter Dropdown Toggling
+function toggleFilterDropdown(id, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    const target = document.getElementById(id);
+    if (!target) return;
+    const isOpen = target.classList.contains('open');
+    document.querySelectorAll('.filter-dropdown.open').forEach(d => {
+        if (d !== target) d.classList.remove('open');
+    });
+    target.classList.toggle('open', !isOpen);
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.filter-dropdown')) {
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+});
 </script>
 {% endblock %}

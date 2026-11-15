@@ -16,10 +16,21 @@
         <h1 style="font-size: 3rem; margin-bottom: 0.5rem; color:var(--accent);">{{ item.title }}</h1>
         <p style="opacity: 0.7; font-size: 1.1rem; margin-bottom: 1.5rem;">{{ item.year }} • {% if director %}{{ 'Directed by ' if item_type == 'movie' else 'Written by ' }}{{ director }}{% endif %}</p>
         
-        <div style="display:flex; gap: 1rem; margin-bottom: 2rem;">
+        <div style="display:flex; gap: 0.8rem; margin-bottom: 2rem; align-items:center; flex-wrap:wrap;">
             <div class="status-badge {{ 'status-watched' if 'watch' in item.status else 'status-reading' }}">
                 {{ item.status.replace('_', ' ').title() }}
             </div>
+            {% if item_type == 'movie' and item.media_type %}
+                {% if item.media_type == 'series' %}
+                <span class="type-tag series"><i class="fas fa-tv"></i> Series</span>
+                {% elif item.media_type == 'animation' %}
+                <span class="type-tag animation"><i class="fas fa-paint-brush"></i> Animation</span>
+                {% elif item.media_type == 'anime' %}
+                <span class="type-tag anime"><i class="fas fa-torii-gate"></i> Anime</span>
+                {% else %}
+                <span class="type-tag movie"><i class="fas fa-film"></i> Movie</span>
+                {% endif %}
+            {% endif %}
             <div style="background:rgba(255,255,255,0.1); padding:0.2rem 0.8rem; border-radius:30px; font-weight:bold; color:#ffb703;">
                 ⭐ {{ item.rating }}/10
             </div>

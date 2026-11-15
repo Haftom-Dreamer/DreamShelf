@@ -101,6 +101,7 @@ class Movie(db.Model):
     custom_tags: Mapped[str] = mapped_column(String(250), nullable=True, default="")
     date_added: Mapped[date] = mapped_column(Date, default=date.today)
     date_watched: Mapped[date] = mapped_column(Date, nullable=True)
+    media_type: Mapped[str] = mapped_column(String(30), nullable=False, default="movie")
     owner: Mapped["User"] = relationship("User", back_populates="movies")
 
 class Book(db.Model):
@@ -131,6 +132,43 @@ with app.app_context():
         with db.engine.connect() as conn:
             conn.execute(text("ALTER TABLE user ADD COLUMN google_id VARCHAR(100)"))
             conn.commit()
+    # Add media_type column to movie table if missing
+    movie_cols = [c["name"] for c in inspector.get_columns("movie")]
+    if "media_type" not in movie_cols:
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE movie ADD COLUMN media_type VARCHAR(30) NOT NULL DEFAULT 'movie'"))
+            conn.commit()
+
+    # One-time smart auto-categorization for existing animation/anime movies in DB
+    with db.engine.connect() as conn:
+        try:
+            conn.execute(text("""
+                UPDATE movie 
+                SET media_type = 'anime'
+                WHERE (media_type = 'movie' OR media_type = 'animation')
+                  AND (LOWER(title) LIKE '%solo leveling%' 
+                    OR LOWER(title) LIKE '%my hero academia%' 
+                    OR LOWER(title) LIKE '%one piece%' 
+                    OR LOWER(title) LIKE '%attack on titan%' 
+                    OR LOWER(title) LIKE '%detective conan%' 
+                    OR LOWER(title) LIKE '%spirited away%' 
+                    OR LOWER(title) LIKE '%naruto%' 
+                    OR LOWER(title) LIKE '%bleach%' 
+                    OR LOWER(title) LIKE '%demon slayer%' 
+                    OR LOWER(title) LIKE '%dragon ball%' 
+                    OR LOWER(title) LIKE '%jujutsu%'
+                    OR LOWER(title) LIKE '%anime%'
+                    OR LOWER(genre) LIKE '%anime%')
+            """))
+            conn.execute(text("""
+                UPDATE movie 
+                SET media_type = 'animation'
+                WHERE media_type = 'movie' 
+                  AND LOWER(genre) LIKE '%animation%'
+            """))
+            conn.commit()
+        except Exception:
+            pass
     # Make password_hash nullable in SQLite (SQLite ignores NOT NULL on ALTER,
     # so existing rows stay intact; new Google-only rows will have NULL).
 
@@ -695,6 +733,7 @@ def collection():
     status = request.args.get("status", "all")
     sort = request.args.get("sort", "newest")
     tag_filter = request.args.get("tag")
+    media_type_filter = request.args.get("media_type")
 
     movie_q = Movie.query.filter_by(user_id=current_user.id)
     book_q = Book.query.filter_by(user_id=current_user.id)
@@ -707,6 +746,9 @@ def collection():
         book_q = book_q.filter_by(status="read")
     elif status == "to_read":
         book_q = book_q.filter_by(status="to_read")
+
+    if media_type_filter:
+        movie_q = movie_q.filter_by(media_type=media_type_filter)
 
     if sort == "rating":
         movie_q = movie_q.order_by(Movie.rating.desc())
@@ -730,6 +772,30 @@ def collection():
     to_read_count = Book.query.filter_by(user_id=current_user.id, status="to_read").count()
     total_books_count = read_count + to_read_count
 
+    # Media type counts with watched/total breakdown (from full collection)
+    movie_type_counts = {
+        "movie": {
+            "total": Movie.query.filter_by(user_id=current_user.id, media_type="movie").count(),
+            "watched": Movie.query.filter_by(user_id=current_user.id, media_type="movie", status="watched").count(),
+            "to_watch": Movie.query.filter_by(user_id=current_user.id, media_type="movie", status="to_watch").count(),
+        },
+        "series": {
+            "total": Movie.query.filter_by(user_id=current_user.id, media_type="series").count(),
+            "watched": Movie.query.filter_by(user_id=current_user.id, media_type="series", status="watched").count(),
+            "to_watch": Movie.query.filter_by(user_id=current_user.id, media_type="series", status="to_watch").count(),
+        },
+        "animation": {
+            "total": Movie.query.filter_by(user_id=current_user.id, media_type="animation").count(),
+            "watched": Movie.query.filter_by(user_id=current_user.id, media_type="animation", status="watched").count(),
+            "to_watch": Movie.query.filter_by(user_id=current_user.id, media_type="animation", status="to_watch").count(),
+        },
+        "anime": {
+            "total": Movie.query.filter_by(user_id=current_user.id, media_type="anime").count(),
+            "watched": Movie.query.filter_by(user_id=current_user.id, media_type="anime", status="watched").count(),
+            "to_watch": Movie.query.filter_by(user_id=current_user.id, media_type="anime", status="to_watch").count(),
+        },
+    }
+
     # Tag Processing
     all_tags = set()
     for m in movies:
@@ -747,7 +813,8 @@ def collection():
     return render_template("collection.html", movies=movies, books=books,
                            tab=tab, status=status, sort=sort, all_tags=all_tags, current_tag=tag_filter,
                            watched_count=watched_count, to_watch_count=to_watch_count, total_movies_count=total_movies_count,
-                           read_count=read_count, to_read_count=to_read_count, total_books_count=total_books_count)
+                           read_count=read_count, to_read_count=to_read_count, total_books_count=total_books_count,
+                           movie_type_counts=movie_type_counts, current_media_type=media_type_filter)
 
 @app.route("/u/<username>")
 def public_collection(username):
@@ -759,6 +826,7 @@ def public_collection(username):
     tab = request.args.get("tab", "movies")
     status = request.args.get("status", "all")
     sort = request.args.get("sort", "newest")
+    media_type_filter = request.args.get("media_type")
 
     movie_q = Movie.query.filter_by(user_id=user.id)
     book_q = Book.query.filter_by(user_id=user.id)
@@ -771,6 +839,9 @@ def public_collection(username):
         book_q = book_q.filter_by(status="read")
     elif status == "to_read":
         book_q = book_q.filter_by(status="to_read")
+
+    if media_type_filter:
+        movie_q = movie_q.filter_by(media_type=media_type_filter)
 
     if sort == "rating":
         movie_q = movie_q.order_by(Movie.rating.desc())
@@ -793,12 +864,36 @@ def public_collection(username):
     to_read_count = Book.query.filter_by(user_id=user.id, status="to_read").count()
     total_books_count = read_count + to_read_count
 
+    movie_type_counts = {
+        "movie": {
+            "total": Movie.query.filter_by(user_id=user.id, media_type="movie").count(),
+            "watched": Movie.query.filter_by(user_id=user.id, media_type="movie", status="watched").count(),
+            "to_watch": Movie.query.filter_by(user_id=user.id, media_type="movie", status="to_watch").count(),
+        },
+        "series": {
+            "total": Movie.query.filter_by(user_id=user.id, media_type="series").count(),
+            "watched": Movie.query.filter_by(user_id=user.id, media_type="series", status="watched").count(),
+            "to_watch": Movie.query.filter_by(user_id=user.id, media_type="series", status="to_watch").count(),
+        },
+        "animation": {
+            "total": Movie.query.filter_by(user_id=user.id, media_type="animation").count(),
+            "watched": Movie.query.filter_by(user_id=user.id, media_type="animation", status="watched").count(),
+            "to_watch": Movie.query.filter_by(user_id=user.id, media_type="animation", status="to_watch").count(),
+        },
+        "anime": {
+            "total": Movie.query.filter_by(user_id=user.id, media_type="anime").count(),
+            "watched": Movie.query.filter_by(user_id=user.id, media_type="anime", status="watched").count(),
+            "to_watch": Movie.query.filter_by(user_id=user.id, media_type="anime", status="to_watch").count(),
+        },
+    }
+
     return render_template("public_collection.html", 
                            profile_user=user, 
                            movies=movies, books=books,
                            tab=tab, status=status, sort=sort,
                            watched_count=watched_count, to_watch_count=to_watch_count, total_movies_count=total_movies_count,
-                           read_count=read_count, to_read_count=to_read_count, total_books_count=total_books_count)
+                           read_count=read_count, to_read_count=to_read_count, total_books_count=total_books_count,
+                           movie_type_counts=movie_type_counts, current_media_type=media_type_filter)
 
 
 
@@ -1011,104 +1106,381 @@ def _get_user_collection_ids():
     return movie_tmdb_ids, book_google_ids
 
 
-def get_diverse_movie_recommendations(user_movies, movie_in_collection, page=1):
+def detect_media_type(d, explicit_type=None):
+    if explicit_type in ["movie", "series", "animation", "anime"]:
+        return explicit_type
+    
+    genres_raw = d.get("genres", [])
+    if isinstance(genres_raw, list):
+        genres_names = [g.get("name", "") if isinstance(g, dict) else str(g) for g in genres_raw]
+    else:
+        genres_names = [str(genres_raw)]
+    genres_str = " ".join(genres_names).lower()
+    
+    orig_lang = (d.get("original_language") or "").lower()
+    title_str = (d.get("title") or d.get("name") or "").lower()
+    overview_str = (d.get("overview") or "").lower()
+    
+    is_animation = "animation" in genres_str
+    anime_keywords = ["anime", "solo leveling", "my hero academia", "one piece", "attack on titan", "detective conan", "spirited away", "naruto", "bleach", "demon slayer", "dragon ball", "jujutsu"]
+    is_anime = is_animation and (orig_lang == "ja" or any(k in overview_str or k in title_str for k in anime_keywords))
+    is_tv = "first_air_date" in d or d.get("media_type") == "tv"
+    
+    if is_anime:
+        return "anime"
+    elif is_animation:
+        return "animation"
+    elif is_tv:
+        return "series"
+    else:
+        return "movie"
+
+
+def get_diverse_movie_recommendations(user_movies, movie_in_collection, page=1, category="all"):
     import random
     if not user_movies:
         return []
 
-    # Map user's movies to genre categories present in collection
-    active_categories = set()
-    for m in user_movies:
-        mg = (m.genre or "").lower()
-        if any(term in mg for term in ["science fiction", "sci-fi", "fantasy"]):
-            active_categories.add("scifi_fantasy")
-        if any(term in mg for term in ["action", "adventure"]):
-            active_categories.add("action_adventure")
-        if any(term in mg for term in ["crime", "thriller", "mystery"]):
-            active_categories.add("crime_thriller_mystery")
-        if any(term in mg for term in ["animation", "family"]):
-            active_categories.add("animation_family")
-        if any(term in mg for term in ["drama", "romance"]):
-            active_categories.add("drama_romance")
-        if "comedy" in mg:
-            active_categories.add("comedy")
-
-    if not active_categories:
-        active_categories = {"scifi_fantasy", "action_adventure", "crime_thriller_mystery", "animation_family"}
-
-    active_cat_list = list(active_categories)
-    # Shuffle categories order based on page seed
-    rng = random.Random(page * 7919)
-    rng.shuffle(active_cat_list)
-
-    category_results = {}
     seen_ids = set(movie_in_collection)
+    results = []
 
-    for cat_key in active_cat_list:
-        gids = MOVIE_GENRE_CATEGORIES.get(cat_key, [28])
-        gid_str = "|".join(str(g) for g in gids)
+    if category == "series":
         try:
             params = {
                 "api_key": TMDB_API_KEY,
-                "with_genres": gid_str,
                 "sort_by": "popularity.desc",
-                "vote_count.gte": 150,
+                "vote_count.gte": 80,
                 "page": page
             }
-            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
-            cat_movies = []
+            r = requests.get("https://api.themoviedb.org/3/discover/tv", params=params, timeout=5)
             for item in r.json().get("results", []):
                 tid = str(item["id"])
                 if tid in seen_ids:
                     continue
                 if item.get("poster_path"):
                     seen_ids.add(tid)
-                    cat_movies.append({
+                    results.append({
+                        "tmdb_id": tid,
+                        "title": item.get("name") or item.get("original_name") or "",
+                        "year": (item.get("first_air_date") or "")[:4],
+                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "rating": round(item.get("vote_average", 0), 1),
+                        "overview": (item.get("overview") or "")[:200],
+                        "media_type": "series"
+                    })
+                if len(results) >= 12:
+                    break
+        except Exception:
+            pass
+        return results
+
+    elif category == "anime":
+        try:
+            params = {
+                "api_key": TMDB_API_KEY,
+                "with_genres": "16",
+                "with_original_language": "ja",
+                "sort_by": "popularity.desc",
+                "vote_count.gte": 30,
+                "page": page
+            }
+            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
+            for item in r.json().get("results", []):
+                tid = str(item["id"])
+                if tid in seen_ids:
+                    continue
+                if item.get("poster_path"):
+                    seen_ids.add(tid)
+                    results.append({
                         "tmdb_id": tid,
                         "title": item.get("title", ""),
                         "year": (item.get("release_date") or "")[:4],
                         "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
                         "rating": round(item.get("vote_average", 0), 1),
-                        "overview": (item.get("overview") or "")[:200]
+                        "overview": (item.get("overview") or "")[:200],
+                        "media_type": "anime"
                     })
-                if len(cat_movies) >= 6:
+                if len(results) >= 12:
                     break
-            category_results[cat_key] = cat_movies
         except Exception:
-            category_results[cat_key] = []
+            pass
+        return results
 
-    # Round-robin interleave across the different categories so recommendations are diverse!
-    blended = []
-    max_count = max((len(lst) for lst in category_results.values()), default=0)
-    for i in range(max_count):
-        for cat_key in active_cat_list:
-            lst = category_results.get(cat_key, [])
-            if i < len(lst) and len(blended) < 12:
-                blended.append(lst[i])
+    elif category == "animation":
+        try:
+            params = {
+                "api_key": TMDB_API_KEY,
+                "with_genres": "16",
+                "without_original_language": "ja",
+                "sort_by": "popularity.desc",
+                "vote_count.gte": 80,
+                "page": page
+            }
+            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
+            for item in r.json().get("results", []):
+                tid = str(item["id"])
+                if tid in seen_ids:
+                    continue
+                if item.get("poster_path"):
+                    seen_ids.add(tid)
+                    results.append({
+                        "tmdb_id": tid,
+                        "title": item.get("title", ""),
+                        "year": (item.get("release_date") or "")[:4],
+                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "rating": round(item.get("vote_average", 0), 1),
+                        "overview": (item.get("overview") or "")[:200],
+                        "media_type": "animation"
+                    })
+                if len(results) >= 12:
+                    break
+        except Exception:
+            pass
+        return results
 
-    return blended
-
-
-def get_trending_movies(movie_in_collection, page=1):
-    trending = []
-    try:
-        params = {"api_key": TMDB_API_KEY, "sort_by": "popularity.desc", "page": page}
-        r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
-        for item in r.json().get("results", []):
-            tid = str(item["id"])
-            if tid in movie_in_collection:
+    elif category == "movie":
+        # Feature movies, excluding animation
+        active_categories = set()
+        for m in user_movies:
+            if m.media_type != "movie" and m.media_type:
                 continue
-            if item.get("poster_path"):
-                trending.append({
-                    "tmdb_id": tid,
-                    "title": item.get("title", ""),
-                    "year": (item.get("release_date") or "")[:4],
-                    "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
-                    "rating": round(item.get("vote_average", 0), 1),
-                    "overview": (item.get("overview") or "")[:200]
-                })
-            if len(trending) >= 12:
-                break
+            mg = (m.genre or "").lower()
+            if any(term in mg for term in ["science fiction", "sci-fi", "fantasy"]):
+                active_categories.add("scifi_fantasy")
+            if any(term in mg for term in ["action", "adventure"]):
+                active_categories.add("action_adventure")
+            if any(term in mg for term in ["crime", "thriller", "mystery"]):
+                active_categories.add("crime_thriller_mystery")
+            if any(term in mg for term in ["drama", "romance"]):
+                active_categories.add("drama_romance")
+            if "comedy" in mg:
+                active_categories.add("comedy")
+        if not active_categories:
+            active_categories = {"scifi_fantasy", "action_adventure", "crime_thriller_mystery"}
+
+        active_cat_list = list(active_categories)
+        rng = random.Random(page * 7919)
+        rng.shuffle(active_cat_list)
+        category_results = {}
+        for cat_key in active_cat_list:
+            gids = MOVIE_GENRE_CATEGORIES.get(cat_key, [28])
+            gid_str = "|".join(str(g) for g in gids)
+            try:
+                params = {
+                    "api_key": TMDB_API_KEY,
+                    "with_genres": gid_str,
+                    "without_genres": "16",
+                    "sort_by": "popularity.desc",
+                    "vote_count.gte": 150,
+                    "page": page
+                }
+                r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
+                cat_movies = []
+                for item in r.json().get("results", []):
+                    tid = str(item["id"])
+                    if tid in seen_ids:
+                        continue
+                    if item.get("poster_path"):
+                        seen_ids.add(tid)
+                        cat_movies.append({
+                            "tmdb_id": tid,
+                            "title": item.get("title", ""),
+                            "year": (item.get("release_date") or "")[:4],
+                            "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                            "rating": round(item.get("vote_average", 0), 1),
+                            "overview": (item.get("overview") or "")[:200],
+                            "media_type": "movie"
+                        })
+                    if len(cat_movies) >= 6:
+                        break
+                category_results[cat_key] = cat_movies
+            except Exception:
+                category_results[cat_key] = []
+        blended = []
+        max_count = max((len(lst) for lst in category_results.values()), default=0)
+        for i in range(max_count):
+            for cat_key in active_cat_list:
+                lst = category_results.get(cat_key, [])
+                if i < len(lst) and len(blended) < 12:
+                    blended.append(lst[i])
+        return blended
+
+    else:
+        # category == "all": blended across genres
+        active_categories = set()
+        for m in user_movies:
+            mg = (m.genre or "").lower()
+            if any(term in mg for term in ["science fiction", "sci-fi", "fantasy"]):
+                active_categories.add("scifi_fantasy")
+            if any(term in mg for term in ["action", "adventure"]):
+                active_categories.add("action_adventure")
+            if any(term in mg for term in ["crime", "thriller", "mystery"]):
+                active_categories.add("crime_thriller_mystery")
+            if any(term in mg for term in ["animation", "family"]):
+                active_categories.add("animation_family")
+            if any(term in mg for term in ["drama", "romance"]):
+                active_categories.add("drama_romance")
+            if "comedy" in mg:
+                active_categories.add("comedy")
+
+        if not active_categories:
+            active_categories = {"scifi_fantasy", "action_adventure", "crime_thriller_mystery", "animation_family"}
+
+        active_cat_list = list(active_categories)
+        rng = random.Random(page * 7919)
+        rng.shuffle(active_cat_list)
+
+        category_results = {}
+        for cat_key in active_cat_list:
+            gids = MOVIE_GENRE_CATEGORIES.get(cat_key, [28])
+            gid_str = "|".join(str(g) for g in gids)
+            try:
+                params = {
+                    "api_key": TMDB_API_KEY,
+                    "with_genres": gid_str,
+                    "sort_by": "popularity.desc",
+                    "vote_count.gte": 150,
+                    "page": page
+                }
+                r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
+                cat_movies = []
+                for item in r.json().get("results", []):
+                    tid = str(item["id"])
+                    if tid in seen_ids:
+                        continue
+                    if item.get("poster_path"):
+                        seen_ids.add(tid)
+                        m_type = "animation" if cat_key == "animation_family" else "movie"
+                        cat_movies.append({
+                            "tmdb_id": tid,
+                            "title": item.get("title", ""),
+                            "year": (item.get("release_date") or "")[:4],
+                            "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                            "rating": round(item.get("vote_average", 0), 1),
+                            "overview": (item.get("overview") or "")[:200],
+                            "media_type": m_type
+                        })
+                    if len(cat_movies) >= 6:
+                        break
+                category_results[cat_key] = cat_movies
+            except Exception:
+                category_results[cat_key] = []
+
+        blended = []
+        max_count = max((len(lst) for lst in category_results.values()), default=0)
+        for i in range(max_count):
+            for cat_key in active_cat_list:
+                lst = category_results.get(cat_key, [])
+                if i < len(lst) and len(blended) < 12:
+                    blended.append(lst[i])
+
+        return blended
+
+
+def get_trending_movies(movie_in_collection, page=1, category="all"):
+    trending = []
+    seen_ids = set(movie_in_collection)
+    try:
+        if category == "series":
+            params = {"api_key": TMDB_API_KEY, "sort_by": "popularity.desc", "page": page}
+            r = requests.get("https://api.themoviedb.org/3/discover/tv", params=params, timeout=5)
+            for item in r.json().get("results", []):
+                tid = str(item["id"])
+                if tid in seen_ids:
+                    continue
+                if item.get("poster_path"):
+                    seen_ids.add(tid)
+                    trending.append({
+                        "tmdb_id": tid,
+                        "title": item.get("name") or item.get("original_name") or "",
+                        "year": (item.get("first_air_date") or "")[:4],
+                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "rating": round(item.get("vote_average", 0), 1),
+                        "overview": (item.get("overview") or "")[:200],
+                        "media_type": "series"
+                    })
+                if len(trending) >= 12:
+                    break
+        elif category == "anime":
+            params = {"api_key": TMDB_API_KEY, "with_genres": "16", "with_original_language": "ja", "sort_by": "popularity.desc", "page": page}
+            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
+            for item in r.json().get("results", []):
+                tid = str(item["id"])
+                if tid in seen_ids:
+                    continue
+                if item.get("poster_path"):
+                    seen_ids.add(tid)
+                    trending.append({
+                        "tmdb_id": tid,
+                        "title": item.get("title", ""),
+                        "year": (item.get("release_date") or "")[:4],
+                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "rating": round(item.get("vote_average", 0), 1),
+                        "overview": (item.get("overview") or "")[:200],
+                        "media_type": "anime"
+                    })
+                if len(trending) >= 12:
+                    break
+        elif category == "animation":
+            params = {"api_key": TMDB_API_KEY, "with_genres": "16", "without_original_language": "ja", "sort_by": "popularity.desc", "page": page}
+            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
+            for item in r.json().get("results", []):
+                tid = str(item["id"])
+                if tid in seen_ids:
+                    continue
+                if item.get("poster_path"):
+                    seen_ids.add(tid)
+                    trending.append({
+                        "tmdb_id": tid,
+                        "title": item.get("title", ""),
+                        "year": (item.get("release_date") or "")[:4],
+                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "rating": round(item.get("vote_average", 0), 1),
+                        "overview": (item.get("overview") or "")[:200],
+                        "media_type": "animation"
+                    })
+                if len(trending) >= 12:
+                    break
+        elif category == "movie":
+            params = {"api_key": TMDB_API_KEY, "without_genres": "16", "sort_by": "popularity.desc", "page": page}
+            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
+            for item in r.json().get("results", []):
+                tid = str(item["id"])
+                if tid in seen_ids:
+                    continue
+                if item.get("poster_path"):
+                    seen_ids.add(tid)
+                    trending.append({
+                        "tmdb_id": tid,
+                        "title": item.get("title", ""),
+                        "year": (item.get("release_date") or "")[:4],
+                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "rating": round(item.get("vote_average", 0), 1),
+                        "overview": (item.get("overview") or "")[:200],
+                        "media_type": "movie"
+                    })
+                if len(trending) >= 12:
+                    break
+        else:
+            params = {"api_key": TMDB_API_KEY, "sort_by": "popularity.desc", "page": page}
+            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
+            for item in r.json().get("results", []):
+                tid = str(item["id"])
+                if tid in seen_ids:
+                    continue
+                if item.get("poster_path"):
+                    seen_ids.add(tid)
+                    trending.append({
+                        "tmdb_id": tid,
+                        "title": item.get("title", ""),
+                        "year": (item.get("release_date") or "")[:4],
+                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "rating": round(item.get("vote_average", 0), 1),
+                        "overview": (item.get("overview") or "")[:200],
+                        "media_type": "movie"
+                    })
+                if len(trending) >= 12:
+                    break
     except Exception:
         pass
     return trending
@@ -1215,6 +1587,7 @@ def get_trending_books(book_in_collection, book_titles_in_collection, seed=0):
 @login_required
 def discover():
     tab = request.args.get("tab", "movies")
+    category = request.args.get("category", "all")
     rec_page = request.args.get("rec_page", type=int, default=1)
     trend_page = request.args.get("trend_page", type=int, default=1)
 
@@ -1233,8 +1606,8 @@ def discover():
         user_movies = Movie.query.filter_by(user_id=current_user.id).all()
         is_personalized_movies = bool(user_movies)
         if is_personalized_movies:
-            recommended_movies = get_diverse_movie_recommendations(user_movies, movie_in_collection, page=rec_page)
-        trending_movies = get_trending_movies(movie_in_collection, page=trend_page)
+            recommended_movies = get_diverse_movie_recommendations(user_movies, movie_in_collection, page=rec_page, category=category)
+        trending_movies = get_trending_movies(movie_in_collection, page=trend_page, category=category)
     else:
         user_books = Book.query.filter_by(user_id=current_user.id).all()
         is_personalized_books = bool(user_books)
@@ -1244,6 +1617,7 @@ def discover():
 
     return render_template("discover.html",
         tab=tab,
+        current_category=category,
         recommended_movies=recommended_movies,
         trending_movies=trending_movies,
         recommended_books=recommended_books,
@@ -1258,6 +1632,7 @@ def discover():
 def api_discover_section():
     tab = request.args.get("tab", "movies")
     section = request.args.get("section", "recommended")
+    category = request.args.get("category", "all")
     page = request.args.get("page", type=int, default=1)
     seed = request.args.get("seed", type=int, default=1)
 
@@ -1267,9 +1642,9 @@ def api_discover_section():
     if tab == "movies":
         if section == "recommended":
             user_movies = Movie.query.filter_by(user_id=current_user.id).all()
-            items = get_diverse_movie_recommendations(user_movies, movie_in_collection, page=page)
+            items = get_diverse_movie_recommendations(user_movies, movie_in_collection, page=page, category=category)
         else:
-            items = get_trending_movies(movie_in_collection, page=page)
+            items = get_trending_movies(movie_in_collection, page=page, category=category)
     else:
         if section == "recommended":
             user_books = Book.query.filter_by(user_id=current_user.id).all()
@@ -1277,7 +1652,7 @@ def api_discover_section():
         else:
             items = get_trending_books(book_in_collection, book_titles_in_collection, seed=seed)
 
-    return jsonify({"success": True, "items": items, "tab": tab, "section": section})
+    return jsonify({"success": True, "items": items, "tab": tab, "section": section, "category": category})
 
 
 # =====================
@@ -1383,6 +1758,7 @@ def quick_add_movie():
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
     tmdb_id = request.args.get("id")
     status = request.args.get("status", "to_watch")
+    req_type = request.args.get("media_type")
     if not tmdb_id:
         if is_ajax:
             return jsonify({"success": False, "message": "Missing movie ID"}), 400
@@ -1397,20 +1773,41 @@ def quick_add_movie():
         return redirect(url_for("discover", tab="movies"))
 
     try:
-        r = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}",
-                         params={"api_key": TMDB_API_KEY}, timeout=6)
-        d = r.json()
-        genres = ", ".join([g["name"] for g in d.get("genres", [])])
+        is_tv = req_type == "series"
+        d = None
+        if not is_tv:
+            r = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}",
+                             params={"api_key": TMDB_API_KEY}, timeout=6)
+            if r.status_code == 200:
+                d = r.json()
+        if not d:
+            r_tv = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}",
+                                params={"api_key": TMDB_API_KEY}, timeout=6)
+            if r_tv.status_code == 200:
+                d = r_tv.json()
+                is_tv = True
+
+        if not d:
+            raise Exception("Item not found on TMDB")
+
+        genres_list = [g.get("name", "") for g in d.get("genres", []) if g.get("name")]
+        genres = ", ".join(genres_list)
+        title = d.get("title") or d.get("name") or "Unknown"
+        rel_date = d.get("release_date") or d.get("first_air_date") or ""
+        year = rel_date[:4] if rel_date else ""
+        media_type = detect_media_type(d, explicit_type=req_type)
+
         new_movie = Movie(
             user_id=current_user.id,
             tmdb_id=str(tmdb_id),
-            title=d.get("title", "Unknown"),
-            year=(d.get("release_date") or "")[:4],
+            title=title,
+            year=year,
             rating=0.0,
             description=(d.get("overview") or "")[:1000],
             genre=genres,
-            img_url=f"https://image.tmdb.org/t/p/w500{d.get('poster_path', '')}",
+            img_url=f"https://image.tmdb.org/t/p/w500{d.get('poster_path', '')}" if d.get('poster_path') else "",
             status=status,
+            media_type=media_type,
             date_watched=date.today() if status == "watched" else None,
         )
         db.session.add(new_movie)
@@ -1420,6 +1817,7 @@ def quick_add_movie():
                 "success": True,
                 "title": new_movie.title,
                 "status": status,
+                "media_type": media_type,
                 "message": f'"{new_movie.title}" added to your collection!'
             })
         flash(f'"{new_movie.title}" added to your collection!', "success")
@@ -1614,6 +2012,7 @@ def find():
 def select():
     tmdb_id = request.args.get("id")
     status = request.args.get("status", "to_watch")
+    req_type = request.args.get("media_type")
     if not tmdb_id:
         return redirect(url_for("add"))
 
@@ -1622,20 +2021,41 @@ def select():
         flash(f'"{existing.title}" is already in your collection.', "error")
         return redirect(url_for("collection", tab="movies"))
 
-    r = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}",
-                     params={"api_key": TMDB_API_KEY})
-    d = r.json()
-    genres = ", ".join([g["name"] for g in d.get("genres", [])])
+    is_tv = req_type == "series"
+    d = None
+    if not is_tv:
+        r = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}",
+                         params={"api_key": TMDB_API_KEY})
+        if r.status_code == 200:
+            d = r.json()
+    if not d:
+        r_tv = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}",
+                            params={"api_key": TMDB_API_KEY})
+        if r_tv.status_code == 200:
+            d = r_tv.json()
+            is_tv = True
+
+    if not d:
+        flash("Could not fetch details from TMDB.", "error")
+        return redirect(url_for("add"))
+
+    genres = ", ".join([g.get("name", "") for g in d.get("genres", []) if g.get("name")])
+    title = d.get("title") or d.get("name") or "Unknown"
+    rel_date = d.get("release_date") or d.get("first_air_date") or ""
+    year = rel_date[:4] if rel_date else ""
+    media_type = detect_media_type(d, explicit_type=req_type)
+
     new_movie = Movie(
         user_id=current_user.id,
         tmdb_id=str(tmdb_id),
-        title=d.get("title", "Unknown"),
-        year=(d.get("release_date") or "")[:4],
+        title=title,
+        year=year,
         rating=0.0,
         description=(d.get("overview") or "")[:1000],
         genre=genres,
-        img_url=f"https://image.tmdb.org/t/p/w500{d.get('poster_path', '')}",
+        img_url=f"https://image.tmdb.org/t/p/w500{d.get('poster_path', '')}" if d.get('poster_path') else "",
         status=status,
+        media_type=media_type,
         date_watched=date.today() if status == "watched" else None,
     )
     db.session.add(new_movie)
@@ -1654,6 +2074,12 @@ def edit(movie_id):
         return redirect(url_for("collection"))
     class EditForm(FlaskForm):
         title = StringField("Title", validators=[DataRequired()])
+        media_type = SelectField("Category", choices=[
+            ("movie", "🎬 Normal Movie"),
+            ("series", "📺 Series / TV Show"),
+            ("animation", "🎨 Animation"),
+            ("anime", "⛩️ Anime")
+        ], default="movie")
         rating = StringField("Your Rating (0–10)")
         custom_tags = StringField("Custom Tags (comma separated)")
         review = TextAreaField("Your Review")
@@ -1663,6 +2089,7 @@ def edit(movie_id):
     form = EditForm()
     if form.validate_on_submit():
         movie.title = form.title.data
+        movie.media_type = form.media_type.data or "movie"
         try:
             movie.rating = float(form.rating.data or 0)
         except ValueError:
@@ -1677,6 +2104,7 @@ def edit(movie_id):
         flash("Saved!", "success")
         return redirect(url_for("collection", tab="movies"))
     form.title.data = movie.title
+    form.media_type.data = movie.media_type or "movie"
     form.rating.data = str(movie.rating)
     form.custom_tags.data = movie.custom_tags
     form.review.data = movie.review
