@@ -313,19 +313,56 @@
             <div class="media-card" id="card-movie-{{ movie.id }}" data-title="{{ movie.title | lower }}" data-status="{{ movie.status }}" data-category="{{ movie.media_type or 'movie' }}">
                 <div class="card-inner">
                     <div class="card-front" onclick="flipCard('movie', {{ movie.id }})">
-                        <!-- Quick status toggle mark on card front -->
-                        <button type="button"
-                                class="card-quick-toggle {{ movie.status }}"
-                                onclick="toggleMediaStatus(event, 'movie', {{ movie.id }})"
-                                title="{% if movie.status == 'watched' %}Mark as To Watch{% else %}Mark as Watched{% endif %}"
-                                aria-label="Toggle watched status">
-                            <i class="fas {% if movie.status == 'watched' %}fa-check{% else %}fa-clock{% endif %}"></i>
-                        </button>
-                        {% if movie.img_url %}
-                        <img src="{{ movie.img_url }}" alt="{{ movie.title }}" loading="lazy">
-                        {% else %}
-                        <div class="img-placeholder"><i class="fas fa-film"></i></div>
-                        {% endif %}
+                        <!-- 2:3 Poster Frame & Overlay Drawer -->
+                        <div class="card-poster-box">
+                            <!-- Quick status toggle mark on card front -->
+                            <button type="button"
+                                    class="card-quick-toggle {{ movie.status }}"
+                                    onclick="toggleMediaStatus(event, 'movie', {{ movie.id }})"
+                                    title="{% if movie.status == 'watched' %}Mark as To Watch{% else %}Mark as Watched{% endif %}"
+                                    aria-label="Toggle watched status">
+                                <i class="fas {% if movie.status == 'watched' %}fa-check{% else %}fa-clock{% endif %}"></i>
+                            </button>
+
+                            <!-- Corner category tag -->
+                            <div class="card-type-tag-corner">
+                                {% if movie.media_type == 'series' %}
+                                <span class="type-tag series"><i class="fas fa-tv"></i> Series</span>
+                                {% elif movie.media_type == 'animation' %}
+                                <span class="type-tag animation"><i class="fas fa-paint-brush"></i> Animation</span>
+                                {% elif movie.media_type == 'anime' %}
+                                <span class="type-tag anime"><i class="fas fa-torii-gate"></i> Anime</span>
+                                {% else %}
+                                <span class="type-tag movie"><i class="fas fa-film"></i> Movie</span>
+                                {% endif %}
+                            </div>
+
+                            {% if movie.img_url %}
+                            <img src="{{ movie.img_url }}" alt="{{ movie.title }}" loading="lazy">
+                            {% else %}
+                            <div class="img-placeholder"><i class="fas fa-film"></i></div>
+                            {% endif %}
+
+                            <!-- Hover Overlay Drawer -->
+                            <div class="card-overlay-drawer" onclick="event.stopPropagation();">
+                                <div class="drawer-title">{{ movie.title }}</div>
+                                <div class="drawer-sub">{{ movie.year or '—' }} {% if movie.genre %}• {{ movie.genre[:22] }}{% endif %}</div>
+                                {% if movie.rating and movie.rating > 0 %}
+                                <div class="drawer-rating">★ {{ movie.rating }} <span style="font-size:0.68rem; opacity:0.8;">/ 10</span></div>
+                                {% endif %}
+                                {% if movie.review %}
+                                <p class="drawer-review">"{{ movie.review }}"</p>
+                                {% endif %}
+                                <div class="drawer-actions">
+                                    <a href="{{ url_for('view_movie', item_id=movie.id) }}" class="btn-drawer-act view" title="View Dossier"><i class="fas fa-eye"></i></a>
+                                    <a href="{{ url_for('edit', movie_id=movie.id) }}" class="btn-drawer-act edit" title="Edit"><i class="fas fa-pen"></i></a>
+                                    <button type="button" class="btn-drawer-act delete" onclick="deleteMediaItem(event, 'movie', {{ movie.id }}, '{{ url_for('delete', movie_id=movie.id) }}')" title="Delete"><i class="fas fa-trash"></i></button>
+                                    <button type="button" class="btn-drawer-act flip" onclick="flipCard('movie', {{ movie.id }})" title="Flip details"><i class="fas fa-undo"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Front Info Bar -->
                         <div class="card-front-info">
                             <div class="card-title">{{ movie.title }}</div>
                             <div class="card-meta">
@@ -336,19 +373,16 @@
                                     <i class="fas {{ 'fa-check' if movie.status == 'watched' else 'fa-clock' }}"></i>
                                     <span>{{ 'Watched' if movie.status == 'watched' else 'To Watch' }}</span>
                                 </button>
-                                {% if movie.media_type == 'series' %}
-                                <span class="type-tag series"><i class="fas fa-tv"></i> Series</span>
-                                {% elif movie.media_type == 'animation' %}
-                                <span class="type-tag animation"><i class="fas fa-paint-brush"></i> Animation</span>
-                                {% elif movie.media_type == 'anime' %}
-                                <span class="type-tag anime"><i class="fas fa-torii-gate"></i> Anime</span>
+                                {% if movie.rating and movie.rating > 0 %}
+                                <span class="rating-chip">★ {{ movie.rating }}</span>
                                 {% else %}
-                                <span class="type-tag movie"><i class="fas fa-film"></i> Movie</span>
+                                <span style="font-size: 0.72rem; color: var(--text-faint);">Unrated</span>
                                 {% endif %}
-                                {% if movie.rating and movie.rating > 0 %}<span class="rating-chip">⭐ {{ movie.rating }}</span>{% endif %}
                             </div>
                         </div>
                     </div>
+
+                    <!-- Card Back -->
                     <div class="card-back">
                         <div class="card-back-title" style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.4rem;">
                             <span>{{ movie.title }}</span>
@@ -362,27 +396,26 @@
                         </div>
                         {% if movie.genre %}<div class="card-genre">{{ movie.genre[:40] }}</div>{% endif %}
                         {% if movie.custom_tags %}
-                        <div style="font-size: 0.75rem; margin: 0.5rem 0;">
+                        <div style="font-size: 0.75rem; margin: 0.4rem 0;">
                             {% for tag in movie.custom_tags.split(',') %}
-                            <span style="background:rgba(255,255,255,0.1); padding:0.1rem 0.4rem; border-radius:4px; margin-right:0.3rem;">{{ tag.strip() }}</span>
+                            <span style="background:rgba(255,255,255,0.08); padding:0.15rem 0.45rem; border-radius:4px; margin-right:0.3rem;">#{{ tag.strip() }}</span>
                             {% endfor %}
                         </div>
                         {% endif %}
-                        <p class="card-review">{{ movie.review if movie.review else 'No review yet.' }}</p>
+                        <p class="card-review">{{ movie.review if movie.review else 'No review written yet.' }}</p>
                         <p class="card-desc">{{ movie.description[:120] }}{% if movie.description | length > 120 %}...{% endif %}</p>
                         <div class="card-actions" style="display:flex; justify-content:center; gap:0.5rem;">
                             {% set item = movie %}
-                            {% set is_movie = True %}
                             <button type="button"
                                     class="btn-card-toggle {{ movie.status }}"
                                     onclick="toggleMediaStatus(event, 'movie', {{ movie.id }})"
                                     title="{% if movie.status == 'watched' %}Mark as To Watch{% else %}Mark as Watched{% endif %}">
                                 <i class="fas {% if movie.status == 'watched' %}fa-clock{% else %}fa-check{% endif %}"></i>
                             </button>
-                            <a href="{{ url_for('view_movie', item_id=item.id) }}" class="btn-card-edit" style="background:#43b89c;" title="View Details"><i class="fas fa-eye"></i></a>
-                            <a href="{{ url_for('edit', movie_id=item.id) }}" class="btn-card-edit" title="Edit"><i class="fas fa-edit"></i></a>
+                            <a href="{{ url_for('view_movie', item_id=item.id) }}" class="btn-card-edit" style="background:#2563eb;" title="View Details"><i class="fas fa-eye"></i></a>
+                            <a href="{{ url_for('edit', movie_id=item.id) }}" class="btn-card-edit" title="Edit"><i class="fas fa-pen"></i></a>
                             <button type="button" class="btn-card-delete" onclick="deleteMediaItem(event, 'movie', {{ item.id }}, '{{ url_for('delete', movie_id=item.id) }}')" title="Delete"><i class="fas fa-trash"></i></button>
-                            <button class="btn-card-flip" onclick="flipCard('movie', {{ movie.id }})"><i class="fas fa-undo"></i></button>
+                            <button class="btn-card-flip" onclick="flipCard('movie', {{ movie.id }})" title="Flip back"><i class="fas fa-undo"></i></button>
                         </div>
                     </div>
                 </div>
@@ -406,19 +439,58 @@
             <div class="media-card" id="card-book-{{ book.id }}" data-title="{{ book.title | lower }}" data-status="{{ book.status }}" data-category="{{ book.category or 'fiction' }}">
                 <div class="card-inner">
                     <div class="card-front" onclick="flipCard('book', {{ book.id }})">
-                        <!-- Quick status toggle mark on card front -->
-                        <button type="button"
-                                class="card-quick-toggle {{ book.status }}"
-                                onclick="toggleMediaStatus(event, 'book', {{ book.id }})"
-                                title="{% if book.status == 'read' %}Mark as To Read{% else %}Mark as Read{% endif %}"
-                                aria-label="Toggle read status">
-                            <i class="fas {% if book.status == 'read' %}fa-check{% else %}fa-bookmark{% endif %}"></i>
-                        </button>
-                        {% if book.img_url %}
-                        <img src="{{ book.img_url }}" alt="{{ book.title }}" loading="lazy">
-                        {% else %}
-                        <div class="img-placeholder"><i class="fas fa-book"></i></div>
-                        {% endif %}
+                        <!-- 2:3 Poster Frame & Overlay Drawer -->
+                        <div class="card-poster-box">
+                            <!-- Quick status toggle mark on card front -->
+                            <button type="button"
+                                    class="card-quick-toggle {{ book.status }}"
+                                    onclick="toggleMediaStatus(event, 'book', {{ book.id }})"
+                                    title="{% if book.status == 'read' %}Mark as To Read{% else %}Mark as Read{% endif %}"
+                                    aria-label="Toggle read status">
+                                <i class="fas {% if book.status == 'read' %}fa-check{% else %}fa-bookmark{% endif %}"></i>
+                            </button>
+
+                            <!-- Corner category tag -->
+                            <div class="card-type-tag-corner">
+                                {% if book.category == 'philosophy' %}
+                                <span class="type-tag philosophy" title="Philosophy"><i class="fas fa-brain"></i> Philosophy</span>
+                                {% elif book.category == 'self_help' %}
+                                <span class="type-tag self_help" title="Self-Help"><i class="fas fa-seedling"></i> Self-Help</span>
+                                {% elif book.category == 'business' %}
+                                <span class="type-tag business" title="Business"><i class="fas fa-chart-line"></i> Business</span>
+                                {% elif book.category == 'non_fiction' %}
+                                <span class="type-tag non_fiction" title="Non-Fiction"><i class="fas fa-globe"></i> Non-Fiction</span>
+                                {% else %}
+                                <span class="type-tag fiction" title="Fiction"><i class="fas fa-book"></i> Fiction</span>
+                                {% endif %}
+                            </div>
+
+                            {% if book.img_url %}
+                            <img src="{{ book.img_url }}" alt="{{ book.title }}" loading="lazy">
+                            {% else %}
+                            <div class="img-placeholder"><i class="fas fa-book"></i></div>
+                            {% endif %}
+
+                            <!-- Hover Overlay Drawer -->
+                            <div class="card-overlay-drawer" onclick="event.stopPropagation();">
+                                <div class="drawer-title">{{ book.title }}</div>
+                                <div class="drawer-sub">{{ book.author }} {% if book.year %}• {{ book.year }}{% endif %}</div>
+                                {% if book.rating and book.rating > 0 %}
+                                <div class="drawer-rating">★ {{ book.rating }} <span style="font-size:0.68rem; opacity:0.8;">/ 10</span></div>
+                                {% endif %}
+                                {% if book.review %}
+                                <p class="drawer-review">"{{ book.review }}"</p>
+                                {% endif %}
+                                <div class="drawer-actions">
+                                    <a href="{{ url_for('view_book', item_id=book.id) }}" class="btn-drawer-act view" title="View Dossier"><i class="fas fa-eye"></i></a>
+                                    <a href="{{ url_for('edit_book', book_id=book.id) }}" class="btn-drawer-act edit" title="Edit"><i class="fas fa-pen"></i></a>
+                                    <button type="button" class="btn-drawer-act delete" onclick="deleteMediaItem(event, 'book', {{ book.id }}, '{{ url_for('delete_book', book_id=book.id) }}')" title="Delete"><i class="fas fa-trash"></i></button>
+                                    <button type="button" class="btn-drawer-act flip" onclick="flipCard('book', {{ book.id }})" title="Flip details"><i class="fas fa-undo"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Front Info Bar -->
                         <div class="card-front-info">
                             <div class="card-title">{{ book.title }}</div>
                             <div class="card-sub">{{ book.author }}</div>
@@ -430,10 +502,16 @@
                                     <i class="fas {{ 'fa-check' if book.status == 'read' else 'fa-bookmark' }}"></i>
                                     <span>{{ 'Read' if book.status == 'read' else 'To Read' }}</span>
                                 </button>
-                                {% if book.rating and book.rating > 0 %}<span class="rating-chip">⭐ {{ book.rating }}</span>{% endif %}
+                                {% if book.rating and book.rating > 0 %}
+                                <span class="rating-chip">★ {{ book.rating }}</span>
+                                {% else %}
+                                <span style="font-size: 0.72rem; color: var(--text-faint);">Unrated</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
+
+                    <!-- Card Back -->
                     <div class="card-back">
                         <div class="card-back-title" style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.4rem;">
                             <span>{{ book.title }}</span>
@@ -451,13 +529,13 @@
                         </div>
                         <div class="card-genre">by {{ book.author }} {% if book.year %}· {{ book.year }}{% endif %}</div>
                         {% if book.custom_tags %}
-                        <div style="font-size: 0.75rem; margin: 0.5rem 0;">
+                        <div style="font-size: 0.75rem; margin: 0.4rem 0;">
                             {% for tag in book.custom_tags.split(',') %}
-                            <span style="background:rgba(255,255,255,0.1); padding:0.1rem 0.4rem; border-radius:4px; margin-right:0.3rem;">{{ tag.strip() }}</span>
+                            <span style="background:rgba(255,255,255,0.08); padding:0.15rem 0.45rem; border-radius:4px; margin-right:0.3rem;">#{{ tag.strip() }}</span>
                             {% endfor %}
                         </div>
                         {% endif %}
-                        <p class="card-review">{{ book.review if book.review else 'No review yet.' }}</p>
+                        <p class="card-review">{{ book.review if book.review else 'No review written yet.' }}</p>
                         <p class="card-desc">{{ book.description[:120] }}{% if book.description | length > 120 %}...{% endif %}</p>
                         <div class="card-actions" style="display:flex; justify-content:center; gap:0.5rem;">
                             <button type="button"
@@ -466,10 +544,10 @@
                                     title="{% if book.status == 'read' %}Mark as To Read{% else %}Mark as Read{% endif %}">
                                 <i class="fas {% if book.status == 'read' %}fa-bookmark{% else %}fa-check{% endif %}"></i>
                             </button>
-                            <a href="{{ url_for('view_book', item_id=book.id) }}" class="btn-card-edit" style="background:#43b89c;" title="View Details"><i class="fas fa-eye"></i></a>
+                            <a href="{{ url_for('view_book', item_id=book.id) }}" class="btn-card-edit" style="background:#10b981;" title="View Details"><i class="fas fa-eye"></i></a>
                             <a href="{{ url_for('edit_book', book_id=book.id) }}" class="btn-card-edit" title="Edit"><i class="fas fa-pen"></i></a>
                             <button type="button" class="btn-card-delete" onclick="deleteMediaItem(event, 'book', {{ book.id }}, '{{ url_for('delete_book', book_id=book.id) }}')" title="Delete"><i class="fas fa-trash"></i></button>
-                            <button class="btn-card-flip" onclick="flipCard('book', {{ book.id }})"><i class="fas fa-undo"></i></button>
+                            <button class="btn-card-flip" onclick="flipCard('book', {{ book.id }})" title="Flip back"><i class="fas fa-undo"></i></button>
                         </div>
                     </div>
                 </div>
@@ -481,6 +559,7 @@
         <div class="empty-state">
             <i class="fas fa-book" style="font-size:3rem;color:var(--accent-book);opacity:.4;"></i>
             <h3>No books here yet</h3>
+            <p>Add your first book to get started!</p>
             <a href="{{ url_for('add_book') }}" class="btn-secondary" style="margin-top:1rem;"><i class="fas fa-plus"></i> Add Book</a>
         </div>
         {% endif %}

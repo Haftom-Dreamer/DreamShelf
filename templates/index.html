@@ -1,90 +1,193 @@
 {% extends 'base.html' %}
 
-{% block title %}DreamShelf — Where Stories Meet Dreams{% endblock %}
+{% block title %}DreamShelf — The Premium Cinema &amp; Book Library{% endblock %}
 
 {% block content %}
+<!-- Landing Hero -->
 <section class="landing-hero">
     <div class="landing-hero-content">
-        <div class="hero-badge">✦ Curate Your Universe · Movies + Books</div>
-        <h1 class="welcome-title">Dream, Track &amp; Curate<br>Every Story You Love.</h1>
-        <p class="welcome-subtitle">Your personal celestial shelf for favorite movies and books. Rate, review, and discover timeless stories in one magical collection.</p>
+        <div class="hero-badge">✦ The Cinema &amp; Story Platform · Movies + Books</div>
+        <h1 class="welcome-title">
+            The Cinema Club &amp; Library For <span class="gradient-text">Devoted Devotees.</span>
+        </h1>
+        <p class="welcome-subtitle">
+            Curate your personal universe of films and books. Rate on a precise 10-point scale, log cinema diaries, track your streaks, and discover timeless stories in one atmospheric space.
+        </p>
         <div class="hero-cta-group">
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('dashboard') }}" class="btn-hero-primary">Go to Dashboard <i class="fas fa-arrow-right"></i></a>
-            <a href="{{ url_for('discover') }}" class="btn-hero-secondary">Discover Trending</a>
+            <a href="{{ url_for('dashboard') }}" class="btn-hero-primary">
+                <span>Go to Dashboard</span>
+                <i class="fas fa-arrow-right"></i>
+            </a>
+            <a href="{{ url_for('discover') }}" class="btn-hero-secondary">
+                <i class="fas fa-compass"></i> Discover Trending
+            </a>
             {% else %}
-            <a href="{{ url_for('register') }}" class="btn-hero-primary">Start Your DreamShelf <i class="fas fa-arrow-right"></i></a>
-            <a href="{{ url_for('login') }}" class="btn-hero-secondary">Sign In</a>
+            <a href="{{ url_for('register') }}" class="btn-hero-primary">
+                <span>Start Your DreamShelf</span>
+                <i class="fas fa-arrow-right"></i>
+            </a>
+            <a href="{{ url_for('login') }}" class="btn-hero-secondary">
+                <span>Sign In</span>
+            </a>
             {% endif %}
         </div>
-    </div>
 
-    <div class="hero-visual">
-        <div class="floating-cards">
-            <div class="float-card fc1">
-                <div class="fc-icon">🎬</div>
-                <div class="fc-text">
-                    <span>Inception</span>
-                    <small>⭐ 9.2 · Sci-Fi</small>
-                </div>
-                <span class="fc-badge watched">Watched</span>
+        <!-- Metrics Ribbon -->
+        <div class="hero-metrics-ribbon">
+            <div class="metric-item">
+                <i class="fas fa-film"></i>
+                <span><strong>100k+</strong> Films Indexed</span>
             </div>
-            <div class="float-card fc2">
-                <div class="fc-icon">📚</div>
-                <div class="fc-text">
-                    <span>Dune</span>
-                    <small>⭐ 8.8 · Frank Herbert</small>
-                </div>
-                <span class="fc-badge read">Read</span>
+            <div class="metric-item">
+                <i class="fas fa-star"></i>
+                <span><strong>10/10</strong> Rating Scale</span>
             </div>
-            <div class="float-card fc3">
-                <div class="fc-icon">🔍</div>
-                <div class="fc-text">
-                    <span>Trending Now</span>
-                    <small>Discover new titles</small>
-                </div>
+            <div class="metric-item">
+                <i class="fas fa-shield-alt"></i>
+                <span><strong>0%</strong> Ads &amp; Clutter</span>
+            </div>
+            <div class="metric-item">
+                <i class="fas fa-bolt"></i>
+                <span><strong>Instant</strong> TMDB Sync</span>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Features -->
+<!-- Trending Strip Section -->
+<section class="trending-strip-section">
+    <div class="strip-header">
+        <h2 class="strip-title">
+            <span class="pulse-dot"></span>
+            <span>Loved by Cinephiles This Week</span>
+        </h2>
+        <a href="{{ url_for('discover') if current_user.is_authenticated else url_for('register') }}" class="section-link">
+            <span>Explore all trending</span>
+            <i class="fas fa-arrow-right"></i>
+        </a>
+    </div>
+
+    <div class="strip-scroll">
+        <!-- Film 1 -->
+        <a href="{{ url_for('discover') if current_user.is_authenticated else url_for('register') }}" class="trending-poster-card" title="Oppenheimer (2023)">
+            <img src="https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg" class="trending-poster-img" alt="Oppenheimer" loading="lazy">
+            <div class="trending-poster-info">
+                <div class="trending-poster-title">Oppenheimer</div>
+                <div class="trending-poster-meta">
+                    <span>2023 · Nolan</span>
+                    <span class="star">★ 8.9</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Film 2 -->
+        <a href="{{ url_for('discover') if current_user.is_authenticated else url_for('register') }}" class="trending-poster-card" title="Dune: Part Two (2024)">
+            <img src="https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg" class="trending-poster-img" alt="Dune: Part Two" loading="lazy">
+            <div class="trending-poster-info">
+                <div class="trending-poster-title">Dune: Part Two</div>
+                <div class="trending-poster-meta">
+                    <span>2024 · Sci-Fi</span>
+                    <span class="star">★ 8.7</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Film 3 -->
+        <a href="{{ url_for('discover') if current_user.is_authenticated else url_for('register') }}" class="trending-poster-card" title="Interstellar (2014)">
+            <img src="https://image.tmdb.org/t/p/w500/gKkl37BQuKTanygYQG1pyYgLVgf.jpg" class="trending-poster-img" alt="Interstellar" loading="lazy">
+            <div class="trending-poster-info">
+                <div class="trending-poster-title">Interstellar</div>
+                <div class="trending-poster-meta">
+                    <span>2014 · Adventure</span>
+                    <span class="star">★ 8.6</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Film 4 -->
+        <a href="{{ url_for('discover') if current_user.is_authenticated else url_for('register') }}" class="trending-poster-card" title="The Dark Knight (2008)">
+            <img src="https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg" class="trending-poster-img" alt="The Dark Knight" loading="lazy">
+            <div class="trending-poster-info">
+                <div class="trending-poster-title">The Dark Knight</div>
+                <div class="trending-poster-meta">
+                    <span>2008 · Crime</span>
+                    <span class="star">★ 9.0</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Film 5 -->
+        <a href="{{ url_for('discover') if current_user.is_authenticated else url_for('register') }}" class="trending-poster-card" title="Spirited Away (2001)">
+            <img src="https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg" class="trending-poster-img" alt="Spirited Away" loading="lazy">
+            <div class="trending-poster-info">
+                <div class="trending-poster-title">Spirited Away</div>
+                <div class="trending-poster-meta">
+                    <span>2001 · Ghibli</span>
+                    <span class="star">★ 9.1</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Film 6 -->
+        <a href="{{ url_for('discover') if current_user.is_authenticated else url_for('register') }}" class="trending-poster-card" title="Avengers: Infinity War (2018)">
+            <img src="https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg" class="trending-poster-img" alt="Infinity War" loading="lazy">
+            <div class="trending-poster-info">
+                <div class="trending-poster-title">Infinity War</div>
+                <div class="trending-poster-meta">
+                    <span>2018 · Action</span>
+                    <span class="star">★ 8.3</span>
+                </div>
+            </div>
+        </a>
+    </div>
+</section>
+
+<!-- Features Grid -->
 <section class="landing-features">
-    <h2 class="landing-section-title">Everything you need to curate your dream collection.</h2>
+    <h2 class="landing-section-title">Everything you need to curate your master collection.</h2>
     <div class="features-grid">
         <div class="feature-card">
-            <div class="feature-icon" style="background:rgba(124,92,255,0.15);color:#a29bfe;"><i class="fas fa-layer-group"></i></div>
-            <h3>Celestial Dual Library</h3>
-            <p>Track movies and books harmoniously side by side. Switch between stories instantly with a single click.</p>
+            <div class="feature-icon" style="background:rgba(37,99,235,0.15);color:#60a5fa;">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <h3>Dual Media Library</h3>
+            <p>Track movies and books harmoniously side by side. Seamlessly categorize into Series, Animation, Anime, and Fiction.</p>
         </div>
         <div class="feature-card">
-            <div class="feature-icon" style="background:rgba(255,209,102,0.15);color:#ffd166;"><i class="fas fa-star"></i></div>
-            <h3>Rate &amp; Reflect</h3>
-            <p>Score every title out of 10, write heartfelt reviews, and craft your personal legacy of stories.</p>
+            <div class="feature-icon" style="background:rgba(245,158,11,0.15);color:#fbbf24;">
+                <i class="fas fa-star"></i>
+            </div>
+            <h3>10-Point Rating &amp; Diary</h3>
+            <p>Score every title out of 10, write reflective reviews, and preserve your personal timeline of cinematic memories.</p>
         </div>
         <div class="feature-card">
-            <div class="feature-icon" style="background:rgba(56,239,125,0.15);color:#38ef7d;"><i class="fas fa-chart-pie"></i></div>
-            <h3>Dream Analytics</h3>
-            <p>Visualize your reading streaks, movie milestones, and genre constellations with vivid charts.</p>
+            <div class="feature-icon" style="background:rgba(16,185,129,0.15);color:#34d399;">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>Milestones &amp; Streaks</h3>
+            <p>Celebrate day streaks, monthly targets, and rating curves with Letterboxd-style distribution charts and analytics.</p>
         </div>
         <div class="feature-card">
-            <div class="feature-icon" style="background:rgba(0,242,254,0.15);color:#00f2fe;"><i class="fas fa-compass"></i></div>
-            <h3>Cosmic Discovery</h3>
-            <p>Explore personalized recommendations from TMDB and Google Books — add gems with one tap.</p>
+            <div class="feature-icon" style="background:rgba(56,189,248,0.15);color:#38bdf8;">
+                <i class="fas fa-compass"></i>
+            </div>
+            <h3>Deep Discovery</h3>
+            <p>Explore personalized recommendations from TMDB and Google Books — add any discovered title to your shelf with one click.</p>
         </div>
     </div>
 </section>
 
-<!-- CTA -->
+<!-- Bottom CTA -->
 <section class="landing-cta">
     <h2>Begin your DreamShelf today.</h2>
-    <p>Free forever. Curate movies, books, and timeless favorites in one celestial space.</p>
+    <p>Ad-free, elegant, and forever free. Curate movies, books, and timeless favorites in one celestial space.</p>
     {% if not current_user.is_authenticated %}
-    <a href="{{ url_for('register') }}" class="btn-hero-primary" style="margin-top:1.5rem; font-size:1rem; padding: 0.85rem 2rem;">
+    <a href="{{ url_for('register') }}" class="btn-hero-primary" style="margin-top:1.8rem; font-size:1.05rem; padding: 0.95rem 2.4rem;">
         <i class="fas fa-sparkles"></i> Create Free Account
     </a>
     {% else %}
-    <a href="{{ url_for('dashboard') }}" class="btn-hero-primary" style="margin-top:1.5rem; font-size:1rem; padding: 0.85rem 2rem;">
+    <a href="{{ url_for('dashboard') }}" class="btn-hero-primary" style="margin-top:1.8rem; font-size:1.05rem; padding: 0.95rem 2.4rem;">
         <i class="fas fa-th-large"></i> Go to Dashboard
     </a>
     {% endif %}

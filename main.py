@@ -750,6 +750,17 @@ def dashboard():
     rated_movies = [m for m in watched if m.rating is not None and m.rating > 0]
     avg_movie_rating = round(sum(m.rating for m in rated_movies) / len(rated_movies), 1) if rated_movies else 0.0
 
+    # --- Up Next queue (first 4 items from watchlist) ---
+    up_next_movies = to_watch[:4]
+
+    # --- Rating distribution (1 to 10 stars) ---
+    rating_counts = {i: 0 for i in range(1, 11)}
+    for m in rated_movies:
+        r = int(round(m.rating))
+        if 1 <= r <= 10:
+            rating_counts[r] += 1
+    max_rating_freq = max(rating_counts.values()) if any(rating_counts.values()) else 1
+
     return render_template("dashboard.html",
         watched_count=len(watched),
         to_watch_count=len(to_watch),
@@ -759,7 +770,10 @@ def dashboard():
         books_this_month=len(books_this_month),
         recent=recent,
         avg_movie_rating=avg_movie_rating,
-        streak=streak
+        streak=streak,
+        up_next=up_next_movies,
+        rating_counts=rating_counts,
+        max_rating_freq=max_rating_freq
     )
 
 @app.route("/analytics")

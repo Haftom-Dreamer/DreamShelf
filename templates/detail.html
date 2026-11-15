@@ -1,25 +1,72 @@
 {% extends "base.html" %}
-{% block title %}{{ item.title }} - Details{% endblock %}
+{% block title %}{{ item.title }} ({{ item.year }}) — DreamShelf Film Dossier{% endblock %}
 
 {% block content %}
-<div style="position: relative; width: 100vw; margin-left: calc(-50vw + 50%); height: 60vh; background: url('{{ backdrop_url }}') center/cover no-repeat; mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0)); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0)); pointer-events: none;">
-</div>
+<!-- Full-Bleed Cinematic Backdrop -->
+{% if backdrop_url %}
+<div class="film-backdrop-container" style="background-image: url('{{ backdrop_url }}');"></div>
+{% else %}
+<div class="film-backdrop-container" style="background-image: radial-gradient(circle at 50% 30%, rgba(37,99,235,0.2), rgba(5,7,12,0.95));"></div>
+{% endif %}
 
-<div class="page-container" style="max-width: 1000px; margin: -20vh auto 0; position: relative; z-index: 10; display:flex; gap: 2rem; flex-wrap: wrap;">
-    <!-- Poster Box -->
-    <div style="flex: 1; min-width: 250px; max-width: 300px;">
-        <img src="{{ item.img_url }}" style="width: 100%; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.5);">
+<!-- Dossier Card Floating Over Backdrop -->
+<div class="film-dossier-wrap">
+    
+    <!-- Left: 2:3 Poster Column -->
+    <div class="film-poster-col">
+        <div class="film-poster-frame">
+            {% if item.img_url %}
+            <img src="{{ item.img_url }}" alt="{{ item.title }}" loading="lazy">
+            {% else %}
+            <div class="img-placeholder" style="height:100%;"><i class="fas fa-{% if item_type == 'movie' %}film{% else %}book{% endif %}"></i></div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Status Card below Poster -->
+        <div style="margin-top: 1.2rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.8rem;">
+                <span style="font-size:0.76rem; color:var(--text-muted); font-weight:600;">Status</span>
+                <span class="status-badge {{ item.status }}">
+                    {% if item.status in ['watched', 'read'] %}✓{% else %}🕐{% endif %}
+                    {{ item.status | replace('_', ' ') | title }}
+                </span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-top: 0.7rem; border-top: 1px solid var(--border);">
+                <span style="font-size:0.76rem; color:var(--text-muted); font-weight:600;">Rating</span>
+                {% if item.rating and item.rating > 0 %}
+                <span style="font-size:0.95rem; font-weight:800; color:var(--gold);">★ {{ item.rating }}<span style="font-size:0.72rem; color:var(--text-muted); font-weight:500;">/10</span></span>
+                {% else %}
+                <span style="font-size:0.75rem; color:var(--text-faint);">Not rated yet</span>
+                {% endif %}
+            </div>
+
+            {% if current_user.is_authenticated and current_user.id == item.user_id %}
+            <div style="display:flex; gap:0.5rem; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--border);">
+                <a href="{{ url_for('edit', movie_id=item.id) if item_type == 'movie' else url_for('edit_book', book_id=item.id) }}" class="btn-primary-sm" style="flex:1; text-align:center; justify-content:center;">
+                    <i class="fas fa-pen"></i> Edit
+                </a>
+            </div>
+            {% endif %}
+        </div>
     </div>
     
-    <!-- Details Box -->
-    <div style="flex: 2; min-width: 300px; background: rgba(20,20,20,0.8); backdrop-filter: blur(20px); padding: 2rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);">
-        <h1 style="font-size: 3rem; margin-bottom: 0.5rem; color:var(--accent);">{{ item.title }}</h1>
-        <p style="opacity: 0.7; font-size: 1.1rem; margin-bottom: 1.5rem;">{{ item.year }} • {% if director %}{{ 'Directed by ' if item_type == 'movie' else 'Written by ' }}{{ director }}{% endif %}</p>
+    <!-- Right: Dossier Content -->
+    <div class="film-dossier-card">
+        <h1 class="film-title-head">{{ item.title }}</h1>
+        <div class="film-meta-sub">
+            <span>{{ item.year }}</span>
+            <span>•</span>
+            {% if director %}
+            <span>{{ 'Directed by ' if item_type == 'movie' else 'Written by ' }}<strong style="color:#ffffff;">{{ director }}</strong></span>
+            <span>•</span>
+            {% endif %}
+            {% if item.genre %}
+            <span>{{ item.genre }}</span>
+            {% endif %}
+        </div>
         
-        <div style="display:flex; gap: 0.8rem; margin-bottom: 2rem; align-items:center; flex-wrap:wrap;">
-            <div class="status-badge {{ 'status-watched' if 'watch' in item.status else 'status-reading' }}">
-                {{ item.status.replace('_', ' ').title() }}
-            </div>
+        <!-- Meta Pills Row -->
+        <div class="film-meta-pills">
             {% if item_type == 'movie' and item.media_type %}
                 {% if item.media_type == 'series' %}
                 <span class="type-tag series"><i class="fas fa-tv"></i> Series</span>
@@ -43,53 +90,83 @@
                 <span class="type-tag fiction"><i class="fas fa-book"></i> Fiction</span>
                 {% endif %}
             {% endif %}
+
             {% if item.rating and item.rating > 0 %}
-            <div style="background:rgba(255,255,255,0.1); padding:0.2rem 0.8rem; border-radius:30px; font-weight:bold; color:#ffb703;">
-                ⭐ {{ item.rating }}/10
+            <div class="film-rating-pill">
+                <span>★</span>
+                <span>{{ item.rating }} / 10</span>
             </div>
-            {% else %}
-            <div style="background:rgba(255,255,255,0.06); padding:0.2rem 0.8rem; border-radius:30px; font-weight:500; color:var(--text-muted);">
-                Not rated yet
-            </div>
+            {% endif %}
+
+            {% if item.custom_tags %}
+                {% for tag in item.custom_tags.split(',') %}
+                <span style="font-size:0.76rem; background:rgba(255,255,255,0.06); border:1px solid var(--border); padding:0.25rem 0.65rem; border-radius:50px; color:var(--text-muted);">#{{ tag.strip() }}</span>
+                {% endfor %}
             {% endif %}
         </div>
 
-        <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem;">{{ item.owner.username }}'s Review</h3>
-        <p style="font-style: italic; opacity: 0.9; margin-bottom: 2rem; line-height: 1.6; border-left: 3px solid var(--accent); padding-left: 1rem;">
-            "{{ item.review }}"
-        </p>
-        
-        <h3 style="margin-bottom: 0.5rem; font-size: 1.2rem;">Overview</h3>
-        <p style="opacity: 0.7; line-height: 1.6; margin-bottom: 2rem;">{{ item.description }}</p>
-        
-        {% if cast %}
-        <h3 style="margin-bottom: 1rem; font-size: 1.2rem;">Top Cast</h3>
-        <div style="display:flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem;">
-            {% for actor in cast %}
-            <div style="text-align:center; min-width:80px;">
-                {% if actor.profile_path %}
-                <img src="https://image.tmdb.org/t/p/w200{{ actor.profile_path }}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:0.5rem;">
-                {% else %}
-                <div style="width:60px; height:60px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; margin:0 auto 0.5rem;"><i class="fas fa-user"></i></div>
-                {% endif %}
-                <div style="font-size:0.7rem; opacity:0.8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ actor.name }}">{{ actor.name }}</div>
+        <!-- User Review -->
+        {% if item.review %}
+        <div style="margin-bottom: 2rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent);">
+                {{ item.owner.username }}'s Review
+            </h3>
+            <div class="film-review-quote">
+                "{{ item.review }}"
             </div>
-            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Storyline Overview -->
+        {% if item.description %}
+        <div style="margin-bottom: 2.2rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
+                Synopsis &amp; Overview
+            </h3>
+            <p class="film-overview-text">{{ item.description }}</p>
+        </div>
+        {% endif %}
+        
+        <!-- Cast Carousel -->
+        {% if cast %}
+        <div>
+            <h3 style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
+                Top Billed Cast
+            </h3>
+            <div class="film-cast-scroll">
+                {% for actor in cast %}
+                <div class="film-cast-item">
+                    {% if actor.profile_path %}
+                    <img src="https://image.tmdb.org/t/p/w200{{ actor.profile_path }}" alt="{{ actor.name }}" loading="lazy">
+                    {% else %}
+                    <div class="film-cast-placeholder"><i class="fas fa-user"></i></div>
+                    {% endif %}
+                    <div class="film-cast-name" title="{{ actor.name }}">{{ actor.name }}</div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
         {% endif %}
     </div>
 </div>
 
+<!-- Official Trailer Embed (if available) -->
 {% if trailer_key %}
-<div class="page-container" style="max-width: 1000px; margin-top: 2rem;">
-    <h2 style="margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;"><i class="fab fa-youtube" style="color:#ff0000;"></i> Official Trailer</h2>
-    <div style="position: relative; padding-bottom: 56.25%; height: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-        <iframe src="https://www.youtube.com/embed/{{ trailer_key }}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen></iframe>
+<div class="film-trailer-container">
+    <h2 style="font-size: 1.25rem; font-weight: 700; color: #ffffff; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem;">
+        <i class="fab fa-youtube" style="color:#ef4444; font-size:1.4rem;"></i>
+        <span>Official Trailer</span>
+    </h2>
+    <div class="trailer-frame-box">
+        <iframe src="https://www.youtube.com/embed/{{ trailer_key }}" allowfullscreen loading="lazy"></iframe>
     </div>
 </div>
 {% endif %}
 
-<div style="text-align: center; margin: 4rem 0;">
-    <a href="{{ url_for('public_collection', username=item.owner.username) }}" class="btn-secondary"><i class="fas fa-arrow-left"></i> Back to {{ item.owner.username }}'s Collection</a>
+<!-- Back Navigation -->
+<div style="text-align: center; margin: 4.5rem 0 2rem;">
+    <a href="{{ url_for('public_collection', username=item.owner.username) }}" class="btn-secondary" style="border-radius: 50px; padding: 0.75rem 1.8rem;">
+        <i class="fas fa-arrow-left"></i> Back to {{ item.owner.username }}'s Shelf
+    </a>
 </div>
 {% endblock %}
