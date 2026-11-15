@@ -989,19 +989,234 @@ CURATED_BOOKS = [
     }
 ]
 
+MOVIE_GENRE_CATEGORIES = {
+    "scifi_fantasy": [878, 14],            # Science Fiction, Fantasy
+    "action_adventure": [28, 12],          # Action, Adventure
+    "crime_thriller_mystery": [80, 53, 9648], # Crime, Thriller, Mystery
+    "animation_family": [16, 10751],       # Animation, Family
+    "drama_romance": [18, 10749],          # Drama, Romance
+    "comedy": [35],                        # Comedy
+}
+
+BOOK_BUCKETS = {
+    "philosophy": ["philosophy", "stoicism", "wisdom", "ethics", "mind", "morality"],
+    "fiction_scifi": ["fiction", "fantasy", "sci-fi", "dystopian", "classics", "literature", "adventure", "magical"],
+    "self_help": ["self-help", "habits", "productivity", "growth", "motivation", "success", "happiness", "discipline"],
+    "psychology_finance": ["psychology", "finance", "money", "business", "strategy", "economics", "history", "biography"],
+}
+
 def _get_user_collection_ids():
     movie_tmdb_ids = {m.tmdb_id for m in Movie.query.filter_by(user_id=current_user.id).all() if m.tmdb_id}
     book_google_ids = {b.google_id for b in Book.query.filter_by(user_id=current_user.id).all() if b.google_id}
     return movie_tmdb_ids, book_google_ids
 
 
+def get_diverse_movie_recommendations(user_movies, movie_in_collection, page=1):
+    import random
+    if not user_movies:
+        return []
+
+    # Map user's movies to genre categories present in collection
+    active_categories = set()
+    for m in user_movies:
+        mg = (m.genre or "").lower()
+        if any(term in mg for term in ["science fiction", "sci-fi", "fantasy"]):
+            active_categories.add("scifi_fantasy")
+        if any(term in mg for term in ["action", "adventure"]):
+            active_categories.add("action_adventure")
+        if any(term in mg for term in ["crime", "thriller", "mystery"]):
+            active_categories.add("crime_thriller_mystery")
+        if any(term in mg for term in ["animation", "family"]):
+            active_categories.add("animation_family")
+        if any(term in mg for term in ["drama", "romance"]):
+            active_categories.add("drama_romance")
+        if "comedy" in mg:
+            active_categories.add("comedy")
+
+    if not active_categories:
+        active_categories = {"scifi_fantasy", "action_adventure", "crime_thriller_mystery", "animation_family"}
+
+    active_cat_list = list(active_categories)
+    # Shuffle categories order based on page seed
+    rng = random.Random(page * 7919)
+    rng.shuffle(active_cat_list)
+
+    category_results = {}
+    seen_ids = set(movie_in_collection)
+
+    for cat_key in active_cat_list:
+        gids = MOVIE_GENRE_CATEGORIES.get(cat_key, [28])
+        gid_str = "|".join(str(g) for g in gids)
+        try:
+            params = {
+                "api_key": TMDB_API_KEY,
+                "with_genres": gid_str,
+                "sort_by": "popularity.desc",
+                "vote_count.gte": 150,
+                "page": page
+            }
+            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
+            cat_movies = []
+            for item in r.json().get("results", []):
+                tid = str(item["id"])
+                if tid in seen_ids:
+                    continue
+                if item.get("poster_path"):
+                    seen_ids.add(tid)
+                    cat_movies.append({
+                        "tmdb_id": tid,
+                        "title": item.get("title", ""),
+                        "year": (item.get("release_date") or "")[:4],
+                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "rating": round(item.get("vote_average", 0), 1),
+                        "overview": (item.get("overview") or "")[:200]
+                    })
+                if len(cat_movies) >= 6:
+                    break
+            category_results[cat_key] = cat_movies
+        except Exception:
+            category_results[cat_key] = []
+
+    # Round-robin interleave across the different categories so recommendations are diverse!
+    blended = []
+    max_count = max((len(lst) for lst in category_results.values()), default=0)
+    for i in range(max_count):
+        for cat_key in active_cat_list:
+            lst = category_results.get(cat_key, [])
+            if i < len(lst) and len(blended) < 12:
+                blended.append(lst[i])
+
+    return blended
+
+
+def get_trending_movies(movie_in_collection, page=1):
+    trending = []
+    try:
+        params = {"api_key": TMDB_API_KEY, "sort_by": "popularity.desc", "page": page}
+        r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=5)
+        for item in r.json().get("results", []):
+            tid = str(item["id"])
+            if tid in movie_in_collection:
+                continue
+            if item.get("poster_path"):
+                trending.append({
+                    "tmdb_id": tid,
+                    "title": item.get("title", ""),
+                    "year": (item.get("release_date") or "")[:4],
+                    "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                    "rating": round(item.get("vote_average", 0), 1),
+                    "overview": (item.get("overview") or "")[:200]
+                })
+            if len(trending) >= 12:
+                break
+    except Exception:
+        pass
+    return trending
+
+
+def get_diverse_book_recommendations(user_books, book_in_collection, book_titles_in_collection, seed=0):
+    import random
+    if not user_books:
+        return []
+
+    # Bucket candidate books by theme
+    buckets = {
+        "philosophy": [],
+        "fiction_scifi": [],
+        "self_help": [],
+        "psychology_finance": []
+    }
+
+    for b in CURATED_BOOKS:
+        title_clean = b["title"].lower().strip()
+        if title_clean in book_titles_in_collection or b["google_id"] in book_in_collection:
+            continue
+
+        bg = b["genre"].lower()
+        if any(k in bg for k in BOOK_BUCKETS["philosophy"]):
+            buckets["philosophy"].append(b)
+        elif any(k in bg for k in BOOK_BUCKETS["fiction_scifi"]):
+            buckets["fiction_scifi"].append(b)
+        elif any(k in bg for k in BOOK_BUCKETS["self_help"]):
+            buckets["self_help"].append(b)
+        else:
+            buckets["psychology_finance"].append(b)
+
+    # Shuffle each bucket using seed
+    rng = random.Random(seed) if seed else random.Random()
+    for k in buckets:
+        rng.shuffle(buckets[k])
+
+    # Interleave across all 4 categories so the list contains a balanced blend
+    bucket_keys = ["philosophy", "fiction_scifi", "self_help", "psychology_finance"]
+    if seed:
+        shift = seed % len(bucket_keys)
+        bucket_keys = bucket_keys[shift:] + bucket_keys[:shift]
+
+    blended = []
+    max_len = max((len(buckets[k]) for k in bucket_keys), default=0)
+    for i in range(max_len):
+        for k in bucket_keys:
+            if i < len(buckets[k]) and len(blended) < 12:
+                blended.append(buckets[k][i])
+
+    return blended
+
+
+def get_trending_books(book_in_collection, book_titles_in_collection, seed=0):
+    import random
+    rng = random.Random(seed) if seed else random.Random()
+
+    pool = [b for b in CURATED_BOOKS if b["title"].lower().strip() not in book_titles_in_collection and b["google_id"] not in book_in_collection]
+    rng.shuffle(pool)
+
+    # Also try to fetch daily trending from Open Library
+    live_books = []
+    try:
+        r = requests.get("https://openlibrary.org/trending/daily.json", params={"limit": 10}, timeout=4)
+        for w in r.json().get("works", []):
+            w_title = w.get("title", "").strip()
+            if not w_title or w_title.lower() in book_titles_in_collection:
+                continue
+            w_key = w.get("key", "").replace("/works/", "")
+            if w_key in book_in_collection:
+                continue
+            cover_i = w.get("cover_i")
+            thumb = f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg" if cover_i else ""
+            if not thumb:
+                continue
+            authors = w.get("author_name", ["Unknown"])
+            author_str = ", ".join(authors[:2]) if isinstance(authors, list) else str(authors)
+            live_books.append({
+                "google_id": w_key,
+                "title": w_title,
+                "author": author_str,
+                "year": str(w.get("first_publish_year", "")),
+                "img_url": thumb,
+                "overview": ""
+            })
+    except Exception:
+        pass
+
+    combined = live_books + pool
+    seen = set()
+    result = []
+    for b in combined:
+        tl = b["title"].lower().strip()
+        if tl not in seen:
+            seen.add(tl)
+            result.append(b)
+        if len(result) >= 12:
+            break
+    return result
+
+
 @app.route("/discover")
 @login_required
 def discover():
-    import random
     tab = request.args.get("tab", "movies")
-    refresh = request.args.get('refresh', type=int, default=0)
-    page_offset = random.randint(1, 4) if refresh else 1
+    rec_page = request.args.get("rec_page", type=int, default=1)
+    trend_page = request.args.get("trend_page", type=int, default=1)
 
     movie_in_collection, book_in_collection = _get_user_collection_ids()
     book_titles_in_collection = {b.title.lower().strip() for b in Book.query.filter_by(user_id=current_user.id).all() if b.title}
@@ -1015,163 +1230,17 @@ def discover():
     is_personalized_books = False
 
     if tab == "movies":
-        # -- Personalized movie recommendations based on BOTH watched and to_watch movies --
         user_movies = Movie.query.filter_by(user_id=current_user.id).all()
-        genre_ids = set()
-        for m in user_movies:
-            if m.tmdb_id:
-                try:
-                    r = requests.get(f"https://api.themoviedb.org/3/movie/{m.tmdb_id}",
-                                     params={"api_key": TMDB_API_KEY}, timeout=4)
-                    for g in r.json().get("genres", []):
-                        genre_ids.add(str(g["id"]))
-                    if len(genre_ids) >= 6:
-                        break
-                except Exception:
-                    pass
-
-        if genre_ids and refresh:
-            genre_ids = set(random.sample(list(genre_ids), min(3, len(genre_ids))))
-
-        is_personalized_movies = bool(genre_ids)
+        is_personalized_movies = bool(user_movies)
         if is_personalized_movies:
-            try:
-                params = {"api_key": TMDB_API_KEY, "sort_by": "popularity.desc", "page": page_offset}
-                params["with_genres"] = ",".join(list(genre_ids)[:3])
-                r = requests.get("https://api.themoviedb.org/3/discover/movie", params=params, timeout=6)
-                for item in r.json().get("results", []):
-                    tid = str(item["id"])
-                    if tid in movie_in_collection: continue
-                    if item.get("poster_path"):
-                        recommended_movies.append({
-                            "tmdb_id": tid, "title": item.get("title", ""),
-                            "year": (item.get("release_date") or "")[:4],
-                            "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
-                            "rating": round(item.get("vote_average", 0), 1),
-                            "overview": (item.get("overview") or "")[:200]
-                        })
-                    if len(recommended_movies) >= 12: break
-            except Exception: pass
-
-        try:
-            tparams = {"api_key": TMDB_API_KEY, "sort_by": "popularity.desc", "page": page_offset}
-            r = requests.get("https://api.themoviedb.org/3/discover/movie", params=tparams, timeout=6)
-            for item in r.json().get("results", []):
-                tid = str(item["id"])
-                if tid in movie_in_collection: continue
-                if item.get("poster_path"):
-                    trending_movies.append({
-                        "tmdb_id": tid, "title": item.get("title", ""),
-                        "year": (item.get("release_date") or "")[:4],
-                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
-                        "rating": round(item.get("vote_average", 0), 1),
-                        "overview": (item.get("overview") or "")[:200]
-                    })
-                if len(trending_movies) >= 12: break
-        except Exception: pass
-
+            recommended_movies = get_diverse_movie_recommendations(user_movies, movie_in_collection, page=rec_page)
+        trending_movies = get_trending_movies(movie_in_collection, page=trend_page)
     else:
-        # tab == "books"
-        # -- Personalized book recommendations based on BOTH read AND to_read books --
         user_books = Book.query.filter_by(user_id=current_user.id).all()
         is_personalized_books = bool(user_books)
-
-        user_authors = []
-        user_genres = []
-        for b in user_books:
-            if b.author and b.author.strip().lower() != "unknown":
-                for a in b.author.split(","):
-                    ac = a.strip().lower()
-                    if ac and ac not in user_authors:
-                        user_authors.append(ac)
-            if b.genre:
-                for g in b.genre.split(","):
-                    for sub in g.split("/"):
-                        gc = sub.strip().lower()
-                        if gc and gc not in ["general", "none", "unknown"] and len(gc) > 2:
-                            if gc not in user_genres:
-                                user_genres.append(gc)
-
-        # 1. Score curated book bank against user reading interests
-        scored_books = []
-        for book in CURATED_BOOKS:
-            title_clean = book["title"].lower().strip()
-            if title_clean in book_titles_in_collection or book["google_id"] in book_in_collection:
-                continue
-
-            score = 0
-            bg_lower = book["genre"].lower()
-            ba_lower = book["author"].lower()
-
-            # Match authors
-            for a in user_authors:
-                if a in ba_lower:
-                    score += 10
-            # Match genres
-            for g in user_genres:
-                if g in bg_lower:
-                    score += 4
-
-            # If user has books, add score + random jitter if refresh
-            jitter = random.random() if refresh else 0
-            scored_books.append((score + jitter, book))
-
-        scored_books.sort(key=lambda x: x[0], reverse=True)
-
         if is_personalized_books:
-            # Pick top scored books that have matching affinity (or top diverse picks)
-            for sc, b in scored_books:
-                recommended_books.append(b)
-                if len(recommended_books) >= 12:
-                    break
-
-        # 2. Popular & Trending Books (from curated library + Open Library live data)
-        # Try live trending from Open Library with fast timeout
-        live_trending = []
-        try:
-            r = requests.get("https://openlibrary.org/trending/daily.json", params={"limit": 15}, timeout=4)
-            for w in r.json().get("works", []):
-                w_title = w.get("title", "").strip()
-                if not w_title or w_title.lower() in book_titles_in_collection:
-                    continue
-                w_key = w.get("key", "").replace("/works/", "")
-                if w_key in book_in_collection:
-                    continue
-                cover_i = w.get("cover_i")
-                thumb = f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg" if cover_i else ""
-                if not thumb:
-                    continue
-                authors = w.get("author_name", ["Unknown"])
-                author_str = ", ".join(authors[:2]) if isinstance(authors, list) else str(authors)
-                live_trending.append({
-                    "google_id": w_key,
-                    "title": w_title,
-                    "author": author_str,
-                    "year": str(w.get("first_publish_year", "")),
-                    "img_url": thumb,
-                    "overview": ""
-                })
-                if len(live_trending) >= 12:
-                    break
-        except Exception:
-            pass
-
-        # Combine live trending + curated popular books (excluding already recommended or in collection)
-        rec_titles = {b["title"].lower().strip() for b in recommended_books}
-        trending_pool = live_trending + [b for b in CURATED_BOOKS if b["title"].lower().strip() not in book_titles_in_collection and b["title"].lower().strip() not in rec_titles]
-
-        seen_titles = set()
-        for b in trending_pool:
-            tl = b["title"].lower().strip()
-            if tl not in seen_titles and tl not in book_titles_in_collection:
-                seen_titles.add(tl)
-                trending_books.append(b)
-            if len(trending_books) >= 12:
-                break
-
-        # If refresh requested, shuffle trending for fresh inspiration
-        if refresh:
-            random.shuffle(trending_books)
+            recommended_books = get_diverse_book_recommendations(user_books, book_in_collection, book_titles_in_collection, seed=rec_page)
+        trending_books = get_trending_books(book_in_collection, book_titles_in_collection, seed=trend_page)
 
     return render_template("discover.html",
         tab=tab,
@@ -1182,6 +1251,33 @@ def discover():
         is_personalized_movies=is_personalized_movies,
         is_personalized_books=is_personalized_books,
     )
+
+
+@app.route("/api/discover_section")
+@login_required
+def api_discover_section():
+    tab = request.args.get("tab", "movies")
+    section = request.args.get("section", "recommended")
+    page = request.args.get("page", type=int, default=1)
+    seed = request.args.get("seed", type=int, default=1)
+
+    movie_in_collection, book_in_collection = _get_user_collection_ids()
+    book_titles_in_collection = {b.title.lower().strip() for b in Book.query.filter_by(user_id=current_user.id).all() if b.title}
+
+    if tab == "movies":
+        if section == "recommended":
+            user_movies = Movie.query.filter_by(user_id=current_user.id).all()
+            items = get_diverse_movie_recommendations(user_movies, movie_in_collection, page=page)
+        else:
+            items = get_trending_movies(movie_in_collection, page=page)
+    else:
+        if section == "recommended":
+            user_books = Book.query.filter_by(user_id=current_user.id).all()
+            items = get_diverse_book_recommendations(user_books, book_in_collection, book_titles_in_collection, seed=seed)
+        else:
+            items = get_trending_books(book_in_collection, book_titles_in_collection, seed=seed)
+
+    return jsonify({"success": True, "items": items, "tab": tab, "section": section})
 
 
 # =====================
@@ -1284,14 +1380,19 @@ def book_preview(book_id):
 @app.route("/quick_add_movie")
 @login_required
 def quick_add_movie():
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
     tmdb_id = request.args.get("id")
     status = request.args.get("status", "to_watch")
     if not tmdb_id:
+        if is_ajax:
+            return jsonify({"success": False, "message": "Missing movie ID"}), 400
         return redirect(url_for("discover", tab="movies"))
 
     # Don't add duplicates
     existing = Movie.query.filter_by(user_id=current_user.id, tmdb_id=str(tmdb_id)).first()
     if existing:
+        if is_ajax:
+            return jsonify({"success": False, "already_exists": True, "message": f'"{existing.title}" is already in your collection.'})
         flash(f'"{existing.title}" is already in your collection.', "error")
         return redirect(url_for("discover", tab="movies"))
 
@@ -1314,8 +1415,17 @@ def quick_add_movie():
         )
         db.session.add(new_movie)
         db.session.commit()
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "title": new_movie.title,
+                "status": status,
+                "message": f'"{new_movie.title}" added to your collection!'
+            })
         flash(f'"{new_movie.title}" added to your collection!', "success")
     except Exception as e:
+        if is_ajax:
+            return jsonify({"success": False, "message": str(e)}), 500
         flash(f"Could not add movie: {str(e)}", "error")
 
     return redirect(url_for("discover", tab="movies"))
@@ -1324,6 +1434,7 @@ def quick_add_movie():
 @app.route("/quick_add_book")
 @login_required
 def quick_add_book():
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
     google_id = request.args.get("id")
     status = request.args.get("status", "to_read")
     title = request.args.get("title")
@@ -1334,6 +1445,8 @@ def quick_add_book():
     overview = request.args.get("overview", "")
 
     if not google_id and not title:
+        if is_ajax:
+            return jsonify({"success": False, "message": "Missing book ID or title"}), 400
         return redirect(url_for("discover", tab="books"))
 
     # Check duplicates by id or title
@@ -1344,6 +1457,8 @@ def quick_add_book():
         existing = Book.query.filter_by(user_id=current_user.id, title=title).first()
 
     if existing:
+        if is_ajax:
+            return jsonify({"success": False, "already_exists": True, "message": f'"{existing.title}" is already in your collection.'})
         flash(f'"{existing.title}" is already in your collection.', "error")
         return redirect(url_for("discover", tab="books"))
 
@@ -1364,6 +1479,13 @@ def quick_add_book():
         )
         db.session.add(new_book)
         db.session.commit()
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "title": new_book.title,
+                "status": status,
+                "message": f'"{new_book.title}" added to your collection!'
+            })
         flash(f'"{new_book.title}" added to your collection!', "success")
         return redirect(url_for("discover", tab="books"))
 
@@ -1385,6 +1507,13 @@ def quick_add_book():
             )
             db.session.add(new_book)
             db.session.commit()
+            if is_ajax:
+                return jsonify({
+                    "success": True,
+                    "title": new_book.title,
+                    "status": status,
+                    "message": f'"{new_book.title}" added to your collection!'
+                })
             flash(f'"{new_book.title}" added to your collection!', "success")
             return redirect(url_for("discover", tab="books"))
 
@@ -1436,8 +1565,17 @@ def quick_add_book():
             )
         db.session.add(new_book)
         db.session.commit()
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "title": new_book.title,
+                "status": status,
+                "message": f'"{new_book.title}" added to your collection!'
+            })
         flash(f'"{new_book.title}" added to your collection!', "success")
     except Exception as e:
+        if is_ajax:
+            return jsonify({"success": False, "message": str(e)}), 500
         flash(f"Could not add book: {str(e)}", "error")
 
     return redirect(url_for("discover", tab="books"))
