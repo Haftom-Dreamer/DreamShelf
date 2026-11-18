@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ item.title }} ({{ item.year }}) — DreamShelf Film Dossier{% endblock %}
+{% block title %}{{ item.title }}{% if item.year %} ({{ item.year }}){% endif %} — DreamShelf Film Dossier{% endblock %}
 
 {% block content %}
 <!-- Full-Bleed Cinematic Backdrop -->
@@ -26,25 +26,54 @@
         <div style="margin-top: 1.2rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.8rem;">
                 <span style="font-size:0.76rem; color:var(--text-muted); font-weight:600;">Status</span>
+                {% if item.status %}
                 <span class="status-badge {{ item.status }}">
                     {% if item.status in ['watched', 'read'] %}✓{% else %}🕐{% endif %}
                     {{ item.status | replace('_', ' ') | title }}
                 </span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; padding-top: 0.7rem; border-top: 1px solid var(--border);">
-                <span style="font-size:0.76rem; color:var(--text-muted); font-weight:600;">Rating</span>
-                {% if item.rating and item.rating > 0 %}
-                <span style="font-size:0.95rem; font-weight:800; color:var(--gold);">★ {{ item.rating }}<span style="font-size:0.72rem; color:var(--text-muted); font-weight:500;">/10</span></span>
                 {% else %}
-                <span style="font-size:0.75rem; color:var(--text-faint);">Not rated yet</span>
+                <span class="status-badge" style="background: rgba(37, 99, 235, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35);">
+                    <i class="fas fa-compass"></i> Discover Title
+                </span>
                 {% endif %}
             </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-top: 0.7rem; border-top: 1px solid var(--border);">
+                <span style="font-size:0.76rem; color:var(--text-muted); font-weight:600;">{% if item.user_id %}Your Rating{% else %}Rating{% endif %}</span>
+                <div style="text-align: right;">
+                    {% if item.rating and item.rating > 0 %}
+                    <span style="font-size:0.95rem; font-weight:800; color:var(--gold);">★ {{ item.rating }}<span style="font-size:0.72rem; color:var(--text-muted); font-weight:500;">/10</span></span>
+                    {% if not item.user_id and item.vote_count %}
+                    <div style="font-size:0.68rem; color:var(--text-muted); margin-top:2px;">({{ "{:,}".format(item.vote_count) }} votes)</div>
+                    {% endif %}
+                    {% else %}
+                    <span style="font-size:0.75rem; color:var(--text-faint);">Not rated yet</span>
+                    {% endif %}
+                </div>
+            </div>
 
-            {% if current_user.is_authenticated and current_user.id == item.user_id %}
+            {% if current_user.is_authenticated and item.user_id and current_user.id == item.user_id %}
             <div style="display:flex; gap:0.5rem; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--border);">
                 <a href="{{ url_for('edit', movie_id=item.id) if item_type == 'movie' else url_for('edit_book', book_id=item.id) }}" class="btn-primary-sm" style="flex:1; text-align:center; justify-content:center;">
-                    <i class="fas fa-pen"></i> Edit
+                    <i class="fas fa-pen"></i> Edit in Library
                 </a>
+            </div>
+            {% elif current_user.is_authenticated and not item.user_id %}
+            <div style="display:flex; flex-direction:column; gap:0.6rem; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--border);">
+                {% if item_type == 'movie' %}
+                <a href="{{ url_for('quick_add_movie', id=item.tmdb_id, status='to_watch') }}" class="btn-quick to-watch" style="width:100%; justify-content:center; padding:0.6rem; font-size:0.85rem; border-radius:8px;">
+                    <i class="fas fa-clock"></i> Add to Watchlist
+                </a>
+                <a href="{{ url_for('quick_add_movie', id=item.tmdb_id, status='watched') }}" class="btn-quick watched" style="width:100%; justify-content:center; padding:0.6rem; font-size:0.85rem; border-radius:8px;">
+                    <i class="fas fa-check"></i> Mark as Watched
+                </a>
+                {% else %}
+                <a href="{{ url_for('quick_add_book', id=item.google_id, status='to_read', title=item.title, author=item.author, img_url=item.img_url, year=item.year) }}" class="btn-quick to-read" style="width:100%; justify-content:center; padding:0.6rem; font-size:0.85rem; border-radius:8px;">
+                    <i class="fas fa-bookmark"></i> Add to Reading List
+                </a>
+                <a href="{{ url_for('quick_add_book', id=item.google_id, status='read', title=item.title, author=item.author, img_url=item.img_url, year=item.year) }}" class="btn-quick read-done" style="width:100%; justify-content:center; padding:0.6rem; font-size:0.85rem; border-radius:8px;">
+                    <i class="fas fa-check"></i> Mark as Read
+                </a>
+                {% endif %}
             </div>
             {% endif %}
         </div>
@@ -53,8 +82,15 @@
     <!-- Right: Dossier Content -->
     <div class="film-dossier-card">
         <h1 class="film-title-head">{{ item.title }}</h1>
+        {% if item.tagline %}
+        <div style="font-size: 1.05rem; font-style: italic; color: #93c5fd; margin-top: -0.3rem; margin-bottom: 0.8rem; opacity: 0.9;">"{{ item.tagline }}"</div>
+        {% endif %}
         <div class="film-meta-sub">
             <span>{{ item.year }}</span>
+            {% if item.runtime %}
+            <span>•</span>
+            <span><i class="fas fa-clock" style="font-size:0.78rem; opacity:0.7;"></i> {{ item.runtime }} min</span>
+            {% endif %}
             <span>•</span>
             {% if director %}
             <span>{{ 'Directed by ' if item_type == 'movie' else 'Written by ' }}<strong style="color:#ffffff;">{{ director }}</strong></span>
@@ -105,8 +141,8 @@
             {% endif %}
         </div>
 
-        <!-- User Review -->
-        {% if item.review %}
+        <!-- User Review (if recorded by owner) -->
+        {% if item.review and item.owner %}
         <div style="margin-bottom: 2rem;">
             <h3 style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent);">
                 {{ item.owner.username }}'s Review
@@ -147,6 +183,30 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- Recommendations (if available from TMDB) -->
+        {% if recommendations %}
+        <div style="margin-top: 2.2rem; padding-top: 1.8rem; border-top: 1px solid var(--border);">
+            <h3 style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display:flex; align-items:center; gap:0.5rem;">
+                <i class="fas fa-sparkles" style="color:var(--accent);"></i> You Might Also Like
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.9rem;">
+                {% for rec in recommendations %}
+                <a href="{{ url_for('discover_movie_detail', tmdb_id=rec.id) }}" style="text-decoration:none; color:inherit; display:block; transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
+                    <div style="aspect-ratio:2/3; border-radius:8px; overflow:hidden; background:var(--bg-card); border:1px solid var(--border); margin-bottom:0.4rem; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+                        {% if rec.poster_path %}
+                        <img src="https://image.tmdb.org/t/p/w200{{ rec.poster_path }}" alt="{{ rec.title or rec.name }}" style="width:100%; height:100%; object-fit:cover;" loading="lazy">
+                        {% else %}
+                        <div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-faint);"><i class="fas fa-film"></i></div>
+                        {% endif %}
+                    </div>
+                    <div style="font-size:0.78rem; font-weight:600; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ rec.title or rec.name }}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted);">{{ (rec.release_date or rec.first_air_date or '')[:4] }}{% if rec.vote_average %} · ⭐ {{ rec.vote_average|round(1) }}{% endif %}</div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -165,8 +225,14 @@
 
 <!-- Back Navigation -->
 <div style="text-align: center; margin: 4.5rem 0 2rem;">
+    {% if from_discover or not item.owner %}
+    <a href="{{ url_for('discover') }}" class="btn-secondary" style="border-radius: 50px; padding: 0.75rem 1.8rem;">
+        <i class="fas fa-compass"></i> Back to Discover
+    </a>
+    {% else %}
     <a href="{{ url_for('public_collection', username=item.owner.username) }}" class="btn-secondary" style="border-radius: 50px; padding: 0.75rem 1.8rem;">
         <i class="fas fa-arrow-left"></i> Back to {{ item.owner.username }}'s Shelf
     </a>
+    {% endif %}
 </div>
 {% endblock %}

@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}DreamShelf{% endblock %} — DreamShelf</title>
-    <meta name="description" content="DreamShelf — Curate and track your favorite movies and books in one celestial shelf.">
+    <meta name="description"
+        content="DreamShelf — Every story deserves a shelf. Curate and track your favorite movies and books in one celestial shelf.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
+
 <body>
     <nav class="navbar" id="navbar">
         <div class="nav-container">
@@ -19,17 +24,29 @@
             <div class="nav-right">
                 {% if current_user.is_authenticated %}
                 <ul class="nav-menu">
-                    <li><a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"><i class="fas fa-th-large"></i> Dashboard</a></li>
-                    <li><a href="{{ url_for('feed') }}" class="nav-link {% if request.endpoint == 'feed' %}active{% endif %}"><i class="fas fa-stream"></i> Feed</a></li>
-                    <li><a href="{{ url_for('analytics') }}" class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}"><i class="fas fa-chart-pie"></i> Analytics</a></li>
-                    <li><a href="{{ url_for('collection') }}" class="nav-link {% if request.endpoint == 'collection' %}active{% endif %}"><i class="fas fa-layer-group"></i> Collection</a></li>
-                    <li><a href="{{ url_for('discover') }}" class="nav-link {% if request.endpoint == 'discover' %}active{% endif %}"><i class="fas fa-compass"></i> Discover</a></li>
+                    <li><a href="{{ url_for('dashboard') }}"
+                            class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"><i
+                                class="fas fa-th-large"></i> Dashboard</a></li>
+                    <li><a href="{{ url_for('feed') }}"
+                            class="nav-link {% if request.endpoint == 'feed' %}active{% endif %}"><i
+                                class="fas fa-stream"></i> Feed</a></li>
+                    <li><a href="{{ url_for('analytics') }}"
+                            class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}"><i
+                                class="fas fa-chart-pie"></i> Analytics</a></li>
+                    <li><a href="{{ url_for('collection') }}"
+                            class="nav-link {% if request.endpoint == 'collection' %}active{% endif %}"><i
+                                class="fas fa-layer-group"></i> Collection</a></li>
+                    <li><a href="{{ url_for('discover') }}"
+                            class="nav-link {% if request.endpoint == 'discover' %}active{% endif %}"><i
+                                class="fas fa-compass"></i> Discover</a></li>
                     <li class="nav-add-group">
                         <a href="{{ url_for('add') }}" class="btn-nav-add movie"><i class="fas fa-film"></i> Film</a>
-                        <a href="{{ url_for('add_book') }}" class="btn-nav-add book"><i class="fas fa-book"></i> Book</a>
+                        <a href="{{ url_for('add_book') }}" class="btn-nav-add book"><i class="fas fa-book"></i>
+                            Book</a>
                     </li>
                 </ul>
-                <div class="nav-avatar" id="navAvatar" title="{{ current_user.username }}" style="background:{{ current_user.avatar_color }};" onclick="toggleAvatarDropdown(event)">
+                <div class="nav-avatar" id="navAvatar" title="{{ current_user.username }}"
+                    style="background:{{ current_user.avatar_color }};" onclick="toggleAvatarDropdown(event)">
                     {{ current_user.username[0].upper() }}
                     <div class="avatar-dropdown" id="avatarDropdown" onclick="event.stopPropagation();">
                         <div class="avatar-user-header">
@@ -37,14 +54,19 @@
                             <span class="avatar-email">{{ current_user.email }}</span>
                         </div>
                         <div class="avatar-dropdown-divider"></div>
-                        <a href="{{ url_for('public_collection', username=current_user.username) }}"><i class="fas fa-user-circle"></i> Public Profile</a>
+                        <a href="{{ url_for('public_collection', username=current_user.username) }}"><i
+                                class="fas fa-user-circle"></i> Public Profile</a>
+                        <a href="{{ url_for('manage_favorites') }}"><i class="fas fa-crown"
+                                style="color:var(--gold);"></i> Top 10 Favorites</a>
                         <a href="{{ url_for('collection') }}"><i class="fas fa-layer-group"></i> My Collection</a>
                         <a href="{{ url_for('analytics') }}"><i class="fas fa-chart-pie"></i> Analytics</a>
                         <div class="avatar-dropdown-divider"></div>
-                        <a href="{{ url_for('logout') }}" class="avatar-logout-link"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+                        <a href="{{ url_for('logout') }}" class="avatar-logout-link"><i class="fas fa-sign-out-alt"></i>
+                            Log Out</a>
                     </div>
                 </div>
-                <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.add('open')" aria-label="Menu">
+                <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.add('open')"
+                    aria-label="Menu">
                     <span></span><span></span><span></span>
                 </button>
                 {% else %}
@@ -52,7 +74,8 @@
                     <li><a href="{{ url_for('login') }}" class="nav-link">Sign In</a></li>
                     <li><a href="{{ url_for('register') }}" class="btn-primary-sm">Get Started</a></li>
                 </ul>
-                <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.add('open')" aria-label="Menu">
+                <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.add('open')"
+                    aria-label="Menu">
                     <span></span><span></span><span></span>
                 </button>
                 {% endif %}
@@ -62,16 +85,26 @@
 
     <!-- Mobile Menu Overlay -->
     <div class="mobile-menu" id="mobileMenu">
-        <button class="mobile-menu-close" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i class="fas fa-times"></i></button>
+        <button class="mobile-menu-close" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i
+                class="fas fa-times"></i></button>
         {% if current_user.is_authenticated %}
-        <a href="{{ url_for('dashboard') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i class="fas fa-th-large"></i> Dashboard</a>
-        <a href="{{ url_for('feed') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i class="fas fa-stream"></i> Feed</a>
-        <a href="{{ url_for('analytics') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i class="fas fa-chart-pie"></i> Analytics</a>
-        <a href="{{ url_for('collection') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i class="fas fa-layer-group"></i> Collection</a>
-        <a href="{{ url_for('discover') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i class="fas fa-compass"></i> Discover</a>
-        <a href="{{ url_for('add') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')" style="color:var(--accent)"><i class="fas fa-film"></i> Add Movie</a>
-        <a href="{{ url_for('add_book') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')" style="color:var(--accent-book)"><i class="fas fa-book"></i> Add Book</a>
-        <a href="{{ url_for('logout') }}" style="color:var(--text-muted); font-size:1rem;"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+        <a href="{{ url_for('dashboard') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i
+                class="fas fa-th-large"></i> Dashboard</a>
+        <a href="{{ url_for('feed') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i
+                class="fas fa-stream"></i> Feed</a>
+        <a href="{{ url_for('analytics') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i
+                class="fas fa-chart-pie"></i> Analytics</a>
+        <a href="{{ url_for('collection') }}"
+            onclick="document.getElementById('mobileMenu').classList.remove('open')"><i class="fas fa-layer-group"></i>
+            Collection</a>
+        <a href="{{ url_for('discover') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"><i
+                class="fas fa-compass"></i> Discover</a>
+        <a href="{{ url_for('add') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"
+            style="color:var(--accent)"><i class="fas fa-film"></i> Add Movie</a>
+        <a href="{{ url_for('add_book') }}" onclick="document.getElementById('mobileMenu').classList.remove('open')"
+            style="color:var(--accent-book)"><i class="fas fa-book"></i> Add Book</a>
+        <a href="{{ url_for('logout') }}" style="color:var(--text-muted); font-size:1rem;"><i
+                class="fas fa-sign-out-alt"></i> Log Out</a>
         {% else %}
         <a href="{{ url_for('login') }}">Sign In</a>
         <a href="{{ url_for('register') }}" style="color:var(--accent)">Get Started</a>
@@ -80,17 +113,17 @@
 
 
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="flash-container">
-            {% for cat, msg in messages %}
-            <div class="flash flash-{{ cat }}">
-                <i class="fas fa-{% if cat == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
-                {{ msg }}
-                <button onclick="this.parentElement.remove()" class="flash-close">×</button>
-            </div>
-            {% endfor %}
+    {% if messages %}
+    <div class="flash-container">
+        {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">
+            <i class="fas fa-{% if cat == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+            {{ msg }}
+            <button onclick="this.parentElement.remove()" class="flash-close">×</button>
         </div>
-        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
     {% endwith %}
 
     <main>
@@ -102,37 +135,38 @@
             <span class="nav-logo" style="font-size:1.3rem; justify-content:center;">
                 <span class="logo-icon">✦</span> DreamShelf
             </span>
-            <p>Your personal celestial universe of movies &amp; books.</p>
-            <p style="color:var(--text-muted); opacity:0.65; font-size:0.8rem; margin-top:8px;">© 2026 DreamShelf</p>
+            <p style="font-size: 1.05rem; font-weight: 600; color: #ffffff; margin-top: 6px; letter-spacing: 0.02em;">Every story deserves a shelf.</p>
+            <p style="color:var(--text-muted); opacity:0.65; font-size:0.8rem; margin-top:4px;">Your personal celestial universe of movies &amp; books · © 2026 DreamShelf</p>
         </div>
     </footer>
 
     <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
     <script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
     <script>
-    // Navbar scroll
-    window.addEventListener('scroll', () => {
-        document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
-    });
+        // Navbar scroll
+        window.addEventListener('scroll', () => {
+            document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
+        });
 
-    // Avatar Dropdown Toggle
-    function toggleAvatarDropdown(e) {
-        if (e) e.stopPropagation();
-        const avatar = document.getElementById('navAvatar');
-        if (avatar) avatar.classList.toggle('open');
-    }
-    document.addEventListener('click', function(e) {
-        const avatar = document.getElementById('navAvatar');
-        if (avatar && !avatar.contains(e.target)) {
-            avatar.classList.remove('open');
-        }
-    });
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
+        // Avatar Dropdown Toggle
+        function toggleAvatarDropdown(e) {
+            if (e) e.stopPropagation();
             const avatar = document.getElementById('navAvatar');
-            if (avatar) avatar.classList.remove('open');
+            if (avatar) avatar.classList.toggle('open');
         }
-    });
+        document.addEventListener('click', function (e) {
+            const avatar = document.getElementById('navAvatar');
+            if (avatar && !avatar.contains(e.target)) {
+                avatar.classList.remove('open');
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const avatar = document.getElementById('navAvatar');
+                if (avatar) avatar.classList.remove('open');
+            }
+        });
     </script>
 </body>
+
 </html>

@@ -5,11 +5,13 @@ from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from wtforms import StringField, SubmitField, PasswordField, SelectField, TextAreaField
+from wtforms import StringField, SubmitField, PasswordField, SelectField, TextAreaField, BooleanField, FileField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import requests
 import os
+import uuid
 import secrets
 import urllib.parse
 from datetime import datetime, date, timedelta
@@ -17,7 +19,7 @@ from collections import Counter, defaultdict
 import io
 import csv
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Date
+from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Date, Boolean
 
 TMDB_API_KEY = "f319b185cd1af98f98b55a81304dfe9b"
 
@@ -41,6 +43,16 @@ Bootstrap(app)
 db_path = os.path.abspath("favorite-movies.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max upload
+
+UPLOAD_AVATAR_DIR = os.path.join(app.static_folder, 'uploads', 'avatars')
+UPLOAD_COVER_DIR = os.path.join(app.static_folder, 'uploads', 'covers')
+os.makedirs(UPLOAD_AVATAR_DIR, exist_ok=True)
+os.makedirs(UPLOAD_COVER_DIR, exist_ok=True)
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 class Base(DeclarativeBase):
     pass
@@ -78,16 +90,41 @@ class User(UserMixin, db.Model):
     bio: Mapped[str] = mapped_column(String(500), nullable=True)
     avatar_url: Mapped[str] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # Modern Profile additions
+    display_name: Mapped[str] = mapped_column(String(120), nullable=True)
+    location: Mapped[str] = mapped_column(String(120), nullable=True)
+    cover_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    favorite_genres: Mapped[str] = mapped_column(String(300), nullable=True)
+    website: Mapped[str] = mapped_column(String(250), nullable=True)
+    twitter: Mapped[str] = mapped_column(String(100), nullable=True)
+    letterboxd: Mapped[str] = mapped_column(String(100), nullable=True)
+    instagram: Mapped[str] = mapped_column(String(100), nullable=True)
+    is_private: Mapped[bool] = mapped_column(Boolean, default=False)
+
     movies: Mapped[list["Movie"]] = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")
     books: Mapped[list["Book"]] = relationship("Book", back_populates="owner", cascade="all, delete-orphan")
     all_time_favorites: Mapped[list["AllTimeFavorite"]] = relationship(
         "AllTimeFavorite", back_populates="user", cascade="all, delete-orphan", order_by="AllTimeFavorite.rank"
+    )
+    custom_collections: Mapped[list["CustomCollection"]] = relationship(
+        "CustomCollection", back_populates="owner", cascade="all, delete-orphan", order_by="CustomCollection.created_at.desc()"
     )
     followed: Mapped[list["User"]] = relationship(
         'User', secondary=followers_table,
         primaryjoin=(followers_table.c.follower_id == id),
         secondaryjoin=(followers_table.c.followed_id == id),
         backref=db.backref('followers', lazy='dynamic'), lazy='dynamic')
+
+    @property
+    def name_or_username(self):
+        return self.display_name if (self.display_name and self.display_name.strip()) else self.username
+
+    @property
+    def genres_list(self):
+        if not self.favorite_genres:
+            return []
+        return [g.strip() for g in self.favorite_genres.split(",") if g.strip()]
 
 class Movie(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -153,6 +190,34 @@ class AllTimeFavorite(db.Model):
             "rating": self.rating,
             "description": self.description,
             "tmdb_id": self.movie.tmdb_id if self.movie else None
+        }
+
+collection_movies_table = db.Table('collection_movies',
+    db.Column('collection_id', db.Integer, db.ForeignKey('custom_collections.id', ondelete="CASCADE"), primary_key=True),
+    db.Column('movie_id', db.Integer, db.ForeignKey('movie.id', ondelete="CASCADE"), primary_key=True)
+)
+
+class CustomCollection(db.Model):
+    __tablename__ = "custom_collections"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String(150), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=True, default="")
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    owner: Mapped["User"] = relationship("User", back_populates="custom_collections")
+    movies: Mapped[list["Movie"]] = relationship("Movie", secondary=collection_movies_table, backref="in_custom_collections")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description or "",
+            "is_public": self.is_public,
+            "movie_count": len(self.movies),
+            "created_at": self.created_at.strftime("%b %d, %Y") if self.created_at else "",
+            "preview_posters": [m.img_url for m in self.movies[:4] if m.img_url]
         }
 
 class Book(db.Model):
@@ -571,20 +636,71 @@ def google_callback():
     return redirect(next_url or url_for("dashboard"))
 
 class SettingsForm(FlaskForm):
-    bio = TextAreaField("Bio", validators=[Length(max=500)])
-    avatar_url = StringField("Avatar URL", validators=[Length(max=500)])
-    submit = SubmitField("Save Settings")
+    display_name = StringField("Display Name", validators=[Optional(), Length(max=120)])
+    bio = TextAreaField("Bio / About Me", validators=[Optional(), Length(max=500)])
+    location = StringField("Location", validators=[Optional(), Length(max=120)])
+    avatar_url = StringField("Avatar URL", validators=[Optional(), Length(max=500)])
+    cover_url = StringField("Cover Banner URL", validators=[Optional(), Length(max=500)])
+    favorite_genres = StringField("Favorite Genres", validators=[Optional(), Length(max=300)])
+    website = StringField("Personal Website", validators=[Optional(), Length(max=250)])
+    twitter = StringField("Twitter / X Handle", validators=[Optional(), Length(max=100)])
+    letterboxd = StringField("Letterboxd Username", validators=[Optional(), Length(max=100)])
+    instagram = StringField("Instagram Handle", validators=[Optional(), Length(max=100)])
+    is_private = BooleanField("Make Profile Private")
+    submit = SubmitField("Save Profile")
 
 @app.route("/settings", methods=["GET", "POST"])
+@app.route("/profile/edit", methods=["GET", "POST"])
 @login_required
 def settings():
     form = SettingsForm(obj=current_user)
     if form.validate_on_submit():
-        current_user.bio = form.bio.data
-        current_user.avatar_url = form.avatar_url.data
+        # Handle avatar file upload
+        avatar_file = request.files.get("avatar_file")
+        if avatar_file and avatar_file.filename:
+            if allowed_file(avatar_file.filename):
+                fname = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}_{secure_filename(avatar_file.filename)}"
+                save_path = os.path.join(UPLOAD_AVATAR_DIR, fname)
+                avatar_file.save(save_path)
+                current_user.avatar_url = f"/static/uploads/avatars/{fname}"
+            else:
+                flash("Invalid avatar image format. Allowed: png, jpg, jpeg, webp, gif", "error")
+                return render_template("settings.html", form=form)
+        elif form.avatar_url.data:
+            current_user.avatar_url = form.avatar_url.data.strip()
+        elif request.form.get("clear_avatar"):
+            current_user.avatar_url = None
+
+        # Handle cover file upload
+        cover_file = request.files.get("cover_file")
+        if cover_file and cover_file.filename:
+            if allowed_file(cover_file.filename):
+                fname = f"cover_{current_user.id}_{uuid.uuid4().hex[:8]}_{secure_filename(cover_file.filename)}"
+                save_path = os.path.join(UPLOAD_COVER_DIR, fname)
+                cover_file.save(save_path)
+                current_user.cover_url = f"/static/uploads/covers/{fname}"
+            else:
+                flash("Invalid cover banner image format. Allowed: png, jpg, jpeg, webp, gif", "error")
+                return render_template("settings.html", form=form)
+        elif form.cover_url.data:
+            current_user.cover_url = form.cover_url.data.strip()
+        elif request.form.get("clear_cover"):
+            current_user.cover_url = None
+
+        current_user.display_name = form.display_name.data.strip() if form.display_name.data else None
+        current_user.bio = form.bio.data.strip() if form.bio.data else None
+        current_user.location = form.location.data.strip() if form.location.data else None
+        current_user.favorite_genres = form.favorite_genres.data.strip() if form.favorite_genres.data else None
+        current_user.website = form.website.data.strip() if form.website.data else None
+        current_user.twitter = form.twitter.data.strip() if form.twitter.data else None
+        current_user.letterboxd = form.letterboxd.data.strip() if form.letterboxd.data else None
+        current_user.instagram = form.instagram.data.strip() if form.instagram.data else None
+        current_user.is_private = bool(form.is_private.data)
+
         db.session.commit()
-        flash("Settings saved successfully.", "success")
+        flash("Profile updated successfully! ✨", "success")
         return redirect(url_for("public_collection", username=current_user.username))
+
     return render_template("settings.html", form=form)
 
 # =====================
@@ -746,6 +862,192 @@ def view_movie(item_id):
 def view_book(item_id):
     book = Book.query.get_or_404(item_id)
     return render_template("detail.html", item=book, trailer_key=None, cast=[], director=book.author, backdrop_url=book.img_url, item_type="book")
+
+@app.route("/discover/movie/<int:tmdb_id>")
+@app.route("/view/tmdb/<int:tmdb_id>")
+def discover_movie_detail(tmdb_id):
+    """Rich detail dossier for any discovered movie/series from TMDB."""
+    user_movie = None
+    if current_user.is_authenticated:
+        user_movie = Movie.query.filter_by(user_id=current_user.id, tmdb_id=str(tmdb_id)).first()
+
+    d = {}
+    trailer_key = None
+    cast = []
+    director = None
+    backdrop_url = None
+    recommendations = []
+
+    try:
+        tmdb_url = f"https://api.themoviedb.org/3/movie/{tmdb_id}?api_key={TMDB_API_KEY}&append_to_response=credits,videos,recommendations"
+        r = requests.get(tmdb_url, timeout=4)
+        if r.status_code == 200:
+            d = r.json()
+        elif r.status_code == 404:
+            tmdb_url = f"https://api.themoviedb.org/3/tv/{tmdb_id}?api_key={TMDB_API_KEY}&append_to_response=credits,videos,recommendations"
+            r = requests.get(tmdb_url, timeout=4)
+            if r.status_code == 200:
+                d = r.json()
+        
+        if d:
+            if "videos" in d and "results" in d["videos"]:
+                for video in d["videos"]["results"]:
+                    if video.get("type") in ["Trailer", "Teaser"] and video.get("site") == "YouTube":
+                        trailer_key = video.get("key")
+                        break
+            if "credits" in d and "cast" in d["credits"]:
+                cast = d["credits"]["cast"][:10]
+            if "credits" in d and "crew" in d["credits"]:
+                for crew_member in d["credits"]["crew"]:
+                    if crew_member.get("job") == "Director":
+                        director = crew_member.get("name")
+                        break
+            if not director and "created_by" in d and d["created_by"]:
+                director = d["created_by"][0].get("name")
+            
+            backdrop_path = d.get("backdrop_path")
+            if backdrop_path:
+                backdrop_url = f"https://image.tmdb.org/t/p/original{backdrop_path}"
+            
+            if "recommendations" in d and "results" in d["recommendations"]:
+                recommendations = d["recommendations"]["results"][:8]
+    except Exception:
+        pass
+
+    title = d.get("title") or d.get("name") or (user_movie.title if user_movie else "Film Dossier")
+    year = (d.get("release_date") or d.get("first_air_date") or (str(user_movie.year) if user_movie and user_movie.year else ""))[:4]
+    poster_path = d.get("poster_path")
+    img_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else (user_movie.img_url if user_movie else None)
+    if not backdrop_url:
+        backdrop_url = img_url
+    
+    genres_list = [g["name"] for g in d.get("genres", [])]
+    genre = ", ".join(genres_list) if genres_list else (user_movie.genre if user_movie else "")
+    description = d.get("overview") or (user_movie.description if user_movie else "No synopsis available.")
+    runtime = d.get("runtime") or (d.get("episode_run_time", [None])[0] if d.get("episode_run_time") else None)
+    tagline = d.get("tagline") or ""
+    vote_avg = round(d.get("vote_average", 0), 1) if d.get("vote_average") else 0
+    vote_count = d.get("vote_count", 0)
+
+    media_type = "series" if "first_air_date" in d else "movie"
+    if any(g.get("id") == 16 for g in d.get("genres", [])):
+        if d.get("original_language") == "ja":
+            media_type = "anime"
+        else:
+            media_type = "animation"
+
+    class DiscoveredMovieItem:
+        def __init__(self):
+            self.id = user_movie.id if user_movie else None
+            self.tmdb_id = tmdb_id
+            self.title = title
+            self.year = year
+            self.img_url = img_url
+            self.genre = genre
+            self.description = description
+            self.runtime = runtime
+            self.tagline = tagline
+            self.status = user_movie.status if user_movie else None
+            self.rating = user_movie.rating if user_movie and user_movie.rating else vote_avg
+            self.vote_count = vote_count
+            self.review = user_movie.review if user_movie else None
+            self.user_id = user_movie.user_id if user_movie else None
+            self.owner = user_movie.owner if user_movie else None
+            self.media_type = user_movie.media_type if (user_movie and user_movie.media_type) else media_type
+            self.custom_tags = user_movie.custom_tags if user_movie else None
+
+    item = DiscoveredMovieItem()
+
+    return render_template(
+        "detail.html",
+        item=item,
+        trailer_key=trailer_key,
+        cast=cast,
+        director=director,
+        backdrop_url=backdrop_url,
+        item_type="movie",
+        from_discover=True,
+        recommendations=recommendations
+    )
+
+@app.route("/discover/book/<book_id>")
+def discover_book_detail(book_id):
+    """Rich detail dossier for any discovered book from Google Books / Open Library."""
+    user_book = None
+    if current_user.is_authenticated:
+        user_book = Book.query.filter_by(user_id=current_user.id, google_id=str(book_id)).first()
+
+    b_meta = None
+    if 'CURATED_BOOKS' in globals():
+        for b in CURATED_BOOKS:
+            if b.get("google_id") == book_id:
+                b_meta = b
+                break
+    
+    if not b_meta:
+        try:
+            ol_id = book_id.replace("/works/", "")
+            r = requests.get(f"https://openlibrary.org/works/{ol_id}.json", timeout=4)
+            if r.status_code == 200:
+                d = r.json()
+                desc = d.get("description", "")
+                if isinstance(desc, dict):
+                    desc = desc.get("value", "")
+                covers = d.get("covers", [])
+                cover_id = covers[0] if covers else None
+                poster = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg" if cover_id else ""
+                subjects = ", ".join(d.get("subjects", [])[:5])
+                b_meta = {
+                    "title": d.get("title", ""),
+                    "author": request.args.get("author", "Author"),
+                    "year": (d.get("first_publish_date") or "")[:4],
+                    "overview": desc if desc else "No overview available.",
+                    "img_url": poster,
+                    "genre": subjects,
+                    "category": detect_book_category(d.get("title", ""), subjects, desc)
+                }
+        except Exception:
+            pass
+
+    title = (b_meta.get("title") if b_meta else None) or (user_book.title if user_book else "Book Dossier")
+    author = (b_meta.get("author") if b_meta else None) or (user_book.author if user_book else "")
+    year = (b_meta.get("year") if b_meta else None) or (user_book.year if user_book else "")
+    img_url = (b_meta.get("img_url") if b_meta else None) or (user_book.img_url if user_book else "")
+    genre = (b_meta.get("genre") if b_meta else None) or (user_book.genre if user_book else "")
+    description = (b_meta.get("overview") if b_meta else None) or (user_book.description if user_book else "")
+    category = (b_meta.get("category") if b_meta else None) or (user_book.category if user_book else "fiction")
+
+    class DiscoveredBookItem:
+        def __init__(self):
+            self.id = user_book.id if user_book else None
+            self.google_id = book_id
+            self.title = title
+            self.author = author
+            self.year = year
+            self.img_url = img_url
+            self.genre = genre
+            self.description = description
+            self.status = user_book.status if user_book else None
+            self.rating = user_book.rating if user_book else 0
+            self.review = user_book.review if user_book else None
+            self.user_id = user_book.user_id if user_book else None
+            self.owner = user_book.owner if user_book else None
+            self.category = category
+            self.custom_tags = user_book.custom_tags if user_book else None
+
+    item = DiscoveredBookItem()
+
+    return render_template(
+        "detail.html",
+        item=item,
+        trailer_key=None,
+        cast=[],
+        director=author,
+        backdrop_url=img_url,
+        item_type="book",
+        from_discover=True,
+        recommendations=[]
+    )
 
 # =====================
 # --- Core Routes ---
@@ -1064,19 +1366,85 @@ def public_collection(username):
         flash("User not found.", "error")
         return redirect(url_for("landing"))
         
-    tab = request.args.get("tab", "movies")
+    is_owner = current_user.is_authenticated and (current_user.id == user.id)
+    is_private_to_viewer = user.is_private and not is_owner
+
+    tab = request.args.get("tab", "overview")
     status = request.args.get("status", "all")
     sort = request.args.get("sort", "newest")
     media_type_filter = request.args.get("media_type")
     book_category_filter = request.args.get("category") or (request.args.get("media_type") if tab == "books" else None) or (request.args.get("type") if tab == "books" else None)
 
+    # All-Time Favorites
+    all_time_favorites = AllTimeFavorite.query.filter_by(user_id=user.id).order_by(AllTimeFavorite.rank.asc()).all()
+
+    # User's items
+    user_movies_all = Movie.query.filter_by(user_id=user.id).all()
+    user_books_all = Book.query.filter_by(user_id=user.id).all()
+
+    watched_movies_all = [m for m in user_movies_all if m.status == "watched"]
+    watchlist_movies_all = [m for m in user_movies_all if m.status == "to_watch"]
+    reviewed_movies_all = [m for m in user_movies_all if m.review and m.review.strip() and m.review.strip().lower() not in ["no review yet.", "no review written yet.", "none", "null"]]
+
+    watched_count = len(watched_movies_all)
+    to_watch_count = len(watchlist_movies_all)
+    total_movies_count = watched_count + to_watch_count
+    reviews_count = len(reviewed_movies_all)
+
+    read_count = len([b for b in user_books_all if b.status == "read"])
+    to_read_count = len([b for b in user_books_all if b.status == "to_read"])
+    total_books_count = read_count + to_read_count
+
+    # Calculate real personal rating average (strictly excluding 0 / unrated)
+    rated_movies = [m for m in watched_movies_all if m.rating is not None and m.rating > 0]
+    avg_movie_rating = round(sum(m.rating for m in rated_movies) / len(rated_movies), 1) if rated_movies else 0.0
+
+    # Rating distribution (1 to 10 stars)
+    rating_counts = {i: 0 for i in range(1, 11)}
+    for m in rated_movies:
+        r = int(round(m.rating))
+        if 1 <= r <= 10:
+            rating_counts[r] += 1
+    max_rating_freq = max(rating_counts.values()) if any(rating_counts.values()) else 1
+
+    # Most-watched genre calculation
+    genre_counter = Counter()
+    for m in watched_movies_all:
+        if m.genre:
+            for g in m.genre.split(","):
+                clean_g = g.strip()
+                if clean_g:
+                    genre_counter[clean_g] += 1
+    most_watched_genre = genre_counter.most_common(1)[0][0] if genre_counter else "Cinema"
+    most_watched_genre_count = genre_counter.most_common(1)[0][1] if genre_counter else 0
+
+    # Custom Collections
+    if is_owner:
+        user_collections = CustomCollection.query.filter_by(user_id=user.id).order_by(CustomCollection.created_at.desc()).all()
+    else:
+        user_collections = CustomCollection.query.filter_by(user_id=user.id, is_public=True).order_by(CustomCollection.created_at.desc()).all()
+    collections_count = len(user_collections)
+
+    # Overview Activity Feeds
+    recent_watched = sorted(watched_movies_all, key=lambda m: (m.date_watched or m.date_added or date.min), reverse=True)[:8]
+    recent_added = sorted(user_movies_all, key=lambda m: (m.date_added or date.min), reverse=True)[:6]
+    recent_reviews = sorted(reviewed_movies_all, key=lambda m: (m.date_watched or m.date_added or date.min), reverse=True)[:4]
+
+    # Specific Query Filtering
     movie_q = Movie.query.filter_by(user_id=user.id)
     book_q = Book.query.filter_by(user_id=user.id)
 
-    if status == "watched":
+    if tab == "watched":
+        movie_q = movie_q.filter_by(status="watched")
+    elif tab == "watchlist":
+        movie_q = movie_q.filter_by(status="to_watch")
+    elif tab == "reviews":
+        movie_q = movie_q.filter(Movie.review.isnot(None), Movie.review != "", Movie.review != "No review yet.", Movie.review != "No review written yet.")
+    elif status == "watched":
         movie_q = movie_q.filter_by(status="watched")
     elif status == "to_watch":
         movie_q = movie_q.filter_by(status="to_watch")
+
     if status == "read":
         book_q = book_q.filter_by(status="read")
     elif status == "to_read":
@@ -1100,14 +1468,6 @@ def public_collection(username):
 
     movies = movie_q.all()
     books = book_q.all()
-    
-    watched_count = Movie.query.filter_by(user_id=user.id, status="watched").count()
-    to_watch_count = Movie.query.filter_by(user_id=user.id, status="to_watch").count()
-    total_movies_count = watched_count + to_watch_count
-
-    read_count = Book.query.filter_by(user_id=user.id, status="read").count()
-    to_read_count = Book.query.filter_by(user_id=user.id, status="to_read").count()
-    total_books_count = read_count + to_read_count
 
     movie_type_counts = {
         "movie": {
@@ -1170,17 +1530,26 @@ def public_collection(username):
         },
     }
 
-    all_time_favorites = AllTimeFavorite.query.filter_by(user_id=user.id).order_by(AllTimeFavorite.rank.asc()).all()
-
     return render_template("public_collection.html", 
-                           profile_user=user, 
+                           profile_user=user,
+                           is_owner=is_owner,
+                           is_private_to_viewer=is_private_to_viewer,
                            movies=movies, books=books,
                            tab=tab, status=status, sort=sort,
                            watched_count=watched_count, to_watch_count=to_watch_count, total_movies_count=total_movies_count,
                            read_count=read_count, to_read_count=to_read_count, total_books_count=total_books_count,
+                           reviews_count=reviews_count, collections_count=collections_count,
+                           avg_movie_rating=avg_movie_rating,
+                           most_watched_genre=most_watched_genre,
+                           most_watched_genre_count=most_watched_genre_count,
+                           rating_counts=rating_counts, max_rating_freq=max_rating_freq,
+                           all_time_favorites=all_time_favorites,
+                           user_collections=user_collections,
+                           recent_watched=recent_watched,
+                           recent_added=recent_added,
+                           recent_reviews=recent_reviews,
                            movie_type_counts=movie_type_counts, current_media_type=media_type_filter,
-                           book_category_counts=book_category_counts, current_book_category=book_category_filter,
-                           all_time_favorites=all_time_favorites)
+                           book_category_counts=book_category_counts, current_book_category=book_category_filter)
 
 
 # ================================================
@@ -1232,6 +1601,8 @@ def api_user_favorites(username):
     u = User.query.filter_by(username=username).first()
     if not u:
         return jsonify({"success": False, "error": "User not found"}), 404
+    if u.is_private and (not current_user.is_authenticated or current_user.id != u.id):
+        return jsonify({"success": False, "error": "This profile is private."}), 403
     favs = AllTimeFavorite.query.filter_by(user_id=u.id).order_by(AllTimeFavorite.rank.asc()).all()
     return jsonify({
         "success": True,
@@ -1570,6 +1941,116 @@ def api_reorder_favorites():
         "message": "Favorites reordered successfully.",
         "favorites": [f.to_dict() for f in normalized]
     })
+
+
+# ================================================
+# --- Custom Movie Collections Feature ---
+# ================================================
+
+@app.route("/api/collections/create", methods=["POST"])
+@login_required
+def api_create_collection():
+    data = request.get_json(silent=True) or request.form
+    title = (data.get("title") or "").strip()
+    description = (data.get("description") or "").strip()
+    is_public = data.get("is_public", True)
+    if isinstance(is_public, str):
+        is_public = is_public.lower() in ["true", "1", "yes", "on"]
+    
+    if not title:
+        return jsonify({"success": False, "error": "Collection title is required."}), 400
+    if len(title) > 150:
+        return jsonify({"success": False, "error": "Title cannot exceed 150 characters."}), 400
+
+    col = CustomCollection(
+        user_id=current_user.id,
+        title=title,
+        description=description[:500],
+        is_public=bool(is_public)
+    )
+    db.session.add(col)
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "message": f'Collection "{title}" created!',
+        "collection": col.to_dict()
+    })
+
+@app.route("/api/collections/<int:col_id>/add_movie", methods=["POST"])
+@login_required
+def api_collection_add_movie(col_id):
+    col = db.session.get(CustomCollection, col_id)
+    if not col or col.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Collection not found or access denied."}), 404
+    
+    data = request.get_json(silent=True) or request.form
+    movie_id = data.get("movie_id")
+    movie = db.session.get(Movie, int(movie_id)) if movie_id else None
+    if not movie or movie.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Movie not found in your library."}), 404
+    
+    if movie not in col.movies:
+        col.movies.append(movie)
+        db.session.commit()
+    
+    return jsonify({
+        "success": True,
+        "message": f'Added "{movie.title}" to "{col.title}".',
+        "collection": col.to_dict()
+    })
+
+@app.route("/api/collections/<int:col_id>/remove_movie", methods=["POST"])
+@login_required
+def api_collection_remove_movie(col_id):
+    col = db.session.get(CustomCollection, col_id)
+    if not col or col.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Collection not found or access denied."}), 404
+    
+    data = request.get_json(silent=True) or request.form
+    movie_id = data.get("movie_id")
+    movie = db.session.get(Movie, int(movie_id)) if movie_id else None
+    if movie and movie in col.movies:
+        col.movies.remove(movie)
+        db.session.commit()
+    
+    return jsonify({
+        "success": True,
+        "message": "Movie removed from collection.",
+        "collection": col.to_dict()
+    })
+
+@app.route("/api/collections/<int:col_id>/delete", methods=["POST", "DELETE"])
+@login_required
+def api_collection_delete(col_id):
+    col = db.session.get(CustomCollection, col_id)
+    if not col or col.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Collection not found or access denied."}), 404
+    
+    title = col.title
+    db.session.delete(col)
+    db.session.commit()
+    return jsonify({"success": True, "message": f'Collection "{title}" deleted.'})
+
+@app.route("/api/collections/<int:col_id>")
+def api_get_collection(col_id):
+    col = db.session.get(CustomCollection, col_id)
+    if not col:
+        return jsonify({"success": False, "error": "Collection not found"}), 404
+    if not col.is_public and (not current_user.is_authenticated or current_user.id != col.user_id):
+        return jsonify({"success": False, "error": "This collection is private."}), 403
+    
+    movies_data = [{
+        "id": m.id,
+        "title": m.title,
+        "year": m.year,
+        "img_url": m.img_url,
+        "rating": m.rating,
+        "genre": m.genre or ""
+    } for m in col.movies]
+    
+    d = col.to_dict()
+    d["movies"] = movies_data
+    return jsonify({"success": True, "collection": d})
 
 
 

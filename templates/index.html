@@ -6,12 +6,12 @@
 <!-- Landing Hero -->
 <section class="landing-hero">
     <div class="landing-hero-content">
-        <div class="hero-badge">✦ The Cinema &amp; Story Platform · Movies + Books</div>
+        <div class="hero-badge">✦ DreamShelf · Every story deserves a shelf</div>
         <h1 class="welcome-title">
             The Cinema Club &amp; Library For <span class="gradient-text">Devoted Devotees.</span>
         </h1>
         <p class="welcome-subtitle">
-            Curate your personal universe of films and books. Rate on a precise 10-point scale, log cinema diaries, track your streaks, and discover timeless stories in one atmospheric space.
+            Every story deserves a shelf. Curate your personal universe of films and books, rate on a precise 10-point scale, log cinema diaries, track your streaks, and discover timeless stories in one atmospheric space.
         </p>
         <div class="hero-cta-group">
             {% if current_user.is_authenticated %}
@@ -180,7 +180,7 @@
 
 <!-- Bottom CTA -->
 <section class="landing-cta">
-    <h2>Begin your DreamShelf today.</h2>
+    <h2>Every story deserves a shelf.</h2>
     <p>Ad-free, elegant, and forever free. Curate movies, books, and timeless favorites in one celestial space.</p>
     {% if not current_user.is_authenticated %}
     <a href="{{ url_for('register') }}" class="btn-hero-primary" style="margin-top:1.8rem; font-size:1.05rem; padding: 0.95rem 2.4rem;">

@@ -1,46 +1,404 @@
 {% extends 'base.html' %}
-{% block title %}Settings{% endblock %}
+{% block title %}Edit Profile — DreamShelf{% endblock %}
 
 {% block content %}
-<div class="page-container" style="max-width: 600px; margin: 0 auto;">
+<div class="page-container" style="max-width: 860px; margin: 0 auto; padding-bottom: 5rem;">
+    <!-- Header -->
     <div class="dashboard-header" style="margin-bottom: 2rem;">
-        <h1 class="page-title"><i class="fas fa-cog" style="color:var(--accent);"></i> Settings</h1>
-        <p class="page-subtitle">Customize your public profile.</p>
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <h1 class="page-title" style="margin-bottom: 0;">
+                    <i class="fas fa-user-edit" style="color:var(--accent);"></i> Edit Profile
+                </h1>
+                <span class="favorites-counter-pill">
+                    @{{ current_user.username }}
+                </span>
+            </div>
+            <p class="page-subtitle">Customize your cinema identity, profile imagery, favorite genres, and privacy.</p>
+        </div>
+        <div>
+            <a href="{{ url_for('public_collection', username=current_user.username) }}" class="btn-secondary" style="border-radius:10px; font-weight:600;">
+                <i class="fas fa-eye"></i> View Live Profile
+            </a>
+        </div>
     </div>
 
-    <div class="form-wrapper">
-        <form method="POST" action="{{ url_for('settings') }}">
+    <div class="form-wrapper" style="padding: 2.2rem 2.5rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 16px 40px rgba(0,0,0,0.6);">
+        <form method="POST" action="{{ url_for('settings') }}" enctype="multipart/form-data">
             {{ form.csrf_token }}
-            
-            <div class="form-group" style="margin-bottom: 2rem; display:flex; align-items:center; gap: 1rem;">
-                {% if current_user.avatar_url %}
-                <img src="{{ current_user.avatar_url }}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
-                {% else %}
-                <div style="width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{ current_user.avatar_color }}; color: white; font-size: 2rem;">
-                    <i class="fas fa-user"></i>
+
+            <!-- Section 1: Visual Identity (Cover Banner & Avatar) -->
+            <div style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-image" style="color:var(--accent);"></i> Profile Imagery
+                </h3>
+
+                <!-- Cover Banner Upload / URL -->
+                <div style="margin-bottom: 2rem;">
+                    <label class="form-label" style="display:block; margin-bottom: 0.5rem; font-weight: 700;">Profile Cover / Banner</label>
+                    <div style="position: relative; height: 160px; border-radius: 14px; overflow: hidden; background: #0c101d; border: 1px dashed rgba(59,130,246,0.35); display: flex; align-items: center; justify-content: center; margin-bottom: 0.8rem;">
+                        {% if current_user.cover_url %}
+                        <img id="coverPreviewImg" src="{{ current_user.cover_url }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                        <img id="coverPreviewImg" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                        <div id="coverPlaceholder" style="text-align: center; color: var(--text-muted); font-size: 0.84rem;">
+                            <i class="fas fa-panorama" style="font-size: 2rem; opacity: 0.4; margin-bottom: 0.4rem; display: block;"></i>
+                            No cover banner set (cinematic dark gradient will be used)
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start;">
+                        <div>
+                            <span style="font-size: 0.76rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Upload Image File (PNG, JPG, WebP — max 5MB):</span>
+                            <input type="file" name="cover_file" id="coverFileInput" accept="image/*" class="form-control" style="font-size: 0.8rem; padding: 0.45rem 0.6rem;" onchange="previewCoverFile(this)">
+                        </div>
+                        <div>
+                            <span style="font-size: 0.76rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Or Paste Banner URL:</span>
+                            {{ form.cover_url(class="form-control", id="coverUrlInput", placeholder="https://example.com/banner.jpg", oninput="previewCoverUrl(this.value)") }}
+                        </div>
+                    </div>
                 </div>
-                {% endif %}
-                <div style="flex: 1;">
-                    <label class="form-label">{{ form.avatar_url.label.text }}</label>
-                    {{ form.avatar_url(class="form-control", placeholder="https://example.com/image.jpg") }}
-                    <small>Paste an image URL to show as your profile picture instead of a color.</small>
+
+                <!-- Avatar Upload / URL -->
+                <div>
+                    <label class="form-label" style="display:block; margin-bottom: 0.5rem; font-weight: 700;">Profile Avatar</label>
+                    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+                        <div style="width: 90px; height: 90px; border-radius: 50%; overflow: hidden; border: 3px solid var(--accent); box-shadow: 0 0 20px rgba(37,99,235,0.4); flex-shrink: 0; background: {{ current_user.avatar_color }}; display: flex; align-items: center; justify-content: center;">
+                            {% if current_user.avatar_url %}
+                            <img id="avatarPreviewImg" src="{{ current_user.avatar_url }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% else %}
+                            <img id="avatarPreviewImg" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                            <span id="avatarPlaceholder" style="font-size: 2rem; font-weight: 800; color: white;">{{ current_user.username[0]|upper }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div style="flex: 1; min-width: 260px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div>
+                                    <span style="font-size: 0.76rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Upload Avatar File:</span>
+                                    <input type="file" name="avatar_file" id="avatarFileInput" accept="image/*" class="form-control" style="font-size: 0.8rem; padding: 0.45rem 0.6rem;" onchange="previewAvatarFile(this)">
+                                </div>
+                                <div>
+                                    <span style="font-size: 0.76rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Or Paste Image URL:</span>
+                                    {{ form.avatar_url(class="form-control", id="avatarUrlInput", placeholder="https://example.com/avatar.jpg", oninput="previewAvatarUrl(this.value)") }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="form-group" style="margin-bottom: 2rem;">
-                <label class="form-label">{{ form.bio.label.text }}</label>
-                {{ form.bio(class="form-control", rows="4", placeholder="A short bio about your taste in media...") }}
+            <!-- Section 2: Personal Details -->
+            <div style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-id-card" style="color:var(--accent);"></i> Personal Details
+                </h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label class="form-label" style="font-weight: 700;">Display Name</label>
+                        {{ form.display_name(class="form-control", placeholder="e.g. Maya Lin or Cinephile Max") }}
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Shown on your profile header. If left blank, your username is used.</small>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-weight: 700;">Username</label>
+                        <input type="text" class="form-control" value="{{ current_user.username }}" disabled style="opacity: 0.7; cursor: not-allowed;">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Unique handle for your public URL: /u/{{ current_user.username }}</small>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="form-label" style="font-weight: 700;">Location</label>
+                    <div style="position: relative;">
+                        <i class="fas fa-map-marker-alt" style="position: absolute; left: 14px; top: 14px; color: var(--accent);"></i>
+                        {{ form.location(class="form-control", style="padding-left: 2.5rem;", placeholder="e.g. Los Angeles, CA or London, UK") }}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <label class="form-label" style="font-weight: 700; margin-bottom: 0;">Bio / About Me</label>
+                        <span style="font-size: 0.74rem; color: var(--text-muted);" id="bioCharCount">0/500</span>
+                    </div>
+                    {{ form.bio(class="form-control", rows="4", id="bioTextarea", placeholder="Share your favorite directors, cinema obsessions, or viewing philosophy...", oninput="updateBioCount()") }}
+                </div>
             </div>
 
-            <div style="display: flex; gap: 1rem;">
-                {{ form.submit(class="btn-primary", style="flex: 1;") }}
-                <a href="{{ url_for('dashboard') }}" class="btn-secondary">Cancel</a>
+            <!-- Section 3: Favorite Movie Genres -->
+            <div style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-film" style="color:var(--gold);"></i> Favorite Movie Genres
+                </h3>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+                    Click genre tags to toggle them, or type your own separated by commas. These will be highlighted on your profile.
+                </p>
+
+                <!-- Quick Genre Toggle Chips -->
+                <div class="genre-chip-selector" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    {% set popular_genres = ["Sci-Fi", "Action", "Drama", "Thriller", "Cyberpunk", "Horror", "Comedy", "Animation", "Anime", "Mystery", "Crime", "Romance", "Fantasy", "Documentary"] %}
+                    {% for g in popular_genres %}
+                    <button type="button" class="genre-toggle-chip" onclick="toggleGenreTag('{{ g }}')">
+                        + {{ g }}
+                    </button>
+                    {% endfor %}
+                </div>
+
+                {{ form.favorite_genres(class="form-control", id="favoriteGenresInput", placeholder="e.g. Sci-Fi, Thriller, Drama, Anime") }}
             </div>
-            <div class="settings-actions" style="margin-top: 2rem; text-align: center;">
-                <a href="{{ url_for('import_csv') }}" class="btn-secondary" style="margin-right: 0.5rem;"><i class="fas fa-file-import"></i> Import CSV</a>
-                <a href="{{ url_for('logout') }}" class="btn-primary" style="background:#e63946;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+
+            <!-- Section 4: Social & Cinephile Links -->
+            <div style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-link" style="color:var(--accent);"></i> Social &amp; Community Links
+                </h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem;">
+                    <div>
+                        <label class="form-label" style="font-size: 0.82rem; font-weight: 700;">
+                            <i class="fas fa-globe" style="color: #60a5fa;"></i> Personal Website
+                        </label>
+                        {{ form.website(class="form-control", placeholder="https://yourwebsite.com") }}
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 0.82rem; font-weight: 700;">
+                            <i class="fab fa-twitter" style="color: #38bdf8;"></i> Twitter / X
+                        </label>
+                        {{ form.twitter(class="form-control", placeholder="@username or URL") }}
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 0.82rem; font-weight: 700;">
+                            <i class="fas fa-film" style="color: #fb923c;"></i> Letterboxd Username
+                        </label>
+                        {{ form.letterboxd(class="form-control", placeholder="e.g. david_fincher") }}
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size: 0.82rem; font-weight: 700;">
+                            <i class="fab fa-instagram" style="color: #f472b6;"></i> Instagram
+                        </label>
+                        {{ form.instagram(class="form-control", placeholder="@username") }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Profile Privacy Settings -->
+            <div style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-shield-alt" style="color:#34d399;"></i> Profile Visibility &amp; Privacy
+                </h3>
+
+                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(59,130,246,0.25); border-radius: 14px; padding: 1.2rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;">
+                    <div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-lock" style="color:var(--gold);"></i> Private Profile Mode
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.3rem 0 0;">
+                            When enabled, visitors to your profile will see a private lock screen. Your watched history, watchlists, reviews, and favorites will only be visible to you.
+                        </p>
+                    </div>
+                    <label class="privacy-switch">
+                        {{ form.is_private(id="privacyCheckbox") }}
+                        <span class="privacy-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Submit & Cancel Buttons -->
+            <div style="display: flex; gap: 1.2rem; align-items: center; justify-content: flex-end;">
+                <a href="{{ url_for('public_collection', username=current_user.username) }}" class="btn-secondary" style="border-radius: 10px; padding: 0.75rem 1.6rem; font-weight: 700;">
+                    Cancel
+                </a>
+                <button type="submit" class="btn-primary" style="border-radius: 10px; padding: 0.75rem 2.2rem; font-size: 0.95rem; font-weight: 800; box-shadow: 0 4px 20px rgba(37,99,235,0.4);">
+                    <i class="fas fa-save"></i> Save Profile Changes
+                </button>
             </div>
         </form>
+
+        <!-- Bottom Actions (Import CSV & Sign Out) -->
+        <div style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <a href="{{ url_for('import_csv') }}" class="btn-secondary" style="font-size: 0.82rem; border-radius: 8px;">
+                <i class="fas fa-file-import"></i> Import Letterboxd / CSV
+            </a>
+            <a href="{{ url_for('logout') }}" class="btn-secondary" style="font-size: 0.82rem; border-radius: 8px; color: #f87171; border-color: rgba(239,68,68,0.3);">
+                <i class="fas fa-sign-out-alt"></i> Sign Out
+            </a>
+        </div>
     </div>
 </div>
+
+<style>
+.genre-toggle-chip {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: #94a3b8;
+    padding: 0.35rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.genre-toggle-chip:hover {
+    background: rgba(37, 99, 235, 0.2);
+    border-color: var(--accent);
+    color: #60a5fa;
+    transform: translateY(-1px);
+}
+.genre-toggle-chip.selected {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border-color: #60a5fa;
+    color: #ffffff;
+}
+
+/* Custom Privacy Toggle Switch */
+.privacy-switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+    flex-shrink: 0;
+}
+.privacy-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.privacy-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(51, 65, 85, 0.8);
+    transition: .3s ease;
+    border-radius: 34px;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+.privacy-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s ease;
+    border-radius: 50%;
+}
+.privacy-switch input:checked + .privacy-slider {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    border-color: #60a5fa;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+}
+.privacy-switch input:checked + .privacy-slider:before {
+    transform: translateX(23px);
+}
+</style>
+
+<script>
+function updateBioCount() {
+    const textarea = document.getElementById('bioTextarea');
+    const counter = document.getElementById('bioCharCount');
+    if (!textarea || !counter) return;
+    counter.textContent = `${textarea.value.length}/500`;
+}
+updateBioCount();
+
+function toggleGenreTag(genre) {
+    const input = document.getElementById('favoriteGenresInput');
+    if (!input) return;
+    let current = input.value.split(',').map(s => s.trim()).filter(Boolean);
+    const idx = current.findIndex(g => g.toLowerCase() === genre.toLowerCase());
+    if (idx !== -1) {
+        current.splice(idx, 1);
+    } else {
+        current.push(genre);
+    }
+    input.value = current.join(', ');
+    highlightGenreChips();
+}
+
+function highlightGenreChips() {
+    const input = document.getElementById('favoriteGenresInput');
+    if (!input) return;
+    const current = new Set(input.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
+    document.querySelectorAll('.genre-toggle-chip').forEach(btn => {
+        const g = btn.textContent.replace('+', '').replace('✓', '').trim().toLowerCase();
+        if (current.has(g)) {
+            btn.classList.add('selected');
+            btn.textContent = `✓ ${btn.textContent.replace('+', '').replace('✓', '').trim()}`;
+        } else {
+            btn.classList.remove('selected');
+            btn.textContent = `+ ${btn.textContent.replace('+', '').replace('✓', '').trim()}`;
+        }
+    });
+}
+highlightGenreChips();
+
+const genresInputEl = document.getElementById('favoriteGenresInput');
+if (genresInputEl) {
+    genresInputEl.addEventListener('input', highlightGenreChips);
+}
+
+// Live Image Previews
+function previewAvatarFile(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.getElementById('avatarPreviewImg');
+            const placeholder = document.getElementById('avatarPlaceholder');
+            if (img) {
+                img.src = e.target.result;
+                img.style.display = 'block';
+            }
+            if (placeholder) placeholder.style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function previewAvatarUrl(val) {
+    const img = document.getElementById('avatarPreviewImg');
+    const placeholder = document.getElementById('avatarPlaceholder');
+    if (val && val.trim().length > 5) {
+        if (img) {
+            img.src = val.trim();
+            img.style.display = 'block';
+        }
+        if (placeholder) placeholder.style.display = 'none';
+    } else if (!val || !val.trim()) {
+        if (img) img.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
+    }
+}
+
+function previewCoverFile(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.getElementById('coverPreviewImg');
+            const placeholder = document.getElementById('coverPlaceholder');
+            if (img) {
+                img.src = e.target.result;
+                img.style.display = 'block';
+            }
+            if (placeholder) placeholder.style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function previewCoverUrl(val) {
+    const img = document.getElementById('coverPreviewImg');
+    const placeholder = document.getElementById('coverPlaceholder');
+    if (val && val.trim().length > 5) {
+        if (img) {
+            img.src = val.trim();
+            img.style.display = 'block';
+        }
+        if (placeholder) placeholder.style.display = 'none';
+    } else if (!val || !val.trim()) {
+        if (img) img.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
+    }
+}
+</script>
 {% endblock %}

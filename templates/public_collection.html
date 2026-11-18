@@ -1,390 +1,604 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ profile_user.username }}'s Collection{% endblock %}
+{% block title %}{{ profile_user.name_or_username }} (@{{ profile_user.username }}) — DreamShelf{% endblock %}
 
 {% block content %}
-<div class="page-container">
-    <div class="collection-header" style="flex-direction: column; align-items: center; gap: 1rem; text-align: center;">
-        {% if profile_user.avatar_url %}
-        <img src="{{ profile_user.avatar_url }}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--card-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
-        {% else %}
-        <div style="width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{ profile_user.avatar_color }}; color: white; font-size: 3rem; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
-            <i class="fas fa-user"></i>
+<div class="profile-container">
+    
+    <!-- Cover / Banner -->
+    <div class="profile-cover-wrap">
+        {% if profile_user.cover_url %}
+        <img src="{{ profile_user.cover_url }}" alt="{{ profile_user.name_or_username }} Banner" class="profile-cover-img">
+        {% endif %}
+        <div class="profile-cover-overlay"></div>
+    </div>
+
+    <!-- Profile Header Card -->
+    <div class="profile-header-card">
+        <div class="profile-header-main">
+            <!-- Large Avatar -->
+            <div class="profile-avatar-wrap">
+                {% if profile_user.avatar_url %}
+                <img src="{{ profile_user.avatar_url }}" alt="{{ profile_user.name_or_username }}" class="profile-avatar-large">
+                {% else %}
+                <div class="profile-avatar-large" style="background: {{ profile_user.avatar_color }}; color: white; font-size: 2.8rem; font-weight: 800;">
+                    {{ profile_user.username[0]|upper }}
+                </div>
+                {% endif %}
+                <div class="profile-cinephile-badge" title="Verified Cinephile">
+                    <i class="fas fa-crown"></i>
+                </div>
+            </div>
+
+            <!-- Profile Info Block -->
+            <div class="profile-info-block">
+                <div class="profile-name-row">
+                    <h1 class="profile-display-name">{{ profile_user.name_or_username }}</h1>
+                    <span class="profile-handle-pill">@{{ profile_user.username }}</span>
+                    {% if profile_user.is_private %}
+                    <span class="profile-private-indicator">
+                        <i class="fas fa-lock"></i> Private Profile
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="profile-meta-row">
+                    <span class="profile-meta-item">
+                        <i class="fas fa-calendar-alt" style="color:var(--accent);"></i>
+                        Member since {{ profile_user.created_at.strftime('%B %Y') if profile_user.created_at else '2025' }}
+                    </span>
+                    {% if profile_user.location %}
+                    <span class="profile-meta-item">
+                        <i class="fas fa-map-marker-alt" style="color:#ef4444;"></i>
+                        {{ profile_user.location }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                {% if profile_user.bio %}
+                <p class="profile-bio-text">"{{ profile_user.bio }}"</p>
+                {% endif %}
+
+                <!-- Favorite Genre Tags -->
+                {% if profile_user.genres_list %}
+                <div class="profile-genres-wrap">
+                    <span style="font-size: 0.74rem; font-weight: 700; color: var(--text-muted); margin-right: 0.2rem;">Favorites:</span>
+                    {% for g in profile_user.genres_list %}
+                    <span class="profile-genre-tag">{{ g }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Social Links -->
+                {% if profile_user.website or profile_user.twitter or profile_user.letterboxd or profile_user.instagram %}
+                <div class="profile-socials-wrap">
+                    {% if profile_user.website %}
+                    <a href="{{ profile_user.website if profile_user.website.startswith('http') else 'https://' + profile_user.website }}" target="_blank" rel="noopener noreferrer" class="profile-social-link">
+                        <i class="fas fa-globe" style="color:#60a5fa;"></i> Website
+                    </a>
+                    {% endif %}
+                    {% if profile_user.twitter %}
+                    <a href="{{ profile_user.twitter if profile_user.twitter.startswith('http') else 'https://twitter.com/' + profile_user.twitter.replace('@', '') }}" target="_blank" rel="noopener noreferrer" class="profile-social-link">
+                        <i class="fab fa-twitter" style="color:#38bdf8;"></i> Twitter / X
+                    </a>
+                    {% endif %}
+                    {% if profile_user.letterboxd %}
+                    <a href="{{ profile_user.letterboxd if profile_user.letterboxd.startswith('http') else 'https://letterboxd.com/' + profile_user.letterboxd.replace('@', '') }}" target="_blank" rel="noopener noreferrer" class="profile-social-link">
+                        <i class="fas fa-film" style="color:#fb923c;"></i> Letterboxd
+                    </a>
+                    {% endif %}
+                    {% if profile_user.instagram %}
+                    <a href="{{ profile_user.instagram if profile_user.instagram.startswith('http') else 'https://instagram.com/' + profile_user.instagram.replace('@', '') }}" target="_blank" rel="noopener noreferrer" class="profile-social-link">
+                        <i class="fab fa-instagram" style="color:#f472b6;"></i> Instagram
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Profile Header Actions -->
+            <div class="profile-header-actions">
+                {% if is_owner %}
+                <a href="{{ url_for('settings') }}" class="btn-primary" style="font-size:0.86rem; border-radius:10px; padding:0.55rem 1.25rem;">
+                    <i class="fas fa-user-edit"></i> Edit Profile
+                </a>
+                <a href="{{ url_for('manage_favorites') }}" class="btn-secondary" style="font-size:0.86rem; border-radius:10px; padding:0.55rem 1.15rem;">
+                    <i class="fas fa-crown" style="color:var(--gold);"></i> Manage Top 10
+                </a>
+                {% elif current_user.is_authenticated %}
+                    {% if profile_user in current_user.followed %}
+                    <a href="{{ url_for('unfollow', username=profile_user.username) }}" class="btn-secondary" style="font-size:0.86rem; border-radius:10px;">
+                        <i class="fas fa-user-check"></i> Following
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('follow', username=profile_user.username) }}" class="btn-primary" style="font-size:0.86rem; border-radius:10px;">
+                        <i class="fas fa-user-plus"></i> Follow
+                    </a>
+                    {% endif %}
+                {% endif %}
+
+                <!-- Share Profile Button -->
+                <button type="button" class="btn-secondary" style="font-size:0.86rem; border-radius:10px; padding:0.55rem 1rem;" onclick="copyProfileLink()" title="Copy link to clipboard">
+                    <i class="fas fa-share-alt"></i> Share
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Statistics Ribbon (Section 5) -->
+    <div class="profile-stats-ribbon">
+        <a href="{{ url_for('public_collection', username=profile_user.username, tab='watched') }}" class="profile-stat-item">
+            <div class="profile-stat-icon watched"><i class="fas fa-film"></i></div>
+            <div>
+                <div class="profile-stat-number">{{ watched_count }}</div>
+                <div class="profile-stat-label">Watched</div>
+            </div>
+        </a>
+
+        <a href="{{ url_for('public_collection', username=profile_user.username, tab='watchlist') }}" class="profile-stat-item">
+            <div class="profile-stat-icon watchlist"><i class="fas fa-clock"></i></div>
+            <div>
+                <div class="profile-stat-number">{{ to_watch_count }}</div>
+                <div class="profile-stat-label">Watchlist</div>
+            </div>
+        </a>
+
+        <a href="{{ url_for('public_collection', username=profile_user.username, tab='reviews') }}" class="profile-stat-item">
+            <div class="profile-stat-icon reviews"><i class="fas fa-pen-fancy"></i></div>
+            <div>
+                <div class="profile-stat-number">{{ reviews_count }}</div>
+                <div class="profile-stat-label">Reviews</div>
+            </div>
+        </a>
+
+        <div class="profile-stat-item">
+            <div class="profile-stat-icon rating"><i class="fas fa-star"></i></div>
+            <div>
+                <div class="profile-stat-number">
+                    {% if avg_movie_rating and avg_movie_rating > 0 %}{{ avg_movie_rating }}<span style="font-size:0.8rem; font-weight:500; color:var(--text-muted);">/10</span>{% else %}—{% endif %}
+                </div>
+                <div class="profile-stat-label">Avg Rating</div>
+            </div>
+        </div>
+
+        <div class="profile-stat-item">
+            <div class="profile-stat-icon genre"><i class="fas fa-shapes"></i></div>
+            <div>
+                <div class="profile-stat-number" style="font-size:1.05rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;" title="{{ most_watched_genre }}">
+                    {{ most_watched_genre }}
+                </div>
+                <div class="profile-stat-label">Top Genre</div>
+            </div>
+        </div>
+
+        <a href="{{ url_for('public_collection', username=profile_user.username, tab='collections') }}" class="profile-stat-item">
+            <div class="profile-stat-icon collections"><i class="fas fa-layer-group"></i></div>
+            <div>
+                <div class="profile-stat-number">{{ collections_count }}</div>
+                <div class="profile-stat-label">Collections</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Private Profile Warning Screen -->
+    {% if is_private_to_viewer %}
+    <div class="profile-private-box">
+        <div class="profile-private-icon"><i class="fas fa-lock"></i></div>
+        <h2 class="profile-private-title">This Cinema Profile is Private</h2>
+        <p class="profile-private-desc">
+            @{{ profile_user.username }} has chosen to keep their movie collections, watchlists, reviews, and favorite lists private.
+        </p>
+        <a href="{{ url_for('discover') }}" class="btn-primary" style="border-radius:10px; font-weight:700;">
+            <i class="fas fa-compass"></i> Explore Discover
+        </a>
+    </div>
+    {% else %}
+
+    <!-- Profile Navigation Tabs -->
+    <nav class="profile-nav-tabs">
+        <a href="{{ url_for('public_collection', username=profile_user.username, tab='overview') }}"
+           class="profile-nav-tab {% if tab == 'overview' %}active{% endif %}">
+            <i class="fas fa-sparkles"></i> Overview
+        </a>
+        <a href="{{ url_for('public_collection', username=profile_user.username, tab='watched') }}"
+           class="profile-nav-tab {% if tab == 'watched' %}active{% endif %}">
+            <i class="fas fa-film"></i> Watched <span class="profile-tab-count">{{ watched_count }}</span>
+        </a>
+        <a href="{{ url_for('public_collection', username=profile_user.username, tab='watchlist') }}"
+           class="profile-nav-tab {% if tab == 'watchlist' %}active{% endif %}">
+            <i class="fas fa-clock"></i> Watchlist <span class="profile-tab-count">{{ to_watch_count }}</span>
+        </a>
+        <a href="{{ url_for('public_collection', username=profile_user.username, tab='reviews') }}"
+           class="profile-nav-tab {% if tab == 'reviews' %}active{% endif %}">
+            <i class="fas fa-pen-fancy"></i> Reviews <span class="profile-tab-count">{{ reviews_count }}</span>
+        </a>
+        <a href="{{ url_for('public_collection', username=profile_user.username, tab='collections') }}"
+           class="profile-nav-tab {% if tab == 'collections' %}active{% endif %}">
+            <i class="fas fa-layer-group"></i> Collections <span class="profile-tab-count">{{ collections_count }}</span>
+        </a>
+        <a href="{{ url_for('public_collection', username=profile_user.username, tab='books') }}"
+           class="profile-nav-tab {% if tab == 'books' %}active{% endif %}">
+            <i class="fas fa-book"></i> Bookshelf <span class="profile-tab-count">{{ total_books_count }}</span>
+        </a>
+    </nav>
+
+    <!-- ==============================================
+         TAB 1: OVERVIEW (Rich Cinema Showcase)
+         ============================================== -->
+    {% if tab == 'overview' %}
+        
+        <!-- All-Time Favorites Feature Section (Section 3) -->
+        <section class="all-time-favorites-section" id="allTimeFavoritesSection" style="margin-top: 0; margin-bottom: 2.8rem;">
+            <div class="favorites-header-wrap">
+                <div class="favorites-title-group">
+                    <div class="favorites-title">
+                        <i class="fas fa-crown crown-icon"></i>
+                        {% if is_owner %}My All-Time Favorites Top 10{% else %}{{ profile_user.name_or_username }}'s Top 10 Favorites{% endif %}
+                    </div>
+                    <div class="favorites-sub">
+                        The top 10 defining cinematic masterpieces chosen by {{ 'you' if is_owner else profile_user.name_or_username }}. Rank #1 is their signature film.
+                    </div>
+                </div>
+
+                <div class="favorites-actions-group">
+                    <span class="favorites-counter-pill {% if all_time_favorites|length == 10 %}full{% endif %}" id="pubFavCountPill">
+                        <i class="fas fa-film"></i> <span id="pubFavCountNum">{{ all_time_favorites|length }}</span>/10 Selected
+                    </span>
+                    {% if is_owner %}
+                    <button type="button" class="btn-edit-favorites" onclick="openFavoritesModal()">
+                        <i class="fas fa-pen"></i> Edit My List
+                    </button>
+                    <a href="{{ url_for('manage_favorites') }}" class="btn-secondary" style="border-radius:10px; font-size:0.84rem; font-weight:700; padding:0.5rem 1rem;" title="Dedicated Full-Screen Manager">
+                        <i class="fas fa-arrows-alt"></i> Cockpit
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Showcase Grid -->
+            <div class="favorites-showcase-grid" id="pubFavoritesShowcaseGrid" {% if not all_time_favorites %}style="display:none;"{% endif %}>
+                {% for fav in all_time_favorites %}
+                {% set is_rank1 = fav.rank == 1 %}
+                <a href="{{ url_for('view_movie', item_id=fav.movie_id) }}" class="fav-showcase-card {% if is_rank1 %}rank-1{% endif %}" id="fav-card-{{ fav.id }}" title="#{{ fav.rank }} - {{ fav.movie.title }}">
+                    <div class="fav-poster-box">
+                        <div class="fav-rank-badge {% if is_rank1 %}rank-1{% endif %}">
+                            {% if is_rank1 %}<i class="fas fa-crown"></i> #1{% else %}#{{ fav.rank }}{% endif %}
+                        </div>
+                        {% if fav.movie.img_url %}
+                        <img src="{{ fav.movie.img_url }}" alt="{{ fav.movie.title }}" class="fav-poster-img" loading="lazy">
+                        {% else %}
+                        <div class="img-placeholder" style="height:100%;"><i class="fas fa-film"></i></div>
+                        {% endif %}
+                        <div class="fav-hover-overlay">
+                            <div class="fav-hover-title">{{ fav.movie.title }}</div>
+                            <div class="fav-hover-meta">{{ fav.movie.year or '—' }}</div>
+                            <span class="fav-hover-btn"><i class="fas fa-eye"></i> View Dossier</span>
+                        </div>
+                    </div>
+                    <div class="fav-showcase-info">
+                        <div class="fav-showcase-title">{{ fav.movie.title }}</div>
+                        <div class="fav-showcase-bottom">
+                            <span>{{ fav.movie.year or '—' }}</span>
+                            {% if fav.movie.rating and fav.movie.rating > 0 %}
+                            <span class="star">★ {{ fav.movie.rating }}</span>
+                            {% else %}
+                            <span style="opacity:0.5;">Unrated</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+
+            <!-- Empty State Box -->
+            <div class="fav-empty-box" id="pubFavoritesEmptyBox" {% if all_time_favorites %}style="display:none;"{% endif %}>
+                {% if is_owner %}
+                <i class="fas fa-crown fav-empty-icon"></i>
+                <div class="fav-empty-title">Curate Your All-Time Favorites</div>
+                <p class="fav-empty-desc">
+                    Hand-pick the 10 movies that define your cinematic taste. Rank them from #1 to #10 and showcase them at the very top of your profile.
+                </p>
+                <div style="display:flex; gap:0.8rem; justify-content:center; flex-wrap:wrap;">
+                    <button type="button" class="btn-edit-favorites" onclick="openFavoritesModal()">
+                        <i class="fas fa-magic"></i> Select Top 10 Now
+                    </button>
+                    <a href="{{ url_for('manage_favorites') }}" class="btn-secondary" style="border-radius:10px; font-size:0.84rem; font-weight:700;">
+                        <i class="fas fa-sliders-h"></i> Full Page Cockpit
+                    </a>
+                </div>
+                {% else %}
+                <i class="fas fa-film fav-empty-icon" style="color:var(--text-muted); opacity:0.4;"></i>
+                <div class="fav-empty-title">{{ profile_user.name_or_username }}'s Top 10 is still in the cutting room</div>
+                <p class="fav-empty-desc">
+                    {{ profile_user.name_or_username }} has not curated their All-Time Favorites list yet.
+                </p>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- 2-Column Overview Feeds -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2.2rem; align-items: start;">
+            
+            <!-- Left Column: Recently Watched & Recent Reviews -->
+            <div style="display: flex; flex-direction: column; gap: 2.5rem;">
+                
+                <!-- Recently Watched Movies -->
+                <div>
+                    <div class="section-header" style="margin-bottom: 1.2rem;">
+                        <h2 class="section-heading" style="font-size: 1.25rem;">
+                            <i class="fas fa-history" style="color:var(--accent);"></i> Recently Watched
+                        </h2>
+                        <a href="{{ url_for('public_collection', username=profile_user.username, tab='watched') }}" class="section-link">
+                            View All ({{ watched_count }}) &rarr;
+                        </a>
+                    </div>
+
+                    {% if recent_watched %}
+                    <div class="favorites-showcase-grid" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem;">
+                        {% for movie in recent_watched %}
+                        <a href="{{ url_for('view_movie', item_id=movie.id) }}" class="fav-showcase-card" title="{{ movie.title }}">
+                            <div class="fav-poster-box">
+                                {% if movie.img_url %}
+                                <img src="{{ movie.img_url }}" alt="{{ movie.title }}" class="fav-poster-img" loading="lazy">
+                                {% else %}
+                                <div class="img-placeholder" style="height:100%;"><i class="fas fa-film"></i></div>
+                                {% endif %}
+                                <div class="fav-hover-overlay">
+                                    <div class="fav-hover-title">{{ movie.title }}</div>
+                                    <div class="fav-hover-meta">{{ movie.year or '—' }}</div>
+                                </div>
+                            </div>
+                            <div class="fav-showcase-info" style="padding: 0.6rem 0.75rem;">
+                                <div class="fav-showcase-title" style="font-size: 0.8rem;">{{ movie.title }}</div>
+                                <div class="fav-showcase-bottom" style="font-size: 0.72rem;">
+                                    <span>{{ movie.year or '—' }}</span>
+                                    {% if movie.rating and movie.rating > 0 %}
+                                    <span class="star">★ {{ movie.rating }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state" style="padding: 2.5rem 1rem;">
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">No watched movies logged yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Recent Written Reviews -->
+                {% if recent_reviews %}
+                <div>
+                    <div class="section-header" style="margin-bottom: 1.2rem;">
+                        <h2 class="section-heading" style="font-size: 1.25rem;">
+                            <i class="fas fa-pen-fancy" style="color:#c084fc;"></i> Recent Reviews
+                        </h2>
+                        <a href="{{ url_for('public_collection', username=profile_user.username, tab='reviews') }}" class="section-link">
+                            All Reviews ({{ reviews_count }}) &rarr;
+                        </a>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        {% for movie in recent_reviews %}
+                        <div class="profile-review-card">
+                            {% if movie.img_url %}
+                            <img src="{{ movie.img_url }}" alt="{{ movie.title }}" class="profile-review-poster" loading="lazy">
+                            {% else %}
+                            <div class="profile-review-poster" style="display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>
+                            {% endif %}
+                            <div class="profile-review-body">
+                                <a href="{{ url_for('view_movie', item_id=movie.id) }}" class="profile-review-title">{{ movie.title }}</a>
+                                <div class="profile-review-meta">
+                                    <span>{{ movie.year or '—' }}</span>
+                                    {% if movie.rating and movie.rating > 0 %}
+                                    <span style="color:var(--gold); font-weight:700;">★ {{ movie.rating }}/10</span>
+                                    {% endif %}
+                                </div>
+                                <div class="profile-review-quote">
+                                    "{{ movie.review[:220] }}{% if movie.review|length > 220 %}...{% endif %}"
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Recently Added -->
+                {% if recent_added %}
+                <div>
+                    <div class="section-header" style="margin-bottom: 1.2rem;">
+                        <h2 class="section-heading" style="font-size: 1.25rem;">
+                            <i class="fas fa-plus-circle" style="color:var(--accent);"></i> Recently Added to Shelf
+                        </h2>
+                    </div>
+
+                    <div class="favorites-showcase-grid" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem;">
+                        {% for movie in recent_added %}
+                        <a href="{{ url_for('view_movie', item_id=movie.id) }}" class="fav-showcase-card" title="{{ movie.title }}">
+                            <div class="fav-poster-box">
+                                {% if movie.img_url %}
+                                <img src="{{ movie.img_url }}" alt="{{ movie.title }}" class="fav-poster-img" loading="lazy">
+                                {% else %}
+                                <div class="img-placeholder" style="height:100%;"><i class="fas fa-film"></i></div>
+                                {% endif %}
+                            </div>
+                            <div class="fav-showcase-info" style="padding: 0.6rem 0.75rem;">
+                                <div class="fav-showcase-title" style="font-size: 0.8rem;">{{ movie.title }}</div>
+                                <div class="fav-showcase-bottom" style="font-size: 0.72rem;">
+                                    <span>{{ movie.year or '—' }}</span>
+                                    <span class="status-badge {{ movie.status }}" style="font-size:0.62rem; padding:0.15rem 0.4rem;">
+                                        {{ 'Watched' if movie.status == 'watched' else 'Watchlist' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <!-- Right Column: Personal Rating Curve & Featured Collections -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                
+                <!-- Personal Rating Distribution Curve -->
+                <div class="rating-curve-card" style="margin: 0;">
+                    <div class="rating-curve-title">
+                        <span>Personal Score Curve</span>
+                        <span style="font-size: 0.72rem; color: var(--gold); font-weight: 600;">1 - 10★</span>
+                    </div>
+
+                    {% if rating_counts and (rating_counts.values() | sum > 0) %}
+                    <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                        {% for star in range(10, 0, -1) %}
+                        {% set count = rating_counts[star] %}
+                        {% set pct = (count / max_rating_freq * 100) if max_rating_freq > 0 else 0 %}
+                        <div class="rating-bar-row">
+                            <span class="rating-bar-label">{{ star }}★</span>
+                            <div class="rating-bar-track">
+                                <div class="rating-bar-fill" style="width: {{ pct }}%;"></div>
+                            </div>
+                            <span class="rating-bar-count">{{ count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-faint); margin-top: 0.8rem; padding-top: 0.6rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between;">
+                        <span>Based on {{ watched_count }} watched films</span>
+                        <span>Avg: {{ avg_movie_rating }}★</span>
+                    </div>
+                    {% else %}
+                    <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.85rem;">
+                        <i class="fas fa-star-half-alt" style="font-size: 1.8rem; opacity: 0.3; margin-bottom: 0.5rem; display: block;"></i>
+                        No rated films yet.
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Custom Collections Snapshot -->
+                <div class="rating-curve-card" style="margin: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 0.95rem; font-weight: 700; color: #ffffff; margin: 0;">
+                            <i class="fas fa-layer-group" style="color:#f472b6;"></i> Custom Collections
+                        </h3>
+                        <a href="{{ url_for('public_collection', username=profile_user.username, tab='collections') }}" style="font-size: 0.76rem; color: var(--accent); text-decoration: none;">
+                            View All ({{ collections_count }}) &rarr;
+                        </a>
+                    </div>
+
+                    {% if user_collections %}
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        {% for col in user_collections[:2] %}
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden;">
+                            <div class="custom-col-collage" style="height: 70px;">
+                                {% for m in col.movies[:4] %}
+                                    {% if m.img_url %}
+                                    <img src="{{ m.img_url }}" class="custom-col-poster" alt="{{ m.title }}" loading="lazy">
+                                    {% else %}
+                                    <div class="custom-col-poster-empty"><i class="fas fa-film"></i></div>
+                                    {% endif %}
+                                {% endfor %}
+                                {% for i in range(4 - col.movies[:4]|length) %}
+                                <div class="custom-col-poster-empty"><i class="fas fa-film"></i></div>
+                                {% endfor %}
+                            </div>
+                            <div style="padding: 0.8rem 1rem;">
+                                <div style="font-weight: 700; font-size: 0.88rem; color: #ffffff;">{{ col.title }}</div>
+                                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">{{ col.movies|length }} movies curated</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div style="text-align: center; padding: 1.5rem 0.5rem; color: var(--text-muted); font-size: 0.82rem;">
+                        <i class="fas fa-folder-open" style="font-size: 1.8rem; opacity: 0.3; margin-bottom: 0.4rem; display: block;"></i>
+                        No custom collections created yet.
+                    </div>
+                    {% endif %}
+
+                    {% if is_owner %}
+                    <button type="button" class="btn-secondary" style="width: 100%; border-radius: 8px; font-size: 0.82rem; margin-top: 1rem; font-weight: 600;" onclick="openCreateCollectionModal()">
+                        <i class="fas fa-plus"></i> Create New Collection
+                    </button>
+                    {% endif %}
+                </div>
+
+            </div>
+
+        </div>
+
+    <!-- ==============================================
+         TAB 2 & 3: WATCHED & WATCHLIST
+         ============================================== -->
+    {% elif tab in ['watched', 'watchlist', 'movies'] %}
+        
+        <!-- Category Breakdown Chips -->
+        {% if movie_type_counts %}
+        <div class="category-breakdown-bar" style="justify-content: flex-start; margin-bottom: 1.5rem;">
+            <a class="cat-pill movie {% if current_media_type == 'movie' %}active{% endif %}"
+               href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort=sort, media_type='movie') }}">
+                🎬 <strong>{{ movie_type_counts.movie.watched }}</strong>/{{ movie_type_counts.movie.total }} Movies
+            </a>
+            <a class="cat-pill series {% if current_media_type == 'series' %}active{% endif %}"
+               href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort=sort, media_type='series') }}">
+                📺 <strong>{{ movie_type_counts.series.watched }}</strong>/{{ movie_type_counts.series.total }} Series
+            </a>
+            <a class="cat-pill animation {% if current_media_type == 'animation' %}active{% endif %}"
+               href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort=sort, media_type='animation') }}">
+                🎨 <strong>{{ movie_type_counts.animation.watched }}</strong>/{{ movie_type_counts.animation.total }} Animation
+            </a>
+            <a class="cat-pill anime {% if current_media_type == 'anime' %}active{% endif %}"
+               href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort=sort, media_type='anime') }}">
+                ⛩️ <strong>{{ movie_type_counts.anime.watched }}</strong>/{{ movie_type_counts.anime.total }} Anime
+            </a>
+            {% if current_media_type %}
+            <a class="cat-pill" style="border-style:dashed;" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort=sort) }}" title="Show All Types">
+                <i class="fas fa-times"></i> All Types
+            </a>
+            {% endif %}
         </div>
         {% endif %}
-        
-        <div>
-            <h1 class="page-title">{{ profile_user.username }}'s Collection</h1>
-            {% if profile_user.bio %}
-            <p style="opacity: 0.8; max-width: 500px; margin: 0 auto; font-style: italic;">"{{ profile_user.bio }}"</p>
-            {% endif %}
-            <div class="collection-stats-bar" style="justify-content: center; margin-top: 0.75rem;">
-                {% if tab == 'movies' %}
-                <span class="collection-stat-pill watched" title="Watched Movies"><i class="fas fa-check-circle"></i> <strong>{{ watched_count }}</strong> Watched</span>
-                <span class="collection-stat-pill to-watch" title="Movies To Watch"><i class="fas fa-clock"></i> <strong>{{ to_watch_count }}</strong> To Watch</span>
-                <span class="collection-stat-pill total" title="Total Movies"><i class="fas fa-film"></i> <strong>{{ total_movies_count }}</strong> Total</span>
-                {% else %}
-                <span class="collection-stat-pill read" title="Books Read"><i class="fas fa-check-circle"></i> <strong>{{ read_count }}</strong> Read</span>
-                <span class="collection-stat-pill to-read" title="Books To Read"><i class="fas fa-bookmark"></i> <strong>{{ to_read_count }}</strong> To Read</span>
-                <span class="collection-stat-pill total" title="Total Books"><i class="fas fa-book"></i> <strong>{{ total_books_count }}</strong> Total</span>
-                {% endif %}
-            </div>
-            {% if tab == 'movies' and movie_type_counts %}
-            <div class="category-breakdown-bar" style="justify-content: center;">
-                <a class="cat-pill movie {% if current_media_type == 'movie' %}active{% endif %}"
-                   href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='movie') }}"
-                   title="Filter to Normal Movies">
-                    🎬 <strong>{{ movie_type_counts.movie.watched }}</strong>/{{ movie_type_counts.movie.total }} Movies
-                </a>
-                <a class="cat-pill series {% if current_media_type == 'series' %}active{% endif %}"
-                   href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='series') }}"
-                   title="Filter to Series">
-                    📺 <strong>{{ movie_type_counts.series.watched }}</strong>/{{ movie_type_counts.series.total }} Series
-                </a>
-                <a class="cat-pill animation {% if current_media_type == 'animation' %}active{% endif %}"
-                   href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='animation') }}"
-                   title="Filter to Animation">
-                    🎨 <strong>{{ movie_type_counts.animation.watched }}</strong>/{{ movie_type_counts.animation.total }} Animation
-                </a>
-                <a class="cat-pill anime {% if current_media_type == 'anime' %}active{% endif %}"
-                   href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='anime') }}"
-                   title="Filter to Anime">
-                    ⛩️ <strong>{{ movie_type_counts.anime.watched }}</strong>/{{ movie_type_counts.anime.total }} Anime
-                </a>
+
+        <!-- Filter Toolbar -->
+        <div class="collection-toolbar" style="margin-bottom: 2rem;">
+            <div class="filter-controls-group">
+                <input type="text" id="searchInput" class="search-inline" placeholder="🔍 Filter by title..." oninput="filterCards(this.value)">
+
+                <!-- Minimized Sort Dropdown -->
+                <div class="filter-dropdown" id="pubSortFilterDropdown">
+                    <button type="button" class="filter-dropdown-btn" onclick="toggleFilterDropdown('pubSortFilterDropdown', event)">
+                        <i class="fas fa-sort-amount-down"></i>
+                        <span>
+                            {% if sort == 'rating' %}Sort: Rating
+                            {% elif sort == 'title' %}Sort: A–Z
+                            {% else %}Sort: Newest{% endif %}
+                        </span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </button>
+                    <div class="filter-dropdown-menu">
+                        <a class="filter-dropdown-item {% if sort == 'newest' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='newest', media_type=current_media_type) }}">
+                            <span>🕒 Newest Added</span>
+                        </a>
+                        <a class="filter-dropdown-item {% if sort == 'rating' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='rating', media_type=current_media_type) }}">
+                            <span>⭐ Highest Rating</span>
+                        </a>
+                        <a class="filter-dropdown-item {% if sort == 'title' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='title', media_type=current_media_type) }}">
+                            <span>🔤 Alphabetical (A–Z)</span>
+                        </a>
+                    </div>
+                </div>
+
                 {% if current_media_type %}
-                <a class="cat-pill" style="border-style:dashed;" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort) }}" title="Show All Types">
-                    <i class="fas fa-times"></i> All Types
-                </a>
-                {% endif %}
-            </div>
-            {% elif tab == 'books' and book_category_counts %}
-            <div class="category-breakdown-bar" style="justify-content: center;">
-                <a class="cat-pill fiction {% if current_book_category == 'fiction' %}active{% endif %}"
-                   href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='fiction') }}"
-                   title="Filter to Fiction & Literature">
-                    📖 <strong>{{ book_category_counts.fiction.read }}</strong>/{{ book_category_counts.fiction.total }} Fiction
-                </a>
-                <a class="cat-pill philosophy {% if current_book_category == 'philosophy' %}active{% endif %}"
-                   href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='philosophy') }}"
-                   title="Filter to Philosophy">
-                    🧠 <strong>{{ book_category_counts.philosophy.read }}</strong>/{{ book_category_counts.philosophy.total }} Philosophy
-                </a>
-                <a class="cat-pill self_help {% if current_book_category == 'self_help' %}active{% endif %}"
-                   href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='self_help') }}"
-                   title="Filter to Self-Help">
-                    🌱 <strong>{{ book_category_counts.self_help.read }}</strong>/{{ book_category_counts.self_help.total }} Self-Help
-                </a>
-                <a class="cat-pill business {% if current_book_category == 'business' %}active{% endif %}"
-                   href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='business') }}"
-                   title="Filter to Business & Finance">
-                    💼 <strong>{{ book_category_counts.business.read }}</strong>/{{ book_category_counts.business.total }} Business
-                </a>
-                <a class="cat-pill non_fiction {% if current_book_category == 'non_fiction' %}active{% endif %}"
-                   href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='non_fiction') }}"
-                   title="Filter to Non-Fiction">
-                    🌍 <strong>{{ book_category_counts.non_fiction.read }}</strong>/{{ book_category_counts.non_fiction.total }} Non-Fiction
-                </a>
-                {% if current_book_category %}
-                <a class="cat-pill" style="border-style:dashed;" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort) }}" title="Show All Categories">
-                    <i class="fas fa-times"></i> All Themes
-                </a>
-                {% endif %}
-            </div>
-            {% endif %}
-        </div>
-
-        <div class="collection-actions" style="margin-top: 1rem;">
-            {% if current_user.is_authenticated and current_user.id == profile_user.id %}
-            <a href="{{ url_for('settings') }}" class="btn-card-edit"><i class="fas fa-cog"></i> Edit Profile</a>
-            {% elif not current_user.is_authenticated %}
-            <a href="{{ url_for('register') }}" class="btn-primary"><i class="fas fa-sparkles"></i> Create Your DreamShelf</a>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- All-Time Favorites Feature Section -->
-    <section class="all-time-favorites-section" id="allTimeFavoritesSection">
-        <div class="favorites-header-wrap">
-            <div class="favorites-title-group">
-                <div class="favorites-title">
-                    <i class="fas fa-crown crown-icon"></i>
-                    {% if current_user.is_authenticated and current_user.id == profile_user.id %}
-                        My All-Time Favorites
-                    {% else %}
-                        {{ profile_user.username }}'s All-Time Favorites
-                    {% endif %}
-                </div>
-                <div class="favorites-sub">
-                    The top 10 cinematic masterpieces that define {{ 'your' if (current_user.is_authenticated and current_user.id == profile_user.id) else (profile_user.username + "'s") }} personal taste in film.
-                </div>
-            </div>
-
-            <div class="favorites-actions-group">
-                <span class="favorites-counter-pill {% if all_time_favorites|length == 10 %}full{% endif %}" id="pubFavCountPill">
-                    <i class="fas fa-film"></i> <span id="pubFavCountNum">{{ all_time_favorites|length }}</span>/10 Selected
-                </span>
-                {% if current_user.is_authenticated and current_user.id == profile_user.id %}
-                <button type="button" class="btn-edit-favorites" onclick="openFavoritesModal()">
-                    <i class="fas fa-pen"></i> Edit My List
-                </button>
-                <a href="{{ url_for('manage_favorites') }}" class="btn-secondary" style="border-radius:10px; font-size:0.84rem; font-weight:700; padding:0.5rem 1rem;" title="Dedicated Full-Screen Manager">
-                    <i class="fas fa-arrows-alt"></i> Cockpit
+                <a href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='newest') }}" class="btn-clear-filters" title="Reset all filters">
+                    <i class="fas fa-times"></i> Reset
                 </a>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Showcase 5-col Grid -->
-        <div class="favorites-showcase-grid" id="pubFavoritesShowcaseGrid" {% if not all_time_favorites %}style="display:none;"{% endif %}>
-            {% for fav in all_time_favorites %}
-            {% set is_rank1 = fav.rank == 1 %}
-            <a href="{{ url_for('view_movie', item_id=fav.movie_id) }}" class="fav-showcase-card {% if is_rank1 %}rank-1{% endif %}" id="fav-card-{{ fav.id }}" title="#{{ fav.rank }} - {{ fav.movie.title }}">
-                <div class="fav-poster-box">
-                    <div class="fav-rank-badge {% if is_rank1 %}rank-1{% endif %}">
-                        {% if is_rank1 %}<i class="fas fa-crown"></i> #1{% else %}#{{ fav.rank }}{% endif %}
-                    </div>
-                    {% if fav.movie.img_url %}
-                    <img src="{{ fav.movie.img_url }}" alt="{{ fav.movie.title }}" class="fav-poster-img" loading="lazy">
-                    {% else %}
-                    <div class="img-placeholder" style="height:100%;"><i class="fas fa-film"></i></div>
-                    {% endif %}
-                    <div class="fav-hover-overlay">
-                        <div class="fav-hover-title">{{ fav.movie.title }}</div>
-                        <div class="fav-hover-meta">{{ fav.movie.year or '—' }}</div>
-                        <span class="fav-hover-btn"><i class="fas fa-eye"></i> View Dossier</span>
-                    </div>
-                </div>
-                <div class="fav-showcase-info">
-                    <div class="fav-showcase-title">{{ fav.movie.title }}</div>
-                    <div class="fav-showcase-bottom">
-                        <span>{{ fav.movie.year or '—' }}</span>
-                        {% if fav.movie.rating and fav.movie.rating > 0 %}
-                        <span class="star">★ {{ fav.movie.rating }}</span>
-                        {% else %}
-                        <span style="opacity:0.5;">Unrated</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-
-        <!-- Empty State Box -->
-        <div class="fav-empty-box" id="pubFavoritesEmptyBox" {% if all_time_favorites %}style="display:none;"{% endif %}>
-            {% if current_user.is_authenticated and current_user.id == profile_user.id %}
-            <i class="fas fa-crown fav-empty-icon"></i>
-            <div class="fav-empty-title">Curate Your All-Time Favorites</div>
-            <p class="fav-empty-desc">
-                Hand-pick the 10 movies that define your cinematic taste. Rank them from #1 to #10 and showcase them at the very top of your profile.
-            </p>
-            <div style="display:flex; gap:0.8rem; justify-content:center; flex-wrap:wrap;">
-                <button type="button" class="btn-edit-favorites" onclick="openFavoritesModal()">
-                    <i class="fas fa-magic"></i> Select Top 10 Now
-                </button>
-                <a href="{{ url_for('manage_favorites') }}" class="btn-secondary" style="border-radius:10px; font-size:0.84rem; font-weight:700;">
-                    <i class="fas fa-sliders-h"></i> Full Page Cockpit
-                </a>
-            </div>
-            {% else %}
-            <i class="fas fa-film fav-empty-icon" style="color:var(--text-muted); opacity:0.4;"></i>
-            <div class="fav-empty-title">{{ profile_user.username }}'s Top 10 is still in the cutting room</div>
-            <p class="fav-empty-desc">
-                {{ profile_user.username }} hasn't curated their All-Time Favorites list yet.
-            </p>
-            {% endif %}
-        </div>
-    </section>
-
-    <!-- Tab Navigation -->
-    <div class="tab-bar">
-        <a href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort) }}"
-           class="tab-item {% if tab == 'movies' %}active{% endif %}">
-            <i class="fas fa-film"></i> Movies <span class="tab-badge">{{ total_movies_count }}</span>
-        </a>
-        <a href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort) }}"
-           class="tab-item {% if tab == 'books' %}active{% endif %}">
-            <i class="fas fa-book"></i> Books <span class="tab-badge">{{ total_books_count }}</span>
-        </a>
-    </div>
-
-    <!-- Toolbar: Minimized filter dropdowns + sort + search -->
-    <div class="collection-toolbar">
-        <div class="filter-controls-group">
-            <input type="text" id="searchInput" class="search-inline" placeholder="🔍 Filter by title..." oninput="filterCards(this.value)">
-
-            <!-- Minimized Category Dropdown -->
-            {% if tab == 'movies' and movie_type_counts %}
-            <div class="filter-dropdown" id="pubCategoryFilterDropdown">
-                <button type="button" class="filter-dropdown-btn {% if current_media_type %}active {{ current_media_type }}{% endif %}" onclick="toggleFilterDropdown('pubCategoryFilterDropdown', event)">
-                    <i class="fas fa-shapes"></i>
-                    <span>
-                        {% if current_media_type == 'movie' %}🎬 Movies ({{ movie_type_counts.movie.watched }}/{{ movie_type_counts.movie.total }})
-                        {% elif current_media_type == 'series' %}📺 Series ({{ movie_type_counts.series.watched }}/{{ movie_type_counts.series.total }})
-                        {% elif current_media_type == 'animation' %}🎨 Animation ({{ movie_type_counts.animation.watched }}/{{ movie_type_counts.animation.total }})
-                        {% elif current_media_type == 'anime' %}⛩️ Anime ({{ movie_type_counts.anime.watched }}/{{ movie_type_counts.anime.total }})
-                        {% else %}Category: All Types{% endif %}
-                    </span>
-                    <i class="fas fa-chevron-down dropdown-arrow"></i>
-                </button>
-                <div class="filter-dropdown-menu">
-                    <a class="filter-dropdown-item {% if not current_media_type %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort) }}">
-                       <span>All Types</span>
-                       <span class="chip-count">{{ total_movies_count }}</span>
-                    </a>
-                    <a class="filter-dropdown-item movie {% if current_media_type == 'movie' %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='movie') }}">
-                       <span>🎬 Normal Movies</span>
-                       <span class="chip-count">{{ movie_type_counts.movie.watched }}/{{ movie_type_counts.movie.total }}</span>
-                    </a>
-                    <a class="filter-dropdown-item series {% if current_media_type == 'series' %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='series') }}">
-                       <span>📺 Series</span>
-                       <span class="chip-count">{{ movie_type_counts.series.watched }}/{{ movie_type_counts.series.total }}</span>
-                    </a>
-                    <a class="filter-dropdown-item animation {% if current_media_type == 'animation' %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='animation') }}">
-                       <span>🎨 Animation</span>
-                       <span class="chip-count">{{ movie_type_counts.animation.watched }}/{{ movie_type_counts.animation.total }}</span>
-                    </a>
-                    <a class="filter-dropdown-item anime {% if current_media_type == 'anime' %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status=status, sort=sort, media_type='anime') }}">
-                       <span>⛩️ Anime</span>
-                       <span class="chip-count">{{ movie_type_counts.anime.watched }}/{{ movie_type_counts.anime.total }}</span>
-                    </a>
-                </div>
-            </div>
-            {% elif tab == 'books' and book_category_counts %}
-            <div class="filter-dropdown" id="pubBookCategoryFilterDropdown">
-                <button type="button" class="filter-dropdown-btn {% if current_book_category %}active {{ current_book_category }}{% endif %}" onclick="toggleFilterDropdown('pubBookCategoryFilterDropdown', event)">
-                    <i class="fas fa-shapes"></i>
-                    <span>
-                        {% if current_book_category == 'fiction' %}📖 Fiction ({{ book_category_counts.fiction.read }}/{{ book_category_counts.fiction.total }})
-                        {% elif current_book_category == 'philosophy' %}🧠 Philosophy ({{ book_category_counts.philosophy.read }}/{{ book_category_counts.philosophy.total }})
-                        {% elif current_book_category == 'self_help' %}🌱 Self-Help ({{ book_category_counts.self_help.read }}/{{ book_category_counts.self_help.total }})
-                        {% elif current_book_category == 'business' %}💼 Business ({{ book_category_counts.business.read }}/{{ book_category_counts.business.total }})
-                        {% elif current_book_category == 'non_fiction' %}🌍 Non-Fiction ({{ book_category_counts.non_fiction.read }}/{{ book_category_counts.non_fiction.total }})
-                        {% else %}Category: All Themes{% endif %}
-                    </span>
-                    <i class="fas fa-chevron-down dropdown-arrow"></i>
-                </button>
-                <div class="filter-dropdown-menu">
-                    <a class="filter-dropdown-item {% if not current_book_category %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort) }}">
-                       <span>All Themes</span>
-                       <span class="chip-count">{{ total_books_count }}</span>
-                    </a>
-                    <a class="filter-dropdown-item fiction {% if current_book_category == 'fiction' %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='fiction') }}">
-                       <span>📖 Fiction &amp; Literature</span>
-                       <span class="chip-count">{{ book_category_counts.fiction.read }}/{{ book_category_counts.fiction.total }}</span>
-                    </a>
-                    <a class="filter-dropdown-item philosophy {% if current_book_category == 'philosophy' %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='philosophy') }}">
-                       <span>🧠 Philosophy &amp; Ethics</span>
-                       <span class="chip-count">{{ book_category_counts.philosophy.read }}/{{ book_category_counts.philosophy.total }}</span>
-                    </a>
-                    <a class="filter-dropdown-item self_help {% if current_book_category == 'self_help' %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='self_help') }}">
-                       <span>🌱 Self-Help &amp; Growth</span>
-                       <span class="chip-count">{{ book_category_counts.self_help.read }}/{{ book_category_counts.self_help.total }}</span>
-                    </a>
-                    <a class="filter-dropdown-item business {% if current_book_category == 'business' %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='business') }}">
-                       <span>💼 Business &amp; Finance</span>
-                       <span class="chip-count">{{ book_category_counts.business.read }}/{{ book_category_counts.business.total }}</span>
-                    </a>
-                    <a class="filter-dropdown-item non_fiction {% if current_book_category == 'non_fiction' %}active{% endif %}"
-                       href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='non_fiction') }}">
-                       <span>🌍 Non-Fiction &amp; Science</span>
-                       <span class="chip-count">{{ book_category_counts.non_fiction.read }}/{{ book_category_counts.non_fiction.total }}</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Minimized Status Dropdown -->
-            <div class="filter-dropdown" id="pubStatusFilterDropdown">
-                <button type="button" class="filter-dropdown-btn {% if status != 'all' %}active{% endif %}" onclick="toggleFilterDropdown('pubStatusFilterDropdown', event)">
-                    <i class="fas fa-check-circle"></i>
-                    <span>
-                        {% if tab == 'movies' %}
-                            {% if status == 'watched' %}✅ Watched ({{ watched_count }})
-                            {% elif status == 'to_watch' %}🕐 To Watch ({{ to_watch_count }})
-                            {% else %}Status: All{% endif %}
-                        {% else %}
-                            {% if status == 'read' %}✅ Read ({{ read_count }})
-                            {% elif status == 'to_read' %}📖 To Read ({{ to_read_count }})
-                            {% else %}Status: All{% endif %}
-                        {% endif %}
-                    </span>
-                    <i class="fas fa-chevron-down dropdown-arrow"></i>
-                </button>
-                <div class="filter-dropdown-menu">
-                    {% if tab == 'movies' %}
-                    <a class="filter-dropdown-item {% if status == 'all' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='all', sort=sort, media_type=current_media_type) }}">
-                        <span>All Movies</span>
-                        <span class="chip-count">{{ total_movies_count }}</span>
-                    </a>
-                    <a class="filter-dropdown-item {% if status == 'watched' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='watched', sort=sort, media_type=current_media_type) }}">
-                        <span>✅ Watched</span>
-                        <span class="chip-count">{{ watched_count }}</span>
-                    </a>
-                    <a class="filter-dropdown-item {% if status == 'to_watch' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='movies', status='to_watch', sort=sort, media_type=current_media_type) }}">
-                        <span>🕐 To Watch</span>
-                        <span class="chip-count">{{ to_watch_count }}</span>
-                    </a>
-                    {% else %}
-                    <a class="filter-dropdown-item {% if status == 'all' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='all', sort=sort, category=current_book_category) }}">
-                        <span>All Books</span>
-                        <span class="chip-count">{{ total_books_count }}</span>
-                    </a>
-                    <a class="filter-dropdown-item {% if status == 'read' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='read', sort=sort, category=current_book_category) }}">
-                        <span>✅ Read</span>
-                        <span class="chip-count">{{ read_count }}</span>
-                    </a>
-                    <a class="filter-dropdown-item {% if status == 'to_read' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab='books', status='to_read', sort=sort, category=current_book_category) }}">
-                        <span>📖 To Read</span>
-                        <span class="chip-count">{{ to_read_count }}</span>
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Minimized Sort Dropdown -->
-            <div class="filter-dropdown" id="pubSortFilterDropdown">
-                <button type="button" class="filter-dropdown-btn" onclick="toggleFilterDropdown('pubSortFilterDropdown', event)">
-                    <i class="fas fa-sort-amount-down"></i>
-                    <span>
-                        {% if sort == 'rating' %}Sort: Rating
-                        {% elif sort == 'title' %}Sort: A–Z
-                        {% else %}Sort: Newest{% endif %}
-                    </span>
-                    <i class="fas fa-chevron-down dropdown-arrow"></i>
-                </button>
-                <div class="filter-dropdown-menu">
-                    <a class="filter-dropdown-item {% if sort == 'newest' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='newest', media_type=current_media_type, category=current_book_category) }}">
-                        <span>🕒 Newest Added</span>
-                    </a>
-                    <a class="filter-dropdown-item {% if sort == 'rating' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='rating', media_type=current_media_type, category=current_book_category) }}">
-                        <span>⭐ Highest Rating</span>
-                    </a>
-                    <a class="filter-dropdown-item {% if sort == 'title' %}active{% endif %}" href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status=status, sort='title', media_type=current_media_type, category=current_book_category) }}">
-                        <span>🔤 Alphabetical (A–Z)</span>
-                    </a>
-                </div>
-            </div>
-
-            {% if (status != 'all') or current_media_type or current_book_category %}
-            <a href="{{ url_for('public_collection', username=profile_user.username, tab=tab, status='all', sort='newest') }}" class="btn-clear-filters" title="Reset all filters">
-                <i class="fas fa-times"></i> Reset
-            </a>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Grid -->
-    {% if tab == 'movies' %}
+        <!-- Movie Grid -->
         {% if movies %}
         <div class="media-grid" id="mediaGrid">
             {% for movie in movies %}
@@ -394,52 +608,229 @@
                         {% if movie.img_url %}
                         <img src="{{ movie.img_url }}" alt="{{ movie.title }}" loading="lazy">
                         {% else %}
-                        <div class="img-placeholder"><i class="fas fa-film"></i></div>
+                        <div class="poster-placeholder"><i class="fas fa-film"></i></div>
                         {% endif %}
+                        
+                        <div class="card-badges">
+                            <span class="status-badge {{ movie.status }}">
+                                {% if movie.status == 'watched' %}✓ Watched{% else %}🕐 Watchlist{% endif %}
+                            </span>
+                            {% if movie.rating and movie.rating > 0 %}
+                            <span class="rating-chip">⭐ {{ movie.rating }}</span>
+                            {% endif %}
+                        </div>
+
+                        {% if movie.media_type and movie.media_type != 'movie' %}
+                        <span class="type-tag {{ movie.media_type }}">
+                            {% if movie.media_type == 'series' %}📺 Series
+                            {% elif movie.media_type == 'animation' %}🎨 Animation
+                            {% elif movie.media_type == 'anime' %}⛩️ Anime
+                            {% endif %}
+                        </span>
+                        {% endif %}
+
                         <div class="card-front-info">
-                            <div class="card-title">{{ movie.title }}</div>
-                            <div class="card-meta">
-                                <span class="status-chip {{ movie.status }}">
-                                    <i class="fas {{ 'fa-check' if movie.status == 'watched' else 'fa-clock' }}"></i>
-                                    {{ 'Watched' if movie.status == 'watched' else 'To Watch' }}
-                                </span>
-                                {% if movie.media_type == 'series' %}
-                                <span class="type-tag series"><i class="fas fa-tv"></i> Series</span>
-                                {% elif movie.media_type == 'animation' %}
-                                <span class="type-tag animation"><i class="fas fa-paint-brush"></i> Animation</span>
-                                {% elif movie.media_type == 'anime' %}
-                                <span class="type-tag anime"><i class="fas fa-torii-gate"></i> Anime</span>
-                                {% else %}
-                                <span class="type-tag movie"><i class="fas fa-film"></i> Movie</span>
-                                {% endif %}
-                                {% if movie.rating and movie.rating > 0 %}<span class="rating-chip">⭐ {{ movie.rating }}</span>{% endif %}
-                            </div>
+                            <h3 class="card-title">{{ movie.title }}</h3>
+                            <div class="card-sub">{{ movie.year or '—' }}{% if movie.genre %} · {{ movie.genre[:25] }}{% endif %}</div>
                         </div>
                     </div>
-                    <div class="card-back">
+
+                    <!-- Flip Card Back -->
+                    <div class="card-back" onclick="flipCard('movie', {{ movie.id }})">
                         <div class="card-back-title">{{ movie.title }} {% if movie.year %}({{ movie.year }}){% endif %}</div>
                         {% if movie.genre %}<div class="card-genre">{{ movie.genre[:40] }}</div>{% endif %}
-                        <p class="card-review">{{ movie.review if movie.review else 'No review yet.' }}</p>
-                        <p class="card-desc">{{ movie.description[:120] }}{% if movie.description | length > 120 %}...{% endif %}</p>
-                        <div class="card-actions">
-                            <button class="btn-card-flip" onclick="flipCard('movie', {{ movie.id }})" style="margin: 0 auto; display:block;"><i class="fas fa-undo"></i> Flip Back</button>
+                        {% if movie.rating and movie.rating > 0 %}<div style="color:var(--gold); font-size:0.85rem; font-weight:700; margin-bottom:0.5rem;">★ {{ movie.rating }}/10</div>{% endif %}
+                        <p class="card-desc">{{ movie.description[:140] }}{% if movie.description | length > 140 %}...{% endif %}</p>
+                        {% if movie.review %}<p class="card-review">"{{ movie.review[:120] }}"</p>{% endif %}
+
+                        <div class="card-back-actions" onclick="event.stopPropagation();">
+                            <a href="{{ url_for('view_movie', item_id=movie.id) }}" class="btn-card-edit" title="View details">
+                                <i class="fas fa-eye"></i> Dossier
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
-        <div class="no-results-msg" id="noResults" style="display:none;">No matches found.</div>
         {% else %}
         <div class="empty-state">
-            <i class="fas fa-film" style="font-size:3rem;color:var(--accent);opacity:.4;"></i>
-            <h3>No movies here yet</h3>
+            <i class="fas fa-film" style="font-size:3rem; color:var(--accent); opacity:.4;"></i>
+            <h3>No movies found in this view</h3>
+            <p>{{ profile_user.name_or_username }} has not added any movies under these criteria.</p>
         </div>
         {% endif %}
 
-    {% else %}
+    <!-- ==============================================
+         TAB 4: REVIEWS
+         ============================================== -->
+    {% elif tab == 'reviews' %}
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div>
+                <h2 style="font-size: 1.4rem; font-weight: 800; color: #ffffff; margin-bottom: 0.2rem;">
+                    <i class="fas fa-pen-fancy" style="color:#c084fc;"></i> Reviews by {{ profile_user.name_or_username }}
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+                    Personal thoughts, ratings, and cinematic critiques.
+                </p>
+            </div>
+            <span class="favorites-counter-pill">
+                {{ reviews_count }} Written Reviews
+            </span>
+        </div>
+
+        {% if movies %}
+        <div class="profile-reviews-grid">
+            {% for movie in movies %}
+            <div class="profile-review-card">
+                {% if movie.img_url %}
+                <img src="{{ movie.img_url }}" alt="{{ movie.title }}" class="profile-review-poster" loading="lazy">
+                {% else %}
+                <div class="profile-review-poster" style="display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>
+                {% endif %}
+                <div class="profile-review-body">
+                    <a href="{{ url_for('view_movie', item_id=movie.id) }}" class="profile-review-title">{{ movie.title }}</a>
+                    <div class="profile-review-meta">
+                        <span>{{ movie.year or '—' }}</span>
+                        {% if movie.genre %}<span>• {{ movie.genre[:25] }}</span>{% endif %}
+                        {% if movie.rating and movie.rating > 0 %}
+                        <span style="color:var(--gold); font-weight:700; margin-left:auto;">★ {{ movie.rating }}/10</span>
+                        {% endif %}
+                    </div>
+                    <div class="profile-review-quote">
+                        "{{ movie.review }}"
+                    </div>
+                    <div style="margin-top: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.72rem; color: var(--text-faint);">
+                            Logged: {{ movie.date_watched.strftime('%b %d, %Y') if movie.date_watched else movie.date_added.strftime('%b %d, %Y') }}
+                        </span>
+                        <a href="{{ url_for('view_movie', item_id=movie.id) }}" style="font-size: 0.74rem; color: var(--accent); text-decoration: none; font-weight: 700;">
+                            View Movie &rarr;
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-feather-alt" style="font-size:3rem; color:#c084fc; opacity:.4;"></i>
+            <h3>No written reviews yet</h3>
+            <p>{{ profile_user.name_or_username }} has not written any movie reviews yet.</p>
+        </div>
+        {% endif %}
+
+    <!-- ==============================================
+         TAB 5: CUSTOM COLLECTIONS
+         ============================================== -->
+    {% elif tab == 'collections' %}
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
+            <div>
+                <h2 style="font-size: 1.4rem; font-weight: 800; color: #ffffff; margin-bottom: 0.2rem;">
+                    <i class="fas fa-layer-group" style="color:#f472b6;"></i> Custom Movie Collections
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+                    Curated thematic lists created by {{ profile_user.name_or_username }}.
+                </p>
+            </div>
+
+            {% if is_owner %}
+            <button type="button" class="btn-primary" style="border-radius: 10px; font-weight: 700; font-size: 0.88rem;" onclick="openCreateCollectionModal()">
+                <i class="fas fa-plus"></i> New Collection
+            </button>
+            {% endif %}
+        </div>
+
+        {% if user_collections %}
+        <div class="custom-col-grid">
+            {% for col in user_collections %}
+            <div class="custom-col-card" id="col-card-{{ col.id }}">
+                <div class="custom-col-collage">
+                    {% for m in col.movies[:4] %}
+                        {% if m.img_url %}
+                        <img src="{{ m.img_url }}" class="custom-col-poster" alt="{{ m.title }}" loading="lazy">
+                        {% else %}
+                        <div class="custom-col-poster-empty"><i class="fas fa-film"></i></div>
+                        {% endif %}
+                    {% endfor %}
+                    {% for i in range(4 - col.movies[:4]|length) %}
+                    <div class="custom-col-poster-empty"><i class="fas fa-film"></i></div>
+                    {% endfor %}
+                </div>
+                <div class="custom-col-content">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                        <h3 class="custom-col-title">{{ col.title }}</h3>
+                        {% if not col.is_public %}
+                        <span style="font-size: 0.68rem; padding: 0.15rem 0.45rem; border-radius: 4px; background: rgba(245,158,11,0.15); color: var(--gold); border: 1px solid rgba(245,158,11,0.3);"><i class="fas fa-lock"></i> Private</span>
+                        {% endif %}
+                    </div>
+                    {% if col.description %}
+                    <p class="custom-col-desc">{{ col.description }}</p>
+                    {% else %}
+                    <p class="custom-col-desc" style="font-style: italic; opacity: 0.6;">A custom cinema collection.</p>
+                    {% endif %}
+                    
+                    <div class="custom-col-footer">
+                        <span><i class="fas fa-film"></i> {{ col.movies|length }} films</span>
+                        <span>{{ col.created_at.strftime('%b %Y') if col.created_at else '' }}</span>
+                        {% if is_owner %}
+                        <button type="button" onclick="deleteCollection({{ col.id }}, '{{ col.title }}')" style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 0.8rem;" title="Delete Collection">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-folder-open" style="font-size:3rem; color:#f472b6; opacity:.4;"></i>
+            <h3>No collections yet</h3>
+            <p>{{ profile_user.name_or_username }} has not created any custom collections yet.</p>
+            {% if is_owner %}
+            <button type="button" class="btn-primary" style="margin-top: 1rem; border-radius: 10px;" onclick="openCreateCollectionModal()">
+                <i class="fas fa-plus"></i> Create Your First Collection
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    <!-- ==============================================
+         TAB 6: BOOKSHELF
+         ============================================== -->
+    {% elif tab == 'books' %}
+        
+        <!-- Books Category Chips -->
+        {% if book_category_counts %}
+        <div class="category-breakdown-bar" style="justify-content: flex-start; margin-bottom: 1.5rem;">
+            <a class="cat-pill fiction {% if current_book_category == 'fiction' %}active{% endif %}"
+               href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='fiction') }}">
+                📖 <strong>{{ book_category_counts.fiction.read }}</strong>/{{ book_category_counts.fiction.total }} Fiction
+            </a>
+            <a class="cat-pill philosophy {% if current_book_category == 'philosophy' %}active{% endif %}"
+               href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='philosophy') }}">
+                🧠 <strong>{{ book_category_counts.philosophy.read }}</strong>/{{ book_category_counts.philosophy.total }} Philosophy
+            </a>
+            <a class="cat-pill self_help {% if current_book_category == 'self_help' %}active{% endif %}"
+               href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='self_help') }}">
+                🌱 <strong>{{ book_category_counts.self_help.read }}</strong>/{{ book_category_counts.self_help.total }} Self-Help
+            </a>
+            <a class="cat-pill business {% if current_book_category == 'business' %}active{% endif %}"
+               href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='business') }}">
+                💼 <strong>{{ book_category_counts.business.read }}</strong>/{{ book_category_counts.business.total }} Business
+            </a>
+            <a class="cat-pill non_fiction {% if current_book_category == 'non_fiction' %}active{% endif %}"
+               href="{{ url_for('public_collection', username=profile_user.username, tab='books', status=status, sort=sort, category='non_fiction') }}">
+                🌍 <strong>{{ book_category_counts.non_fiction.read }}</strong>/{{ book_category_counts.non_fiction.total }} Non-Fiction
+            </a>
+        </div>
+        {% endif %}
+
         {% if books %}
-        <div class="media-grid" id="mediaGrid">
+        <div class="media-grid" id="booksGrid">
             {% for book in books %}
             <div class="media-card" id="card-book-{{ book.id }}" data-title="{{ book.title | lower }}">
                 <div class="card-inner">
@@ -447,112 +838,108 @@
                         {% if book.img_url %}
                         <img src="{{ book.img_url }}" alt="{{ book.title }}" loading="lazy">
                         {% else %}
-                        <div class="img-placeholder"><i class="fas fa-book"></i></div>
+                        <div class="poster-placeholder book"><i class="fas fa-book"></i></div>
                         {% endif %}
-                        <div class="card-front-info">
-                            <div class="card-title">{{ book.title }}</div>
-                            <div class="card-sub">{{ book.author }}</div>
-                            <div class="card-meta">
-                                <span class="status-chip {{ book.status }}">
-                                    <i class="fas {{ 'fa-check' if book.status == 'read' else 'fa-bookmark' }}"></i>
-                                    {{ 'Read' if book.status == 'read' else 'To Read' }}
-                                </span>
-                                {% if book.rating and book.rating > 0 %}<span class="rating-chip">⭐ {{ book.rating }}</span>{% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-back">
-                        <div class="card-actions" style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
-                            <p style="font-size: 0.8rem; opacity: 0.6;">Added: {{ book.date_added.strftime('%Y-%m-%d') }}</p>
-                            <a href="{{ url_for('view_book', item_id=book.id) }}" class="btn-card-edit"><i class="fas fa-eye"></i> Details</a>
-                        </div>
-                        <div class="card-back-title" style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.4rem;">
-                            <span>{{ book.title }}</span>
-                            {% if book.category == 'philosophy' %}
-                            <span class="type-tag philosophy" title="Philosophy"><i class="fas fa-brain"></i></span>
-                            {% elif book.category == 'self_help' %}
-                            <span class="type-tag self_help" title="Self-Help"><i class="fas fa-seedling"></i></span>
-                            {% elif book.category == 'business' %}
-                            <span class="type-tag business" title="Business"><i class="fas fa-chart-line"></i></span>
-                            {% elif book.category == 'non_fiction' %}
-                            <span class="type-tag non_fiction" title="Non-Fiction"><i class="fas fa-globe"></i></span>
-                            {% else %}
-                            <span class="type-tag fiction" title="Fiction"><i class="fas fa-book"></i></span>
+                        
+                        <div class="card-badges">
+                            <span class="status-badge {{ book.status }}">
+                                {% if book.status == 'read' %}✓ Read{% else %}📖 To Read{% endif %}
+                            </span>
+                            {% if book.rating and book.rating > 0 %}
+                            <span class="rating-chip">⭐ {{ book.rating }}</span>
                             {% endif %}
                         </div>
+
+                        <span class="type-tag {{ book.category }}">
+                            📖 {{ book.category | replace('_', ' ') | title }}
+                        </span>
+
+                        <div class="card-front-info">
+                            <h3 class="card-title">{{ book.title }}</h3>
+                            <div class="card-sub">{{ book.author }} {% if book.year %}· {{ book.year }}{% endif %}</div>
+                        </div>
+                    </div>
+
+                    <div class="card-back" onclick="flipCard('book', {{ book.id }})">
+                        <div class="card-back-title">{{ book.title }}</div>
                         <div class="card-genre">by {{ book.author }} {% if book.year %}· {{ book.year }}{% endif %}</div>
-                        <p class="card-review">{{ book.review if book.review else 'No review yet.' }}</p>
-                        <p class="card-desc">{{ book.description[:120] }}{% if book.description | length > 120 %}...{% endif %}</p>
-                        <div class="card-actions">
-                            <button class="btn-card-flip" onclick="flipCard('book', {{ book.id }})" style="margin: 0 auto; display:block;"><i class="fas fa-undo"></i> Flip Back</button>
+                        <p class="card-desc">{{ book.description[:140] }}{% if book.description | length > 140 %}...{% endif %}</p>
+
+                        <div class="card-back-actions" onclick="event.stopPropagation();">
+                            <a href="{{ url_for('view_book', item_id=book.id) }}" class="btn-card-edit" title="View details">
+                                <i class="fas fa-eye"></i> Details
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
-        <div class="no-results-msg" id="noResults" style="display:none;">No matches found.</div>
         {% else %}
         <div class="empty-state">
-            <i class="fas fa-book" style="font-size:3rem;color:var(--accent-book);opacity:.4;"></i>
-            <h3>No books here yet</h3>
+            <i class="fas fa-book" style="font-size:3rem; color:var(--accent); opacity:.4;"></i>
+            <h3>No books found in this view</h3>
+            <p>{{ profile_user.name_or_username }} has not added any books matching these filters.</p>
         </div>
         {% endif %}
+
     {% endif %}
+
+    {% endif %}
+
 </div>
 
-<script>
-function flipCard(type, id) {
-    const card = document.querySelector(`#card-${type}-${id} .card-inner`);
-    if (card) card.classList.toggle('flipped');
-}
+<!-- Toast Container -->
+<div id="toastContainer" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; display: flex; flex-direction: column; gap: 0.6rem;"></div>
 
-function filterCards(query) {
-    const q = query.toLowerCase();
-    const cards = document.querySelectorAll('#mediaGrid .media-card');
-    let visible = 0;
-    cards.forEach(c => {
-        const title = c.dataset.title || '';
-        const show = title.includes(q);
-        c.style.display = show ? '' : 'none';
-        if (show) visible++;
-    });
-    const noRes = document.getElementById('noResults');
-    if (noRes) noRes.style.display = visible === 0 ? 'block' : 'none';
-}
+<!-- ================================================
+     CREATE COLLECTION MODAL (Owner Only)
+     ================================================ -->
+{% if is_owner %}
+<div class="fav-modal-backdrop" id="createColModal" style="display: none;" onclick="handleColBackdrop(event)">
+    <div class="fav-modal-dialog" style="max-width: 520px;" onclick="event.stopPropagation()">
+        <div class="fav-modal-header">
+            <div>
+                <h2><i class="fas fa-layer-group" style="color:#f472b6;"></i> New Custom Collection</h2>
+                <span style="font-size: 0.78rem; color: var(--text-muted);">Group your favorite films into a thematic showcase.</span>
+            </div>
+            <button type="button" class="fav-modal-close" onclick="closeCreateColModal()">&times;</button>
+        </div>
 
-// Filter Dropdown Toggling
-function toggleFilterDropdown(id, event) {
-    if (event) {
-        event.stopPropagation();
-        event.preventDefault();
-    }
-    const target = document.getElementById(id);
-    if (!target) return;
-    const isOpen = target.classList.contains('open');
-    document.querySelectorAll('.filter-dropdown.open').forEach(d => {
-        if (d !== target) d.classList.remove('open');
-    });
-    target.classList.toggle('open', !isOpen);
-}
+        <div style="padding: 1.8rem;">
+            <div style="margin-bottom: 1.2rem;">
+                <label class="form-label" style="font-weight: 700; margin-bottom: 0.4rem; display: block;">Collection Title *</label>
+                <input type="text" id="newColTitle" class="form-control" placeholder="e.g. Neo-Noir Essentials or Cozy Rainy Day Cinema">
+            </div>
 
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.filter-dropdown')) {
-        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
-    }
-});
+            <div style="margin-bottom: 1.5rem;">
+                <label class="form-label" style="font-weight: 700; margin-bottom: 0.4rem; display: block;">Description</label>
+                <textarea id="newColDesc" class="form-control" rows="3" placeholder="A brief note explaining what makes this collection special..."></textarea>
+            </div>
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
-    }
-});
-</script>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.8rem; padding: 0.8rem 1rem; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                <div>
+                    <div style="font-size: 0.88rem; font-weight: 700; color: #ffffff;">Public Collection</div>
+                    <div style="font-size: 0.74rem; color: var(--text-muted);">Visible to visitors on your public profile</div>
+                </div>
+                <input type="checkbox" id="newColPublic" checked style="width: 18px; height: 18px; accent-color: var(--accent);">
+            </div>
 
-{% if current_user.is_authenticated and current_user.id == profile_user.id %}
+            <div style="display: flex; gap: 0.8rem; justify-content: flex-end;">
+                <button type="button" class="btn-secondary" style="border-radius: 8px;" onclick="closeCreateColModal()">Cancel</button>
+                <button type="button" class="btn-primary" style="border-radius: 8px; font-weight: 700;" onclick="submitCreateCollection()">
+                    <i class="fas fa-plus"></i> Create Collection
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- ================================================
      INTERACTIVE ALL-TIME FAVORITES MODAL
      ================================================ -->
+{% if is_owner %}
 <div class="fav-modal-backdrop" id="favoritesModal" style="display: none;" onclick="handleModalBackdropClick(event)">
     <div class="fav-modal-dialog" onclick="event.stopPropagation()">
         <!-- Modal Header -->
@@ -624,143 +1011,189 @@ document.addEventListener('keydown', function(e) {
                     <input type="text" id="modalTmdbSearch" class="search-inline" style="width: 100%; border-radius: 8px; margin-bottom: 0.8rem;"
                            placeholder="Type movie title to search TMDB..." oninput="handleModalTmdbSearch(this.value)">
                     <div class="fav-candidates-scroll" id="modalTmdbList">
-                        <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.82rem;">
-                            <i class="fas fa-film" style="font-size: 1.8rem; opacity: 0.3; margin-bottom: 0.5rem; display: block;"></i>
-                            Type a movie title above to search TMDB.
+                        <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.84rem;">
+                            Type a movie title above to search TMDB directly.
                         </div>
                     </div>
                 </div>
-
             </div>
-
         </div>
 
         <!-- Modal Footer -->
         <div class="fav-modal-footer">
             <span style="font-size: 0.78rem; color: var(--text-muted);">
-                Changes save automatically to your profile.
+                Changes save automatically.
             </span>
-            <button type="button" class="btn-primary" onclick="closeFavoritesModal()" style="border-radius: 8px; padding: 0.5rem 1.4rem;">
+            <button type="button" class="btn-primary" style="padding: 0.5rem 1.4rem; font-size: 0.84rem; border-radius: 8px;" onclick="closeFavoritesModal()">
                 Done
             </button>
         </div>
     </div>
-
-    <!-- All-Time Favorites Feature Section -->
-    <section class="all-time-favorites-section" id="allTimeFavoritesSection">
-        <div class="favorites-header-wrap">
-            <div class="favorites-title-group">
-                <div class="favorites-title">
-                    <i class="fas fa-crown crown-icon"></i>
-                    {% if current_user.is_authenticated and current_user.id == profile_user.id %}
-                        My All-Time Favorites
-                    {% else %}
-                        {{ profile_user.username }}'s All-Time Favorites
-                    {% endif %}
-                </div>
-                <div class="favorites-sub">
-                    The top 10 cinematic masterpieces that define {{ 'your' if (current_user.is_authenticated and current_user.id == profile_user.id) else (profile_user.username + "'s") }} personal taste in film.
-                </div>
-            </div>
-
-            <div class="favorites-actions-group">
-                <span class="favorites-counter-pill {% if all_time_favorites|length == 10 %}full{% endif %}" id="pubFavCountPill">
-                    <i class="fas fa-film"></i> <span id="pubFavCountNum">{{ all_time_favorites|length }}</span>/10 Selected
-                </span>
-                {% if current_user.is_authenticated and current_user.id == profile_user.id %}
-                <button type="button" class="btn-edit-favorites" onclick="openFavoritesModal()">
-                    <i class="fas fa-pen"></i> Edit My List
-                </button>
-                <a href="{{ url_for('manage_favorites') }}" class="btn-secondary" style="border-radius:10px; font-size:0.84rem; font-weight:700; padding:0.5rem 1rem;" title="Dedicated Full-Screen Manager">
-                    <i class="fas fa-arrows-alt"></i> Cockpit
-                </a>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Showcase 5-col Grid -->
-        <div class="favorites-showcase-grid" id="pubFavoritesShowcaseGrid" {% if not all_time_favorites %}style="display:none;"{% endif %}>
-            {% for fav in all_time_favorites %}
-            {% set is_rank1 = fav.rank == 1 %}
-            <a href="{{ url_for('view_movie', item_id=fav.movie_id) }}" class="fav-showcase-card {% if is_rank1 %}rank-1{% endif %}" id="fav-card-{{ fav.id }}" title="#{{ fav.rank }} - {{ fav.movie.title }}">
-                <div class="fav-poster-box">
-                    <div class="fav-rank-badge {% if is_rank1 %}rank-1{% endif %}">
-                        {% if is_rank1 %}<i class="fas fa-crown"></i> #1{% else %}#{{ fav.rank }}{% endif %}
-                    </div>
-                    {% if fav.movie.img_url %}
-                    <img src="{{ fav.movie.img_url }}" alt="{{ fav.movie.title }}" class="fav-poster-img" loading="lazy">
-                    {% else %}
-                    <div class="img-placeholder" style="height:100%;"><i class="fas fa-film"></i></div>
-                    {% endif %}
-                    <div class="fav-hover-overlay">
-                        <div class="fav-hover-title">{{ fav.movie.title }}</div>
-                        <div class="fav-hover-meta">{{ fav.movie.year or '—' }}</div>
-                        <span class="fav-hover-btn"><i class="fas fa-eye"></i> View Dossier</span>
-                    </div>
-                </div>
-                <div class="fav-showcase-info">
-                    <div class="fav-showcase-title">{{ fav.movie.title }}</div>
-                    <div class="fav-showcase-bottom">
-                        <span>{{ fav.movie.year or '—' }}</span>
-                        {% if fav.movie.rating and fav.movie.rating > 0 %}
-                        <span class="star">★ {{ fav.movie.rating }}</span>
-                        {% else %}
-                        <span style="opacity:0.5;">Unrated</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-
-        <!-- Empty State Box -->
-        <div class="fav-empty-box" id="pubFavoritesEmptyBox" {% if all_time_favorites %}style="display:none;"{% endif %}>
-            {% if current_user.is_authenticated and current_user.id == profile_user.id %}
-            <i class="fas fa-crown fav-empty-icon"></i>
-            <div class="fav-empty-title">Curate Your All-Time Favorites</div>
-            <p class="fav-empty-desc">
-                Hand-pick the 10 movies that define your cinematic taste. Rank them from #1 to #10 and showcase them at the very top of your profile.
-            </p>
-            <div style="display:flex; gap:0.8rem; justify-content:center; flex-wrap:wrap;">
-                <button type="button" class="btn-edit-favorites" onclick="openFavoritesModal()">
-                    <i class="fas fa-magic"></i> Select Top 10 Now
-                </button>
-                <a href="{{ url_for('manage_favorites') }}" class="btn-secondary" style="border-radius:10px; font-size:0.84rem; font-weight:700;">
-                    <i class="fas fa-sliders-h"></i> Full Page Cockpit
-                </a>
-            </div>
-            {% else %}
-            <i class="fas fa-film fav-empty-icon" style="color:var(--text-muted); opacity:0.4;"></i>
-            <div class="fav-empty-title">{{ profile_user.username }}'s Top 10 is still in the cutting room</div>
-            <p class="fav-empty-desc">
-                {{ profile_user.username }} hasn't curated their All-Time Favorites list yet.
-            </p>
-            {% endif %}
-        </div>
-    </section>
 </div>
+{% endif %}
 
 <script>
+// Card Flip Handler
+function flipCard(type, id) {
+    const card = document.getElementById(`card-${type}-${id}`);
+    if (card) {
+        card.classList.toggle('flipped');
+    }
+}
+
+// Client-side instant filter for collection grids
+function filterCards(query) {
+    const q = (query || '').toLowerCase().trim();
+    document.querySelectorAll('.media-card').forEach(card => {
+        const title = (card.getAttribute('data-title') || '').toLowerCase();
+        if (!q || title.includes(q)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Share Profile URL Copy
+function copyProfileLink() {
+    const shareUrl = window.location.origin + '/u/{{ profile_user.username }}';
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showProfileToast('Profile link copied to clipboard! 📋', 'success');
+        }).catch(() => {
+            prompt('Copy your profile link:', shareUrl);
+        });
+    } else {
+        prompt('Copy your profile link:', shareUrl);
+    }
+}
+
+function showProfileToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast-msg ${type}`;
+    const icon = type === 'success' ? 'check-circle' : 'info-circle';
+    toast.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3200);
+}
+
+// Custom Collections Modal & Actions
+function openCreateCollectionModal() {
+    const modal = document.getElementById('createColModal');
+    if (modal) modal.style.display = 'flex';
+}
+function closeCreateColModal() {
+    const modal = document.getElementById('createColModal');
+    if (modal) modal.style.display = 'none';
+}
+function handleColBackdrop(e) {
+    if (e.target.id === 'createColModal') closeCreateColModal();
+}
+
+function submitCreateCollection() {
+    const title = (document.getElementById('newColTitle').value || '').trim();
+    const desc = (document.getElementById('newColDesc').value || '').trim();
+    const isPublic = document.getElementById('newColPublic').checked;
+
+    if (!title) {
+        alert('Please enter a collection title.');
+        return;
+    }
+
+    fetch('/api/collections/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ title: title, description: desc, is_public: isPublic })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeCreateColModal();
+            window.location.href = "{{ url_for('public_collection', username=profile_user.username, tab='collections') }}";
+        } else {
+            alert(data.error || 'Failed to create collection.');
+        }
+    })
+    .catch(() => alert('Network error creating collection.'));
+}
+
+function deleteCollection(id, title) {
+    if (!confirm(`Are you sure you want to delete the collection "${title}"?`)) return;
+    fetch(`/api/collections/${id}/delete`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const card = document.getElementById(`col-card-${id}`);
+            if (card) card.remove();
+            showProfileToast(`Deleted collection "${title}".`, 'info');
+        } else {
+            alert(data.error || 'Failed to delete collection.');
+        }
+    })
+    .catch(() => alert('Network error deleting collection.'));
+}
+
+// Dropdown Filters
+function toggleFilterDropdown(id, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    const target = document.getElementById(id);
+    if (!target) return;
+    const isOpen = target.classList.contains('open');
+    document.querySelectorAll('.filter-dropdown.open').forEach(d => {
+        if (d !== target) d.classList.remove('open');
+    });
+    target.classList.toggle('open', !isOpen);
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.filter-dropdown')) {
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+        if (typeof closeFavoritesModal === 'function') closeFavoritesModal();
+        closeCreateColModal();
+    }
+});
+</script>
+
+{% if is_owner %}
+<script>
+// ================================================
+// ALL-TIME FAVORITES MODAL LOGIC (OWNER ONLY)
+// ================================================
 let modalFavorites = [];
-let modalLibraryMovies = [];
-let modalDraggedIndex = null;
-let modalReplacingId = null;
+let modalLibraryCandidates = [];
 let modalTmdbTimer = null;
+let modalDragSrcIndex = null;
 
 function openFavoritesModal() {
     const modal = document.getElementById('favoritesModal');
     if (!modal) return;
     modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
     loadModalFavorites();
-    loadModalLibrary();
+    loadModalLibraryCandidates();
 }
 
 function closeFavoritesModal() {
     const modal = document.getElementById('favoritesModal');
-    if (!modal) return;
-    modal.style.display = 'none';
-    document.body.style.overflow = '';
+    if (modal) modal.style.display = 'none';
 }
 
 function handleModalBackdropClick(e) {
@@ -769,8 +1202,27 @@ function handleModalBackdropClick(e) {
     }
 }
 
+function switchModalTab(tab) {
+    const btnLib = document.getElementById('modalTabBtnLib');
+    const btnTmdb = document.getElementById('modalTabBtnTmdb');
+    const panelLib = document.getElementById('modalPanelLib');
+    const panelTmdb = document.getElementById('modalPanelTmdb');
+
+    if (tab === 'library') {
+        if (btnLib) btnLib.classList.add('active');
+        if (btnTmdb) btnTmdb.classList.remove('active');
+        if (panelLib) panelLib.style.display = 'block';
+        if (panelTmdb) panelTmdb.style.display = 'none';
+    } else {
+        if (btnLib) btnLib.classList.remove('active');
+        if (btnTmdb) btnTmdb.classList.add('active');
+        if (panelLib) panelLib.style.display = 'none';
+        if (panelTmdb) panelTmdb.style.display = 'block';
+    }
+}
+
 function loadModalFavorites() {
-    fetch('/api/favorites/my', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    fetch('/api/favorites/my')
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -781,114 +1233,106 @@ function loadModalFavorites() {
         });
 }
 
-function loadModalLibrary() {
-    fetch('/api/favorites/library_candidates', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+function loadModalLibraryCandidates() {
+    fetch('/api/favorites/library_candidates')
         .then(r => r.json())
         .then(data => {
-            modalLibraryMovies = data || [];
-            renderModalLibList(modalLibraryMovies);
+            modalLibraryCandidates = data || [];
+            renderModalLibraryCandidates(modalLibraryCandidates);
         });
 }
 
 function renderModalSlots() {
-    const container = document.getElementById('modalSlotsList');
-    const counter = document.getElementById('modalSlotCount');
-    if (counter) counter.textContent = modalFavorites.length;
-    if (!container) return;
-    container.innerHTML = '';
+    const countEl = document.getElementById('modalSlotCount');
+    if (countEl) countEl.textContent = modalFavorites.length;
 
-    for (let i = 0; i < 10; i++) {
-        const rank = i + 1;
-        const fav = modalFavorites[i];
+    const list = document.getElementById('modalSlotsList');
+    if (!list) return;
 
-        if (fav) {
-            const isRank1 = rank === 1;
-            const row = document.createElement('div');
-            row.className = 'fav-slot-row';
-            row.draggable = true;
-            row.dataset.index = i;
-            row.dataset.id = fav.id;
+    if (modalFavorites.length === 0) {
+        list.innerHTML = `
+            <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.84rem;">
+                <i class="fas fa-crown" style="font-size: 1.8rem; color: var(--gold); opacity: 0.4; margin-bottom: 0.6rem; display: block;"></i>
+                Your Top 10 list is currently empty.<br>Add movies from the right panel to begin ranking!
+            </div>
+        `;
+        return;
+    }
 
-            row.innerHTML = `
-                <div class="fav-slot-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></div>
-                <div class="fav-slot-rank-pill ${isRank1 ? 'rank-1' : ''}">${isRank1 ? '<i class="fas fa-crown"></i> 1' : '#' + rank}</div>
-                ${fav.img_url ? `<img src="${fav.img_url}" class="fav-slot-poster" alt="${fav.title}" loading="lazy">` : `<div class="fav-slot-poster" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
+    list.innerHTML = modalFavorites.map((fav, index) => {
+        const isFirst = index === 0;
+        const isLast = index === modalFavorites.length - 1;
+        const isRank1 = fav.rank === 1;
+
+        return `
+            <div class="fav-slot-row ${isRank1 ? 'rank-1' : ''}" draggable="true"
+                 data-id="${fav.id}" data-index="${index}"
+                 ondragstart="handleModalDragStart(event)"
+                 ondragover="handleModalDragOver(event)"
+                 ondragleave="handleModalDragLeave(event)"
+                 ondrop="handleModalDrop(event)"
+                 ondragend="handleModalDragEnd(event)">
+                <span class="fav-slot-drag"><i class="fas fa-grip-vertical"></i></span>
+                <span class="fav-slot-rank-pill ${isRank1 ? 'rank-1' : ''}">
+                    ${isRank1 ? '<i class="fas fa-crown"></i> #1' : '#' + fav.rank}
+                </span>
+                ${fav.img_url ? `<img src="${fav.img_url}" class="fav-slot-thumb" alt="${fav.title}" loading="lazy">` : `<div class="fav-slot-thumb" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
                 <div class="fav-slot-info">
-                    <div class="fav-slot-title">${fav.title}</div>
+                    <div class="fav-slot-title" title="${fav.title}">${fav.title}</div>
                     <div class="fav-slot-sub">${fav.year || '—'} ${fav.rating && fav.rating > 0 ? `• <span style="color:var(--gold);">★ ${fav.rating}</span>` : ''}</div>
                 </div>
                 <div class="fav-slot-actions">
-                    <button type="button" class="btn-slot-icon" onclick="modalMoveItem(${i}, -1)" title="Move Up" ${i === 0 ? 'disabled style="opacity:0.25; cursor:not-allowed;"' : ''}><i class="fas fa-chevron-up"></i></button>
-                    <button type="button" class="btn-slot-icon" onclick="modalMoveItem(${i}, 1)" title="Move Down" ${i === modalFavorites.length - 1 ? 'disabled style="opacity:0.25; cursor:not-allowed;"' : ''}><i class="fas fa-chevron-down"></i></button>
-                    <button type="button" class="btn-slot-icon" onclick="modalPromptReplace(${fav.id}, '${fav.title.replace(/'/g, "\\'")}')" title="Replace"><i class="fas fa-sync-alt"></i></button>
-                    <button type="button" class="btn-slot-icon remove" onclick="modalRemoveItem(${fav.id})" title="Remove"><i class="fas fa-trash"></i></button>
+                    <button type="button" class="btn-slot-move" title="Move Up" onclick="modalMoveSlot(${index}, -1)" ${isFirst ? 'disabled' : ''}>▲</button>
+                    <button type="button" class="btn-slot-move" title="Move Down" onclick="modalMoveSlot(${index}, 1)" ${isLast ? 'disabled' : ''}>▼</button>
+                    <button type="button" class="btn-slot-remove" title="Remove from Top 10" onclick="modalRemoveFavorite(${fav.id}, '${fav.title}')">&times;</button>
                 </div>
-            `;
-
-            row.addEventListener('dragstart', modalDragStart);
-            row.addEventListener('dragover', modalDragOver);
-            row.addEventListener('drop', modalDrop);
-            row.addEventListener('dragend', modalDragEnd);
-
-            container.appendChild(row);
-        } else {
-            const empty = document.createElement('div');
-            empty.className = 'fav-slot-empty';
-            empty.innerHTML = `
-                <div style="width:28px; height:28px; border-radius:6px; border:1px dashed rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text-faint); font-size:0.75rem;">#${rank}</div>
-                <span style="flex:1;">Empty Slot #${rank}</span>
-                <span style="font-size:0.72rem; color:var(--text-faint);"><i class="fas fa-arrow-down"></i> Add below</span>
-            `;
-            container.appendChild(empty);
-        }
-    }
+            </div>
+        `;
+    }).join('');
 }
 
-function modalDragStart(e) {
-    modalDraggedIndex = parseInt(this.dataset.index);
-    this.classList.add('dragging');
+function handleModalDragStart(e) {
+    const row = e.target.closest('.fav-slot-row');
+    modalDragSrcIndex = parseInt(row.dataset.index);
+    row.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
 }
-
-function modalDragOver(e) {
+function handleModalDragOver(e) {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
     const row = e.target.closest('.fav-slot-row');
-    if (row && row !== this) {
-        document.querySelectorAll('#modalSlotsList .fav-slot-row').forEach(r => r.classList.remove('drag-over'));
-        row.classList.add('drag-over');
-    }
+    if (row) row.classList.add('drag-over');
 }
-
-function modalDrop(e) {
+function handleModalDragLeave(e) {
+    const row = e.target.closest('.fav-slot-row');
+    if (row) row.classList.remove('drag-over');
+}
+function handleModalDrop(e) {
     e.preventDefault();
-    const targetRow = e.target.closest('.fav-slot-row');
-    if (!targetRow) return;
-    const targetIndex = parseInt(targetRow.dataset.index);
-
-    if (modalDraggedIndex !== null && modalDraggedIndex !== targetIndex) {
-        const item = modalFavorites.splice(modalDraggedIndex, 1)[0];
+    const row = e.target.closest('.fav-slot-row');
+    if (!row) return;
+    row.classList.remove('drag-over');
+    const targetIndex = parseInt(row.dataset.index);
+    if (modalDragSrcIndex !== null && modalDragSrcIndex !== targetIndex) {
+        const item = modalFavorites.splice(modalDragSrcIndex, 1)[0];
         modalFavorites.splice(targetIndex, 0, item);
-        renderModalSlots();
-        modalSyncReorder();
+        sendModalReorder();
     }
 }
-
-function modalDragEnd() {
-    this.classList.remove('dragging');
-    document.querySelectorAll('#modalSlotsList .fav-slot-row').forEach(r => r.classList.remove('drag-over'));
+function handleModalDragEnd(e) {
+    document.querySelectorAll('.fav-slot-row').forEach(r => {
+        r.classList.remove('dragging', 'drag-over');
+    });
 }
 
-function modalMoveItem(index, dir) {
-    const target = index + dir;
+function modalMoveSlot(index, direction) {
+    const target = index + direction;
     if (target < 0 || target >= modalFavorites.length) return;
     const item = modalFavorites.splice(index, 1)[0];
     modalFavorites.splice(target, 0, item);
-    renderModalSlots();
-    modalSyncReorder();
+    sendModalReorder();
 }
 
-function modalSyncReorder() {
+function sendModalReorder() {
     const order = modalFavorites.map(f => f.id);
     fetch('/api/favorites/reorder', {
         method: 'POST',
@@ -898,47 +1342,15 @@ function modalSyncReorder() {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            modalFavorites = data.favorites || [];
+            modalFavorites = data.favorites;
             renderModalSlots();
             updateProfileShowcaseGrid();
-            showModalAlert('Ranks updated.', 'success');
+            renderModalLibraryCandidates(modalLibraryCandidates);
         }
     });
 }
 
-function modalRemoveItem(favId) {
-    fetch(`/api/favorites/remove/${favId}`, {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            modalFavorites = data.favorites || [];
-            renderModalSlots();
-            renderModalLibList(modalLibraryMovies);
-            updateProfileShowcaseGrid();
-            showModalAlert('Removed from All-Time Favorites.', 'success');
-        } else {
-            showModalAlert(data.error, 'error');
-        }
-    });
-}
-
-function modalPromptReplace(favId, title) {
-    modalReplacingId = favId;
-    showModalAlert(`Choose a movie below to replace "${title}".`, 'info');
-}
-
-function modalAddFromLib(movieId) {
-    if (modalReplacingId) {
-        modalReplaceAction(modalReplacingId, { movie_id: movieId });
-        return;
-    }
-    if (modalFavorites.length >= 10) {
-        showModalAlert('List is full (10/10). Remove or replace one first.', 'error');
-        return;
-    }
+function modalAddFromLibrary(movieId) {
     fetch('/api/favorites/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -947,26 +1359,18 @@ function modalAddFromLib(movieId) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            modalFavorites = data.favorites || [];
+            modalFavorites = data.favorites;
             renderModalSlots();
-            renderModalLibList(modalLibraryMovies);
             updateProfileShowcaseGrid();
+            renderModalLibraryCandidates(modalLibraryCandidates);
             showModalAlert(data.message, 'success');
         } else {
-            showModalAlert(data.error, 'error');
+            showModalAlert(data.error || 'Could not add movie', 'error');
         }
     });
 }
 
 function modalAddFromTmdb(tmdbId) {
-    if (modalReplacingId) {
-        modalReplaceAction(modalReplacingId, { tmdb_id: tmdbId });
-        return;
-    }
-    if (modalFavorites.length >= 10) {
-        showModalAlert('List is full (10/10). Remove or replace one first.', 'error');
-        return;
-    }
     fetch('/api/favorites/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -975,77 +1379,52 @@ function modalAddFromTmdb(tmdbId) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            modalFavorites = data.favorites || [];
+            modalFavorites = data.favorites;
             renderModalSlots();
-            loadModalLibrary();
             updateProfileShowcaseGrid();
+            loadModalLibraryCandidates();
             showModalAlert(data.message, 'success');
         } else {
-            showModalAlert(data.error, 'error');
+            showModalAlert(data.error || 'Could not add movie', 'error');
         }
     });
 }
 
-function modalReplaceAction(favId, payload) {
-    fetch(`/api/favorites/replace/${favId}`, {
+function modalRemoveFavorite(favId, title) {
+    fetch(`/api/favorites/remove/${favId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        body: JSON.stringify(payload)
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(r => r.json())
     .then(data => {
-        modalReplacingId = null;
         if (data.success) {
-            modalFavorites = data.favorites || [];
+            modalFavorites = data.favorites;
             renderModalSlots();
-            renderModalLibList(modalLibraryMovies);
             updateProfileShowcaseGrid();
-            showModalAlert(data.message, 'success');
-        } else {
-            showModalAlert(data.error, 'error');
+            renderModalLibraryCandidates(modalLibraryCandidates);
+            showModalAlert(`Removed "${title}" from All-Time Favorites.`, 'info');
         }
     });
 }
 
-function switchModalTab(tab) {
-    const btnLib = document.getElementById('modalTabBtnLib');
-    const btnTmdb = document.getElementById('modalTabBtnTmdb');
-    const panelLib = document.getElementById('modalPanelLib');
-    const panelTmdb = document.getElementById('modalPanelTmdb');
-
-    if (tab === 'library') {
-        btnLib.classList.add('active');
-        btnTmdb.classList.remove('active');
-        panelLib.style.display = 'block';
-        panelTmdb.style.display = 'none';
-    } else {
-        btnTmdb.classList.add('active');
-        btnLib.classList.remove('active');
-        panelTmdb.style.display = 'block';
-        panelLib.style.display = 'none';
-    }
-}
-
-function renderModalLibList(items) {
-    const container = document.getElementById('modalLibList');
-    if (!container) return;
-    const favIds = new Set(modalFavorites.map(f => f.movie_id));
-
-    if (!items || items.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.8rem;">No movies found in your collection.</div>';
+function renderModalLibraryCandidates(candidates) {
+    const list = document.getElementById('modalLibList');
+    if (!list) return;
+    if (!candidates || candidates.length === 0) {
+        list.innerHTML = `<div style="text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.82rem;">No movies found in your library.</div>`;
         return;
     }
-
-    container.innerHTML = items.map(m => {
-        const inFav = favIds.has(m.id);
+    const favMovieIds = new Set(modalFavorites.map(f => f.movie_id));
+    list.innerHTML = candidates.map(c => {
+        const inFav = favMovieIds.has(c.id);
         return `
             <div class="candidate-item-card">
-                ${m.img_url ? `<img src="${m.img_url}" class="candidate-poster" alt="${m.title}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
+                ${c.img_url ? `<img src="${c.img_url}" class="candidate-poster" alt="${c.title}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
                 <div class="candidate-info">
-                    <div class="candidate-title" title="${m.title}">${m.title}</div>
-                    <div class="candidate-sub">${m.year || '—'} ${m.rating && m.rating > 0 ? `• <span style="color:var(--gold);">★ ${m.rating}</span>` : ''}</div>
+                    <div class="candidate-title" title="${c.title}">${c.title}</div>
+                    <div class="candidate-sub">${c.year || '—'} ${c.rating && c.rating > 0 ? `• <span style="color:var(--gold);">★ ${c.rating}</span>` : ''}</div>
                 </div>
-                <button type="button" class="btn-candidate-add" onclick="modalAddFromLib(${m.id})" ${inFav ? 'disabled' : ''}>
+                <button type="button" class="btn-candidate-add" onclick="modalAddFromLibrary(${c.id})" ${inFav ? 'disabled' : ''}>
                     ${inFav ? '✓ In Top 10' : '+ Add'}
                 </button>
             </div>
@@ -1053,27 +1432,27 @@ function renderModalLibList(items) {
     }).join('');
 }
 
-function filterModalLibCandidates(val) {
-    const q = val.trim().toLowerCase();
+function filterModalLibCandidates(query) {
+    const q = (query || '').toLowerCase().trim();
     if (!q) {
-        renderModalLibList(modalLibraryMovies);
+        renderModalLibraryCandidates(modalLibraryCandidates);
         return;
     }
-    renderModalLibList(modalLibraryMovies.filter(m => (m.title || '').toLowerCase().includes(q)));
+    const filtered = modalLibraryCandidates.filter(c => c.title.toLowerCase().includes(q));
+    renderModalLibraryCandidates(filtered);
 }
 
 function handleModalTmdbSearch(val) {
     clearTimeout(modalTmdbTimer);
-    const query = val.trim();
     const container = document.getElementById('modalTmdbList');
-    if (!query) {
-        container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted); font-size:0.82rem;">Type a movie title above to search TMDB.</div>';
+    const q = (val || '').trim();
+    if (!q) {
+        container.innerHTML = `<div style="text-align:center; padding:2rem 1rem; color:var(--text-muted); font-size:0.84rem;">Type a movie title above to search TMDB directly.</div>`;
         return;
     }
-    container.innerHTML = '<div style="text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.82rem;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
-
+    container.innerHTML = `<div style="text-align:center; padding:1.5rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Searching TMDB...</div>`;
     modalTmdbTimer = setTimeout(() => {
-        fetch(`/api/favorites/search_tmdb?q=${encodeURIComponent(query)}`)
+        fetch(`/api/favorites/search_tmdb?q=${encodeURIComponent(q)}`)
             .then(r => r.json())
             .then(results => {
                 if (!results || results.length === 0) {

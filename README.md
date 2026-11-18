@@ -1,6 +1,6 @@
-# ✦ DreamShelf
+# ✦ DreamShelf — Every Story Deserves a Shelf
 
-A celestial personal universe for curating, tracking, and reviewing your favorite movies and books. Built with Python and Flask.
+A celestial personal universe for curating, tracking, and reviewing your favorite movies and books. Because every story deserves a shelf. Built with Python and Flask.
 
 ## ✨ Features
 
