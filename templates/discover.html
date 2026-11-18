@@ -419,6 +419,7 @@ function refreshSectionDirect(section, tab, cat) {
             grid.style.opacity = '1';
             if (icon) icon.classList.remove('fa-spin');
             if (btn) btn.style.pointerEvents = '';
+            showToast('Unable to refresh recommendations. Please check your internet connection.', 'error');
         });
 }
 
@@ -466,15 +467,19 @@ function quickAdd(event, btn, type, id, status) {
                 }
                 showToast(data.message || 'Added to your shelf!', 'success');
             } else {
-                showToast(data.message || 'Already in your collection', 'info');
+                let msg = data.message || 'Could not add title.';
+                if (/https?connection|traceback|errno|socket|urllib/i.test(msg)) {
+                    msg = 'Could not add title. Please check your internet connection.';
+                }
+                showToast(msg, 'error');
                 btn.innerHTML = origHtml;
                 btn.style.pointerEvents = '';
             }
         })
         .catch(err => {
-            // Fallback to standard navigation if fetch fails, preserving page URL
-            const navUrl = btn.getAttribute('href') || url;
-            window.location.href = navUrl + (navUrl.includes('?') ? '&' : '?') + 'return_url=' + encodeURIComponent(window.location.href);
+            btn.innerHTML = origHtml;
+            btn.style.pointerEvents = '';
+            showToast('Unable to connect to the service. Please check your internet connection.', 'error');
         });
 }
 
@@ -666,8 +671,16 @@ function showPreview(type, id, card) {
     const cardAuthor = card && card.dataset.author ? encodeURIComponent(card.dataset.author) : '';
     const url = type === 'movie' ? `/movie_preview/${id}` : `/book_preview/${id}?author=${cardAuthor}`;
     fetch(url)
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) {
+                return r.json().then(errData => { throw new Error(errData.error || 'Preview failed'); }).catch(() => { throw new Error('Preview failed'); });
+            }
+            return r.json();
+        })
         .then(d => {
+            if (d.error) {
+                throw new Error(d.error);
+            }
             document.getElementById('previewPoster').src = d.poster || (card && card.dataset.img ? card.dataset.img : '');
             document.getElementById('previewTitle').textContent = d.title || (card ? card.dataset.title : '');
             document.getElementById('previewSub').textContent = type === 'movie'
@@ -712,7 +725,7 @@ function showPreview(type, id, card) {
             document.getElementById('previewLoading').style.display = 'none';
             document.getElementById('previewContent').style.display = 'block';
         })
-        .catch(() => {
+        .catch(err => {
             if (card) {
                 document.getElementById('previewPoster').src = card.dataset.img || '';
                 document.getElementById('previewTitle').textContent = card.dataset.title || '';
@@ -737,7 +750,17 @@ function showPreview(type, id, card) {
                 document.getElementById('previewLoading').style.display = 'none';
                 document.getElementById('previewContent').style.display = 'block';
             } else {
-                document.getElementById('previewLoading').innerHTML = '<p style="color:var(--danger)">Failed to load details.</p>';
+                let msg = 'Unable to reach the preview service. Please check your internet connection.';
+                if (err && err.message && !/https?connection|traceback|errno|socket|urllib/i.test(err.message)) {
+                    msg = err.message;
+                }
+                document.getElementById('previewLoading').innerHTML = `
+                    <div style="text-align:center; padding: 2.5rem 1.5rem; color:var(--text-muted);">
+                        <i class="fas fa-wifi" style="font-size:2.4rem; color:var(--accent); opacity:0.8; margin-bottom:1rem; display:block;"></i>
+                        <h3 style="font-size:1.15rem; color:#ffffff; font-weight:700; margin-bottom:0.4rem;">Connection Issue</h3>
+                        <p style="font-size:0.88rem; line-height:1.6; max-width:320px; margin:0 auto 1.2rem;">${escapeHtml(msg)}</p>
+                        <button type="button" class="btn-secondary" onclick="closePreview()" style="border-radius:8px; padding:0.5rem 1.2rem; font-size:0.82rem;">Close</button>
+                    </div>`;
             }
         });
 }

@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         `).join('');
                         dropdown.style.display = 'block';
+                    })
+                    .catch(() => {
+                        dropdown.style.display = 'none';
                     });
             }, 300);
         });

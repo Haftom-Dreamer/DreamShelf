@@ -282,6 +282,51 @@ def detect_book_category(title="", genre="", description="", explicit_category=N
             return cat
     return "fiction"
 
+def humanize_error(e, default="An unexpected error occurred. Please try again."):
+    """Convert technical exceptions (network timeouts, DNS, HTTP errors) into friendly plain text."""
+    if not e:
+        return default
+
+    raw = str(e).strip()
+    if not raw:
+        return default
+
+    err_str = raw.lower()
+
+    # Network / Connection / DNS / Host unreachable
+    if any(k in err_str for k in [
+        "connectionerror", "failed to resolve", "nameresolutionerror", 
+        "name or service not known", "nodename nor servname", "errno -2", "errno -3",
+        "newconnectionerror", "connection refused", "network is unreachable"
+    ]):
+        return "Unable to connect to the external movie or book service. Please check your internet connection and try again."
+
+    # Timeout
+    if any(k in err_str for k in ["timeout", "timed out", "connecttimeout", "readtimeout"]):
+        return "The connection timed out while contacting the service. Please check your internet connection and try again."
+
+    # Max retries
+    if "max retries exceeded" in err_str:
+        return "Connection failed after multiple attempts. Please check your internet connection."
+
+    # HTTP status code errors
+    if any(k in err_str for k in ["502 bad gateway", "503 service unavailable", "504 gateway timeout"]):
+        return "The external database is temporarily unavailable. Please try again in a few moments."
+    if "404" in err_str or "not found" in err_str:
+        return "The requested movie or book could not be found."
+    if any(k in err_str for k in ["401", "403", "forbidden", "unauthorized"]):
+        return "Access was denied or session expired. Please sign in again."
+
+    # Python stack traces or technical strings
+    if any(k in err_str for k in ["httpsconnectionpool", "httpconnectionpool", "traceback", "urllib3", "requests.exceptions"]):
+        return "Network connection issue. Please check your internet connection and try again."
+
+    # If it's a short human-readable message without code artifacts, return it
+    if len(raw) < 140 and not any(ch in raw for ch in ["<", ">", "://", "{", "}", "\\", "[errno"]):
+        return raw
+
+    return default
+
 with app.app_context():
     db.create_all()
     # --- Schema migration: add google_id column if it doesn't exist yet ---
@@ -2861,7 +2906,7 @@ def movie_preview(tmdb_id):
             "tmdb_id": tmdb_id,
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": humanize_error(e, "Connection timed out while loading preview.")}), 503
 
 
 @app.route("/book_preview/<book_id>")
@@ -2926,7 +2971,7 @@ def book_preview(book_id):
             "google_id": book_id,
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": humanize_error(e, "Connection timed out while loading book preview.")}), 503
 
 
 # =====================
@@ -3003,9 +3048,10 @@ def quick_add_movie():
             })
         flash(f'"{new_movie.title}" added to your collection!', "success")
     except Exception as e:
+        msg = humanize_error(e, "Could not add movie. Please check your internet connection and try again.")
         if is_ajax:
-            return jsonify({"success": False, "message": str(e)}), 500
-        flash(f"Could not add movie: {str(e)}", "error")
+            return jsonify({"success": False, "message": msg}), 500
+        flash(msg, "error")
 
     return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="movies"))
 
@@ -3164,9 +3210,10 @@ def quick_add_book():
             })
         flash(f'"{new_book.title}" added to your collection!', "success")
     except Exception as e:
+        msg = humanize_error(e, "Could not add book. Please check your internet connection and try again.")
         if is_ajax:
-            return jsonify({"success": False, "message": str(e)}), 500
-        flash(f"Could not add book: {str(e)}", "error")
+            return jsonify({"success": False, "message": msg}), 500
+        flash(msg, "error")
 
     return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="books"))
 
@@ -3190,13 +3237,20 @@ def add():
 @app.route("/find")
 @login_required
 def find():
-    title = request.args.get("title")
+    title = (request.args.get("title") or "").strip()
     if not title:
         return redirect(url_for("add"))
-    r = requests.get("https://api.themoviedb.org/3/search/movie",
-                     params={"api_key": TMDB_API_KEY, "query": title})
-    data = r.json()
-    return render_template("select.html", items=data.get("results", []), item_type="Movie", query=title)
+    results = []
+    try:
+        r = requests.get("https://api.themoviedb.org/3/search/movie",
+                         params={"api_key": TMDB_API_KEY, "query": title}, timeout=6)
+        if r.status_code == 200:
+            results = r.json().get("results", [])
+        else:
+            flash("Movie search is temporarily unavailable. Please try again shortly.", "error")
+    except Exception as e:
+        flash(humanize_error(e, "Could not reach movie search. Please check your internet connection and try again."), "error")
+    return render_template("select.html", items=results, item_type="Movie", query=title)
 
 
 @app.route("/select")
@@ -3215,20 +3269,24 @@ def select():
 
     is_tv = req_type == "series"
     d = None
-    if not is_tv:
-        r = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}",
-                         params={"api_key": TMDB_API_KEY})
-        if r.status_code == 200:
-            d = r.json()
-    if not d:
-        r_tv = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}",
-                            params={"api_key": TMDB_API_KEY})
-        if r_tv.status_code == 200:
-            d = r_tv.json()
-            is_tv = True
+    try:
+        if not is_tv:
+            r = requests.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}",
+                             params={"api_key": TMDB_API_KEY}, timeout=6)
+            if r.status_code == 200:
+                d = r.json()
+        if not d:
+            r_tv = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}",
+                                params={"api_key": TMDB_API_KEY}, timeout=6)
+            if r_tv.status_code == 200:
+                d = r_tv.json()
+                is_tv = True
+    except Exception as e:
+        flash(humanize_error(e, "Could not retrieve movie details. Please check your internet connection and try again."), "error")
+        return redirect(url_for("add"))
 
     if not d:
-        flash("Could not fetch details from TMDB.", "error")
+        flash("Could not retrieve movie details from the cinema service. Please try again.", "error")
         return redirect(url_for("add"))
 
     genres = ", ".join([g.get("name", "") for g in d.get("genres", []) if g.get("name")])
@@ -3621,7 +3679,7 @@ def select_book():
             return redirect(request.args.get("return_url") or url_for("collection", tab="books", status="to_read"))
         return redirect(request.args.get("return_url") or url_for("edit_book", book_id=new_book.id))
     except Exception as e:
-        flash(f"Could not fetch book details: {str(e)}", "error")
+        flash(humanize_error(e, "Could not fetch book details. Please check your internet connection and try again."), "error")
         return redirect(url_for("add_book"))
 
 
@@ -3733,6 +3791,40 @@ def api_search_book():
         return jsonify(results)
     except:
         return jsonify([])
+
+# =====================
+# --- Error Handlers ---
+# =====================
+
+@app.errorhandler(404)
+def error_404(e):
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.path.startswith("/api/"):
+        return jsonify({"success": False, "error": "The requested resource was not found."}), 404
+    return render_template("error.html",
+                           status_code=404,
+                           error_title="Page or Title Not Found",
+                           error_message="The story or page you are looking for does not exist, has been removed, or is currently private."), 404
+
+@app.errorhandler(500)
+def error_500(e):
+    msg = humanize_error(e, "We encountered an issue processing your request. Please check your internet connection and try again.")
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.path.startswith("/api/"):
+        return jsonify({"success": False, "error": msg, "message": msg}), 500
+    return render_template("error.html",
+                           status_code=500,
+                           error_title="Connection or Service Issue",
+                           error_message=msg), 500
+
+@app.errorhandler(requests.exceptions.RequestException)
+def handle_network_exception(e):
+    msg = humanize_error(e, "Network connection issue. Please check your internet connection and try again.")
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.path.startswith("/api/"):
+        return jsonify({"success": False, "error": msg, "message": msg}), 503
+    return render_template("error.html",
+                           status_code=503,
+                           is_network_error=True,
+                           error_title="Internet Connection Issue",
+                           error_message=msg), 503
 
 if __name__ == "__main__":
     app.run(debug=True)

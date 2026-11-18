@@ -650,8 +650,7 @@ function toggleMediaStatus(event, type, id) {
     })
     .catch(err => {
         if (quickBtn) quickBtn.classList.remove('loading');
-        console.error('Error toggling status:', err);
-        window.location.href = `/toggle_status/${type}/${id}?return_url=${encodeURIComponent(window.location.href)}`;
+        showCollectionToast('Unable to update status. Please check your internet connection.', 'error');
     });
 }
 
@@ -688,11 +687,11 @@ function deleteMediaItem(event, type, id, deleteUrl) {
             applyLiveCounts(data, type, currentFilterStatus);
             showCollectionToast(data.message || 'Item removed.', 'info');
         } else {
-            alert(data.error || 'Could not delete item.');
+            showCollectionToast(data.error || 'Could not delete item.', 'error');
         }
     })
     .catch(err => {
-        window.location.href = deleteUrl + (deleteUrl.includes('?') ? '&' : '?') + 'return_url=' + encodeURIComponent(window.location.href);
+        showCollectionToast('Unable to remove item. Please check your internet connection.', 'error');
     });
 }
 

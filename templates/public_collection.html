@@ -1118,10 +1118,10 @@ function submitCreateCollection() {
             closeCreateColModal();
             window.location.href = "{{ url_for('public_collection', username=profile_user.username, tab='collections') }}";
         } else {
-            alert(data.error || 'Failed to create collection.');
+            showProfileToast(data.error || 'Failed to create collection.', 'error');
         }
     })
-    .catch(() => alert('Network error creating collection.'));
+    .catch(() => showProfileToast('Unable to connect. Please check your internet connection.', 'error'));
 }
 
 function deleteCollection(id, title) {
@@ -1137,10 +1137,10 @@ function deleteCollection(id, title) {
             if (card) card.remove();
             showProfileToast(`Deleted collection "${title}".`, 'info');
         } else {
-            alert(data.error || 'Failed to delete collection.');
+            showProfileToast(data.error || 'Failed to delete collection.', 'error');
         }
     })
-    .catch(() => alert('Network error deleting collection.'));
+    .catch(() => showProfileToast('Unable to connect. Please check your internet connection.', 'error'));
 }
 
 // Dropdown Filters
