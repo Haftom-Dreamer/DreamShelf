@@ -36,7 +36,7 @@ A modern, celestial dark-mode web application for curating, tracking, and showca
 
 ### 1. Clone & Setup Virtual Environment
 ```bash
-git clone https://github.com/your-username/dreamshelf.git
+git clone https://github.com/Haftom-Dreamer/dreamshelf.git
 cd dreamshelf
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate

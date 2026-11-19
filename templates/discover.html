@@ -9,9 +9,12 @@
     <div class="discover-poster">
         <img src="{{ movie.img_url }}" alt="{{ movie.title }}" loading="lazy">
         <div class="discover-overlay">
-            <button class="btn-preview" onclick="showPreview('movie', '{{ movie.tmdb_id }}', this.closest('.discover-card'))">
+            <button type="button" class="btn-preview" onclick="showPreview('movie', '{{ movie.tmdb_id }}', this.closest('.discover-card'))" title="Quick Preview">
                 <i class="fas fa-eye"></i> Preview
             </button>
+            <a href="{{ url_for('movie_detail', tmdb_id=movie.tmdb_id) }}" class="btn-preview-detail" title="Full Detail View">
+                <i class="fas fa-info-circle"></i> Details
+            </a>
         </div>
         <div class="tmdb-rating">⭐ {{ movie.rating }}</div>
         {% if movie.media_type == 'series' %}
@@ -46,9 +49,12 @@
     <div class="discover-poster">
         <img src="{{ book.img_url }}" alt="{{ book.title }}" loading="lazy">
         <div class="discover-overlay">
-            <button class="btn-preview book" onclick="showPreview('book', '{{ book.google_id }}', this.closest('.discover-card'))">
+            <button type="button" class="btn-preview book" onclick="showPreview('book', '{{ book.google_id }}', this.closest('.discover-card'))" title="Quick Preview">
                 <i class="fas fa-eye"></i> Preview
             </button>
+            <a href="{{ url_for('book_detail', google_id=book.google_id) }}" class="btn-preview-detail book" title="Full Book Details">
+                <i class="fas fa-info-circle"></i> Details
+            </a>
         </div>
     </div>
     <div class="discover-info">

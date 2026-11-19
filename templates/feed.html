@@ -10,21 +10,23 @@
 
     <div style="display:flex; flex-direction:column; gap:1.5rem;">
         {% for feed_event in feed_items %}
-        <div style="background:var(--card-bg); border-radius:12px; padding:1.5rem; display:flex; gap:1rem; box-shadow:0 10px 30px rgba(0,0,0,0.1); border:1px solid rgba(255,255,255,0.05);">
+        <div class="feed-item-card" style="background:var(--bg-card); border-radius:12px; padding:1.25rem; display:flex; gap:1rem; box-shadow:0 10px 30px rgba(0,0,0,0.1); border:1px solid rgba(255,255,255,0.08);">
             <div>
                 {% if feed_event.user.avatar_url %}
-                <img src="{{ feed_event.user.avatar_url }}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
+                <img src="{{ feed_event.user.avatar_url }}" style="width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);" alt="{{ feed_event.user.username }}">
                 {% else %}
-                <div style="width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{ feed_event.user.avatar_color }}; color: white; font-size: 1.5rem;">
+                <div style="width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{ feed_event.user.avatar_color }}; color: white; font-size: 1.3rem;">
                     <i class="fas fa-user"></i>
                 </div>
                 {% endif %}
             </div>
-            <div style="flex: 1;">
-                <div style="margin-bottom: 0.5rem;">
-                    <a href="{{ url_for('public_collection', username=feed_event.user.username) }}" style="color:white; font-weight:bold; text-decoration:none; font-size:1.1rem;">{{ feed_event.user.username }}</a> 
-                    <span style="opacity: 0.7; font-size: 0.95rem;"> {{ feed_event.action }}</span>
-                    <span style="opacity: 0.4; font-size: 0.8rem; float: right;">{{ feed_event.date.strftime('%b %d, %Y') if feed_event.date else 'Recently' }}</span>
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.5rem;">
+                    <div>
+                        <a href="{{ url_for('public_collection', username=feed_event.user.username) }}" style="color:white; font-weight:bold; text-decoration:none; font-size:1.05rem;">{{ feed_event.user.username }}</a> 
+                        <span style="opacity: 0.7; font-size: 0.9rem;"> {{ feed_event.action }}</span>
+                    </div>
+                    <span style="opacity: 0.5; font-size: 0.75rem;">{{ feed_event.date.strftime('%b %d, %Y') if feed_event.date else 'Recently' }}</span>
                 </div>
                 
                 <div style="display: flex; gap: 1rem; background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px;">
