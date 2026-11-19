@@ -2,5 +2,10 @@ Flask
 Flask-Bootstrap
 Flask-SQLAlchemy
 Flask-WTF
+Flask-Login
 WTForms
+email-validator
+python-dotenv
 requests
+gunicorn
+psycopg2-binary

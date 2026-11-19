@@ -1221,6 +1221,16 @@ function switchModalTab(tab) {
     }
 }
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function loadModalFavorites() {
     fetch('/api/favorites/my')
         .then(r => r.json())
@@ -1263,6 +1273,8 @@ function renderModalSlots() {
         const isFirst = index === 0;
         const isLast = index === modalFavorites.length - 1;
         const isRank1 = fav.rank === 1;
+        const titleEsc = escapeHtml(fav.title);
+        const yearEsc = escapeHtml(fav.year || '—');
 
         return `
             <div class="fav-slot-row ${isRank1 ? 'rank-1' : ''}" draggable="true"
@@ -1276,15 +1288,15 @@ function renderModalSlots() {
                 <span class="fav-slot-rank-pill ${isRank1 ? 'rank-1' : ''}">
                     ${isRank1 ? '<i class="fas fa-crown"></i> #1' : '#' + fav.rank}
                 </span>
-                ${fav.img_url ? `<img src="${fav.img_url}" class="fav-slot-thumb" alt="${fav.title}" loading="lazy">` : `<div class="fav-slot-thumb" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
+                ${fav.img_url ? `<img src="${fav.img_url}" class="fav-slot-thumb" alt="${titleEsc}" loading="lazy">` : `<div class="fav-slot-thumb" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
                 <div class="fav-slot-info">
-                    <div class="fav-slot-title" title="${fav.title}">${fav.title}</div>
-                    <div class="fav-slot-sub">${fav.year || '—'} ${fav.rating && fav.rating > 0 ? `• <span style="color:var(--gold);">★ ${fav.rating}</span>` : ''}</div>
+                    <div class="fav-slot-title" title="${titleEsc}">${titleEsc}</div>
+                    <div class="fav-slot-sub">${yearEsc} ${fav.rating && fav.rating > 0 ? `• <span style="color:var(--gold);">★ ${fav.rating}</span>` : ''}</div>
                 </div>
                 <div class="fav-slot-actions">
                     <button type="button" class="btn-slot-move" title="Move Up" onclick="modalMoveSlot(${index}, -1)" ${isFirst ? 'disabled' : ''}>▲</button>
                     <button type="button" class="btn-slot-move" title="Move Down" onclick="modalMoveSlot(${index}, 1)" ${isLast ? 'disabled' : ''}>▼</button>
-                    <button type="button" class="btn-slot-remove" title="Remove from Top 10" onclick="modalRemoveFavorite(${fav.id}, '${fav.title}')">&times;</button>
+                    <button type="button" class="btn-slot-remove" title="Remove from Top 10" onclick="modalRemoveFavorite(${fav.id})">&times;</button>
                 </div>
             </div>
         `;
@@ -1390,7 +1402,9 @@ function modalAddFromTmdb(tmdbId) {
     });
 }
 
-function modalRemoveFavorite(favId, title) {
+function modalRemoveFavorite(favId, movieTitle) {
+    const fav = modalFavorites.find(f => f.id === favId);
+    const title = movieTitle || (fav ? fav.title : 'Movie');
     fetch(`/api/favorites/remove/${favId}`, {
         method: 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -1417,12 +1431,14 @@ function renderModalLibraryCandidates(candidates) {
     const favMovieIds = new Set(modalFavorites.map(f => f.movie_id));
     list.innerHTML = candidates.map(c => {
         const inFav = favMovieIds.has(c.id);
+        const titleEsc = escapeHtml(c.title);
+        const yearEsc = escapeHtml(c.year || '—');
         return `
             <div class="candidate-item-card">
-                ${c.img_url ? `<img src="${c.img_url}" class="candidate-poster" alt="${c.title}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
+                ${c.img_url ? `<img src="${c.img_url}" class="candidate-poster" alt="${titleEsc}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
                 <div class="candidate-info">
-                    <div class="candidate-title" title="${c.title}">${c.title}</div>
-                    <div class="candidate-sub">${c.year || '—'} ${c.rating && c.rating > 0 ? `• <span style="color:var(--gold);">★ ${c.rating}</span>` : ''}</div>
+                    <div class="candidate-title" title="${titleEsc}">${titleEsc}</div>
+                    <div class="candidate-sub">${yearEsc} ${c.rating && c.rating > 0 ? `• <span style="color:var(--gold);">★ ${c.rating}</span>` : ''}</div>
                 </div>
                 <button type="button" class="btn-candidate-add" onclick="modalAddFromLibrary(${c.id})" ${inFav ? 'disabled' : ''}>
                     ${inFav ? '✓ In Top 10' : '+ Add'}
@@ -1462,12 +1478,14 @@ function handleModalTmdbSearch(val) {
                 const tmdbIds = new Set(modalFavorites.map(f => f.tmdb_id).filter(Boolean));
                 container.innerHTML = results.map(i => {
                     const inFav = tmdbIds.has(i.tmdb_id) || i.in_favorites;
+                    const titleEsc = escapeHtml(i.title);
+                    const yearEsc = escapeHtml(i.year || '—');
                     return `
                         <div class="candidate-item-card">
-                            ${i.img_url ? `<img src="${i.img_url}" class="candidate-poster" alt="${i.title}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
+                            ${i.img_url ? `<img src="${i.img_url}" class="candidate-poster" alt="${titleEsc}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
                             <div class="candidate-info">
-                                <div class="candidate-title" title="${i.title}">${i.title}</div>
-                                <div class="candidate-sub">${i.year || '—'} ${i.rating && i.rating > 0 ? `• <span style="color:var(--gold);">★ ${i.rating}</span>` : ''}</div>
+                                <div class="candidate-title" title="${titleEsc}">${titleEsc}</div>
+                                <div class="candidate-sub">${yearEsc} ${i.rating && i.rating > 0 ? `• <span style="color:var(--gold);">★ ${i.rating}</span>` : ''}</div>
                             </div>
                             <button type="button" class="btn-candidate-add" onclick="modalAddFromTmdb('${i.tmdb_id}')" ${inFav ? 'disabled' : ''}>
                                 ${inFav ? '✓ In Top 10' : '+ Add'}

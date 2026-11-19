@@ -124,6 +124,16 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLibraryCandidates();
 });
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Load user favorites from API
 function loadFavorites() {
     fetch('/api/favorites/my', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
@@ -169,18 +179,21 @@ function renderSlots() {
             row.dataset.index = i;
             row.dataset.id = fav.id;
 
+            const titleEsc = escapeHtml(fav.title);
+            const yearEsc = escapeHtml(fav.year || '—');
+
             row.innerHTML = `
                 <div class="fav-slot-drag-handle" title="Drag to reorder"><i class="fas fa-grip-vertical"></i></div>
                 <div class="fav-slot-rank-pill ${isRank1 ? 'rank-1' : ''}">${isRank1 ? '<i class="fas fa-crown"></i> 1' : '#' + rank}</div>
-                ${fav.img_url ? `<img src="${fav.img_url}" class="fav-slot-poster" alt="${fav.title}" loading="lazy">` : `<div class="fav-slot-poster" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.8rem;"><i class="fas fa-film"></i></div>`}
+                ${fav.img_url ? `<img src="${fav.img_url}" class="fav-slot-poster" alt="${titleEsc}" loading="lazy">` : `<div class="fav-slot-poster" style="background:var(--bg-card); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.8rem;"><i class="fas fa-film"></i></div>`}
                 <div class="fav-slot-info">
-                    <div class="fav-slot-title" title="${fav.title}">${fav.title}</div>
-                    <div class="fav-slot-sub">${fav.year || '—'} ${fav.rating && fav.rating > 0 ? `• <span style="color:var(--gold);">★ ${fav.rating}</span>` : ''}</div>
+                    <div class="fav-slot-title" title="${titleEsc}">${titleEsc}</div>
+                    <div class="fav-slot-sub">${yearEsc} ${fav.rating && fav.rating > 0 ? `• <span style="color:var(--gold);">★ ${fav.rating}</span>` : ''}</div>
                 </div>
                 <div class="fav-slot-actions">
                     <button type="button" class="btn-slot-icon" onclick="moveFavorite(${i}, -1)" title="Move Up" ${i === 0 ? 'disabled style="opacity:0.25; cursor:not-allowed;"' : ''}><i class="fas fa-chevron-up"></i></button>
                     <button type="button" class="btn-slot-icon" onclick="moveFavorite(${i}, 1)" title="Move Down" ${i === currentFavorites.length - 1 ? 'disabled style="opacity:0.25; cursor:not-allowed;"' : ''}><i class="fas fa-chevron-down"></i></button>
-                    <button type="button" class="btn-slot-icon" onclick="promptReplaceSlot(${fav.id}, '${fav.title.replace(/'/g, "\\'")}')" title="Replace Movie"><i class="fas fa-sync-alt"></i></button>
+                    <button type="button" class="btn-slot-icon" onclick="promptReplaceSlot(${fav.id})" title="Replace Movie"><i class="fas fa-sync-alt"></i></button>
                     <button type="button" class="btn-slot-icon remove" onclick="removeFavorite(${fav.id})" title="Remove"><i class="fas fa-trash"></i></button>
                 </div>
             `;
@@ -301,7 +314,8 @@ function removeFavorite(favId) {
 // Prompt replace slot
 function promptReplaceSlot(favId, movieTitle) {
     replacingSlotId = favId;
-    showAlert(`Select a replacement for "${movieTitle}" from the panel on the right.`, 'info');
+    const title = movieTitle || currentFavorites.find(f => f.id === favId)?.title || 'Movie';
+    showAlert(`Select a replacement for "${title}" from the panel on the right.`, 'info');
     // Scroll right panel into view on mobile
     const panel = document.querySelector('.fav-add-section');
     if (panel) panel.scrollIntoView({ behavior: 'smooth' });
@@ -465,12 +479,14 @@ function renderLibraryCandidates(items) {
 
     container.innerHTML = items.map(m => {
         const inFav = favMovieIds.has(m.id);
+        const titleEsc = escapeHtml(m.title);
+        const yearEsc = escapeHtml(m.year || '—');
         return `
             <div class="candidate-item-card">
-                ${m.img_url ? `<img src="${m.img_url}" class="candidate-poster" alt="${m.title}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-surface); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
+                ${m.img_url ? `<img src="${m.img_url}" class="candidate-poster" alt="${titleEsc}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-surface); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
                 <div class="candidate-info">
-                    <div class="candidate-title" title="${m.title}">${m.title}</div>
-                    <div class="candidate-sub">${m.year || '—'} ${m.rating && m.rating > 0 ? `• <span style="color:var(--gold);">★ ${m.rating}</span>` : ''}</div>
+                    <div class="candidate-title" title="${titleEsc}">${titleEsc}</div>
+                    <div class="candidate-sub">${yearEsc} ${m.rating && m.rating > 0 ? `• <span style="color:var(--gold);">★ ${m.rating}</span>` : ''}</div>
                 </div>
                 <button type="button" class="btn-candidate-add" onclick="addFavoriteFromLibrary(${m.id})" ${inFav ? 'disabled' : ''}>
                     ${inFav ? '✓ In Top 10' : '+ Add'}
@@ -530,12 +546,14 @@ function handleTmdbSearch(val) {
 
                 container.innerHTML = results.map(i => {
                     const inFav = currentTmdbIds.has(i.tmdb_id) || i.in_favorites;
+                    const titleEsc = escapeHtml(i.title);
+                    const yearEsc = escapeHtml(i.year || '—');
                     return `
                         <div class="candidate-item-card">
-                            ${i.img_url ? `<img src="${i.img_url}" class="candidate-poster" alt="${i.title}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-surface); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
+                            ${i.img_url ? `<img src="${i.img_url}" class="candidate-poster" alt="${titleEsc}" loading="lazy">` : `<div class="candidate-poster" style="background:var(--bg-surface); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="fas fa-film"></i></div>`}
                             <div class="candidate-info">
-                                <div class="candidate-title" title="${i.title}">${i.title}</div>
-                                <div class="candidate-sub">${i.year || '—'} ${i.rating && i.rating > 0 ? `• <span style="color:var(--gold);">★ ${i.rating}</span>` : ''}</div>
+                                <div class="candidate-title" title="${titleEsc}">${titleEsc}</div>
+                                <div class="candidate-sub">${yearEsc} ${i.rating && i.rating > 0 ? `• <span style="color:var(--gold);">★ ${i.rating}</span>` : ''}</div>
                             </div>
                             <button type="button" class="btn-candidate-add" id="tmdb-add-btn-${i.tmdb_id}" onclick="addFavoriteFromTmdb('${i.tmdb_id}')" ${inFav ? 'disabled' : ''}>
                                 ${inFav ? '✓ In Top 10' : '+ Add'}

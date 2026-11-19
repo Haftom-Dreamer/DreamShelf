@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 load_dotenv()
-from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session, abort
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
@@ -19,9 +19,10 @@ from collections import Counter, defaultdict
 import io
 import csv
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Date, Boolean
+from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Date, Boolean, event
+from sqlalchemy.engine import Engine
 
-TMDB_API_KEY = "f319b185cd1af98f98b55a81304dfe9b"
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "f319b185cd1af98f98b55a81304dfe9b")
 
 # =====================
 # --- Google OAuth Config ---
@@ -38,10 +39,24 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7Y0sKR6b'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '8BYkEfBA6O6donzWlSihBXox7Y0sKR6b')
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+if os.environ.get("FLASK_ENV") == "production" or os.environ.get("SESSION_COOKIE_SECURE", "").lower() == "true":
+    app.config['SESSION_COOKIE_SECURE'] = True
+
 Bootstrap(app)
-db_path = os.path.abspath("favorite-movies.db")
-app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    # Heroku provides postgres:// which SQLAlchemy 1.4+ expects as postgresql://
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+else:
+    db_path = os.path.abspath("favorite-movies.db")
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max upload
 
@@ -54,10 +69,40 @@ ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
+def is_safe_url(target):
+    """Ensure redirect target is a safe relative path or same-host URL (CWE-601)."""
+    if not target:
+        return False
+    ref_url = urllib.parse.urlparse(request.host_url)
+    test_url = urllib.parse.urlparse(urllib.parse.urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
+
+def is_safe_origin(req):
+    """Verify request originates from same origin to guard mutating endpoints."""
+    fetch_site = req.headers.get("Sec-Fetch-Site")
+    if fetch_site in ["same-origin", "same-site", "none"]:
+        return True
+    ref = req.referrer
+    if ref:
+        return urllib.parse.urlsplit(ref).netloc == req.host
+    # If no fetch header and no referrer (e.g. testing or CLI), permit if not cross-site
+    return fetch_site != "cross-site"
+
 class Base(DeclarativeBase):
     pass
 
 db = SQLAlchemy(model_class=Base)
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    """Enable foreign key constraints in SQLite."""
+    if "sqlite" in app.config.get("SQLALCHEMY_DATABASE_URI", ""):
+        try:
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+        except Exception:
+            pass
 db.init_app(app)
 
 login_manager = LoginManager()
@@ -329,27 +374,73 @@ def humanize_error(e, default="An unexpected error occurred. Please try again.")
 
 with app.app_context():
     db.create_all()
-    # --- Schema migration: add google_id column if it doesn't exist yet ---
+    # Safe schema migration for SQLite & PostgreSQL
     from sqlalchemy import inspect, text
-    inspector = inspect(db.engine)
-    existing_cols = [c["name"] for c in inspector.get_columns("user")]
-    if "google_id" not in existing_cols:
-        with db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE user ADD COLUMN google_id VARCHAR(100)"))
-            conn.commit()
-    # Add media_type column to movie table if missing
-    movie_cols = [c["name"] for c in inspector.get_columns("movie")]
-    if "media_type" not in movie_cols:
-        with db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE movie ADD COLUMN media_type VARCHAR(30) NOT NULL DEFAULT 'movie'"))
-            conn.commit()
+    try:
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        # User table migrations
+        if "user" in tables:
+            existing_user_cols = {c["name"] for c in inspector.get_columns("user")}
+            user_migrations = [
+                ("google_id", "VARCHAR(100)"),
+                ("display_name", "VARCHAR(120)"),
+                ("location", "VARCHAR(120)"),
+                ("bio", "VARCHAR(500)"),
+                ("avatar_url", "VARCHAR(500)"),
+                ("cover_url", "VARCHAR(500)"),
+                ("favorite_genres", "VARCHAR(300)"),
+                ("website", "VARCHAR(250)"),
+                ("twitter", "VARCHAR(100)"),
+                ("letterboxd", "VARCHAR(100)"),
+                ("instagram", "VARCHAR(100)"),
+                ("is_private", "BOOLEAN DEFAULT 0"),
+            ]
+            with db.engine.connect() as conn:
+                for col_name, col_type in user_migrations:
+                    if col_name not in existing_user_cols:
+                        try:
+                            conn.execute(text(f'ALTER TABLE "user" ADD COLUMN {col_name} {col_type}'))
+                            conn.commit()
+                        except Exception:
+                            pass
 
-    # Add category column to book table if missing
-    book_cols = [c["name"] for c in inspector.get_columns("book")]
-    if "category" not in book_cols:
-        with db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE book ADD COLUMN category VARCHAR(50) NOT NULL DEFAULT 'fiction'"))
-            conn.commit()
+        # Movie table migrations
+        if "movie" in tables:
+            existing_movie_cols = {c["name"] for c in inspector.get_columns("movie")}
+            movie_migrations = [
+                ("media_type", "VARCHAR(30) NOT NULL DEFAULT 'movie'"),
+                ("custom_tags", "VARCHAR(250) DEFAULT ''"),
+                ("date_watched", "DATE"),
+            ]
+            with db.engine.connect() as conn:
+                for col_name, col_type in movie_migrations:
+                    if col_name not in existing_movie_cols:
+                        try:
+                            conn.execute(text(f'ALTER TABLE movie ADD COLUMN {col_name} {col_type}'))
+                            conn.commit()
+                        except Exception:
+                            pass
+
+        # Book table migrations
+        if "book" in tables:
+            existing_book_cols = {c["name"] for c in inspector.get_columns("book")}
+            book_migrations = [
+                ("category", "VARCHAR(50) NOT NULL DEFAULT 'fiction'"),
+                ("custom_tags", "VARCHAR(250) DEFAULT ''"),
+                ("date_read", "DATE"),
+            ]
+            with db.engine.connect() as conn:
+                for col_name, col_type in book_migrations:
+                    if col_name not in existing_book_cols:
+                        try:
+                            conn.execute(text(f'ALTER TABLE book ADD COLUMN {col_name} {col_type}'))
+                            conn.commit()
+                        except Exception:
+                            pass
+    except Exception:
+        pass
 
     # One-time smart auto-categorization for existing animation/anime movies in DB
     with db.engine.connect() as conn:
@@ -497,7 +588,9 @@ def login():
         if user and user.password_hash and check_password_hash(user.password_hash, form.password.data):
             login_user(user)
             next_page = request.args.get("next")
-            return redirect(next_page or url_for("dashboard"))
+            if next_page and is_safe_url(next_page):
+                return redirect(next_page)
+            return redirect(url_for("dashboard"))
         elif user and not user.password_hash:
             # Account exists but was created via Google — guide them
             flash("This email is registered via Google Sign-In. Please use the \"Continue with Google\" button.", "error")
@@ -678,7 +771,9 @@ def google_callback():
         return redirect(url_for("login"))
 
     next_url = session.pop("oauth_next", None)
-    return redirect(next_url or url_for("dashboard"))
+    if next_url and is_safe_url(next_url):
+        return redirect(next_url)
+    return redirect(url_for("dashboard"))
 
 class SettingsForm(FlaskForm):
     display_name = StringField("Display Name", validators=[Optional(), Length(max=120)])
@@ -871,6 +966,8 @@ def feed():
 @app.route("/view/movie/<int:item_id>")
 def view_movie(item_id):
     movie = Movie.query.get_or_404(item_id)
+    is_owner = current_user.is_authenticated and (current_user.id == movie.user_id)
+    can_view_personal = is_owner or not (movie.owner and movie.owner.is_private)
     response = {}
     trailer_key = None
     cast = []
@@ -901,12 +998,14 @@ def view_movie(item_id):
         except Exception:
             pass
 
-    return render_template("detail.html", item=movie, trailer_key=trailer_key, cast=cast, director=director, backdrop_url=backdrop_url, item_type="movie")
+    return render_template("detail.html", item=movie, trailer_key=trailer_key, cast=cast, director=director, backdrop_url=backdrop_url, item_type="movie", can_view_personal=can_view_personal, is_owner=is_owner)
 
 @app.route("/view/book/<int:item_id>")
 def view_book(item_id):
     book = Book.query.get_or_404(item_id)
-    return render_template("detail.html", item=book, trailer_key=None, cast=[], director=book.author, backdrop_url=book.img_url, item_type="book")
+    is_owner = current_user.is_authenticated and (current_user.id == book.user_id)
+    can_view_personal = is_owner or not (book.owner and book.owner.is_private)
+    return render_template("detail.html", item=book, trailer_key=None, cast=[], director=book.author, backdrop_url=book.img_url, item_type="book", can_view_personal=can_view_personal, is_owner=is_owner)
 
 @app.route("/discover/movie/<int:tmdb_id>")
 @app.route("/view/tmdb/<int:tmdb_id>")
@@ -1311,77 +1410,44 @@ def collection():
     movies = movie_q.all()
     books = book_q.all()
 
-    # Counts for collection summary and filter badges
-    watched_count = Movie.query.filter_by(user_id=current_user.id, status="watched").count()
-    to_watch_count = Movie.query.filter_by(user_id=current_user.id, status="to_watch").count()
-    total_movies_count = watched_count + to_watch_count
+    # Pre-fetch user's complete library in 2 queries to compute all badge counts in-memory (replaces 31 SQL count queries)
+    user_all_movies = Movie.query.filter_by(user_id=current_user.id).all()
+    user_all_books = Book.query.filter_by(user_id=current_user.id).all()
 
-    read_count = Book.query.filter_by(user_id=current_user.id, status="read").count()
-    to_read_count = Book.query.filter_by(user_id=current_user.id, status="to_read").count()
-    total_books_count = read_count + to_read_count
+    watched_count = sum(1 for m in user_all_movies if m.status == "watched")
+    to_watch_count = sum(1 for m in user_all_movies if m.status == "to_watch")
+    total_movies_count = len(user_all_movies)
 
-    # Media type counts with watched/total breakdown (from full collection)
-    movie_type_counts = {
-        "movie": {
-            "total": Movie.query.filter_by(user_id=current_user.id, media_type="movie").count(),
-            "watched": Movie.query.filter_by(user_id=current_user.id, media_type="movie", status="watched").count(),
-            "to_watch": Movie.query.filter_by(user_id=current_user.id, media_type="movie", status="to_watch").count(),
-        },
-        "series": {
-            "total": Movie.query.filter_by(user_id=current_user.id, media_type="series").count(),
-            "watched": Movie.query.filter_by(user_id=current_user.id, media_type="series", status="watched").count(),
-            "to_watch": Movie.query.filter_by(user_id=current_user.id, media_type="series", status="to_watch").count(),
-        },
-        "animation": {
-            "total": Movie.query.filter_by(user_id=current_user.id, media_type="animation").count(),
-            "watched": Movie.query.filter_by(user_id=current_user.id, media_type="animation", status="watched").count(),
-            "to_watch": Movie.query.filter_by(user_id=current_user.id, media_type="animation", status="to_watch").count(),
-        },
-        "anime": {
-            "total": Movie.query.filter_by(user_id=current_user.id, media_type="anime").count(),
-            "watched": Movie.query.filter_by(user_id=current_user.id, media_type="anime", status="watched").count(),
-            "to_watch": Movie.query.filter_by(user_id=current_user.id, media_type="anime", status="to_watch").count(),
-        },
+    read_count = sum(1 for b in user_all_books if b.status == "read")
+    to_read_count = sum(1 for b in user_all_books if b.status == "to_read")
+    total_books_count = len(user_all_books)
+
+    # Media type counts with watched/total breakdown (computed in-memory)
+    movie_type_counts = {}
+    for mt in ["movie", "series", "animation", "anime"]:
+        movie_type_counts[mt] = {
+            "total": sum(1 for m in user_all_movies if m.media_type == mt),
+            "watched": sum(1 for m in user_all_movies if m.media_type == mt and m.status == "watched"),
+            "to_watch": sum(1 for m in user_all_movies if m.media_type == mt and m.status == "to_watch"),
+        }
+
+    # Book category counts with read/total breakdown (computed in-memory)
+    book_meta = {
+        "fiction": ("Fiction & Literature", "📖"),
+        "philosophy": ("Philosophy", "🧠"),
+        "self_help": ("Self-Help", "🌱"),
+        "business": ("Business & Finance", "💼"),
+        "non_fiction": ("Non-Fiction", "🌍"),
     }
-
-    # Book category counts with read/total breakdown (from full collection)
-    book_category_counts = {
-        "fiction": {
-            "label": "Fiction & Literature",
-            "emoji": "📖",
-            "total": Book.query.filter_by(user_id=current_user.id, category="fiction").count(),
-            "read": Book.query.filter_by(user_id=current_user.id, category="fiction", status="read").count(),
-            "to_read": Book.query.filter_by(user_id=current_user.id, category="fiction", status="to_read").count(),
-        },
-        "philosophy": {
-            "label": "Philosophy",
-            "emoji": "🧠",
-            "total": Book.query.filter_by(user_id=current_user.id, category="philosophy").count(),
-            "read": Book.query.filter_by(user_id=current_user.id, category="philosophy", status="read").count(),
-            "to_read": Book.query.filter_by(user_id=current_user.id, category="philosophy", status="to_read").count(),
-        },
-        "self_help": {
-            "label": "Self-Help",
-            "emoji": "🌱",
-            "total": Book.query.filter_by(user_id=current_user.id, category="self_help").count(),
-            "read": Book.query.filter_by(user_id=current_user.id, category="self_help", status="read").count(),
-            "to_read": Book.query.filter_by(user_id=current_user.id, category="self_help", status="to_read").count(),
-        },
-        "business": {
-            "label": "Business & Finance",
-            "emoji": "💼",
-            "total": Book.query.filter_by(user_id=current_user.id, category="business").count(),
-            "read": Book.query.filter_by(user_id=current_user.id, category="business", status="read").count(),
-            "to_read": Book.query.filter_by(user_id=current_user.id, category="business", status="to_read").count(),
-        },
-        "non_fiction": {
-            "label": "Non-Fiction",
-            "emoji": "🌍",
-            "total": Book.query.filter_by(user_id=current_user.id, category="non_fiction").count(),
-            "read": Book.query.filter_by(user_id=current_user.id, category="non_fiction", status="read").count(),
-            "to_read": Book.query.filter_by(user_id=current_user.id, category="non_fiction", status="to_read").count(),
-        },
-    }
+    book_category_counts = {}
+    for cat, (label, emoji) in book_meta.items():
+        book_category_counts[cat] = {
+            "label": label,
+            "emoji": emoji,
+            "total": sum(1 for b in user_all_books if b.category == cat),
+            "read": sum(1 for b in user_all_books if b.category == cat and b.status == "read"),
+            "to_read": sum(1 for b in user_all_books if b.category == cat and b.status == "to_read"),
+        }
 
     # Tag Processing
     all_tags = set()
@@ -1514,66 +1580,31 @@ def public_collection(username):
     movies = movie_q.all()
     books = book_q.all()
 
-    movie_type_counts = {
-        "movie": {
-            "total": Movie.query.filter_by(user_id=user.id, media_type="movie").count(),
-            "watched": Movie.query.filter_by(user_id=user.id, media_type="movie", status="watched").count(),
-            "to_watch": Movie.query.filter_by(user_id=user.id, media_type="movie", status="to_watch").count(),
-        },
-        "series": {
-            "total": Movie.query.filter_by(user_id=user.id, media_type="series").count(),
-            "watched": Movie.query.filter_by(user_id=user.id, media_type="series", status="watched").count(),
-            "to_watch": Movie.query.filter_by(user_id=user.id, media_type="series", status="to_watch").count(),
-        },
-        "animation": {
-            "total": Movie.query.filter_by(user_id=user.id, media_type="animation").count(),
-            "watched": Movie.query.filter_by(user_id=user.id, media_type="animation", status="watched").count(),
-            "to_watch": Movie.query.filter_by(user_id=user.id, media_type="animation", status="to_watch").count(),
-        },
-        "anime": {
-            "total": Movie.query.filter_by(user_id=user.id, media_type="anime").count(),
-            "watched": Movie.query.filter_by(user_id=user.id, media_type="anime", status="watched").count(),
-            "to_watch": Movie.query.filter_by(user_id=user.id, media_type="anime", status="to_watch").count(),
-        },
-    }
+    # Pre-calculated in-memory counts from user_movies_all and user_books_all (replaces 27 SQL queries)
+    movie_type_counts = {}
+    for mt in ["movie", "series", "animation", "anime"]:
+        movie_type_counts[mt] = {
+            "total": sum(1 for m in user_movies_all if m.media_type == mt),
+            "watched": sum(1 for m in user_movies_all if m.media_type == mt and m.status == "watched"),
+            "to_watch": sum(1 for m in user_movies_all if m.media_type == mt and m.status == "to_watch"),
+        }
 
-    book_category_counts = {
-        "fiction": {
-            "label": "Fiction & Literature",
-            "emoji": "📖",
-            "total": Book.query.filter_by(user_id=user.id, category="fiction").count(),
-            "read": Book.query.filter_by(user_id=user.id, category="fiction", status="read").count(),
-            "to_read": Book.query.filter_by(user_id=user.id, category="fiction", status="to_read").count(),
-        },
-        "philosophy": {
-            "label": "Philosophy",
-            "emoji": "🧠",
-            "total": Book.query.filter_by(user_id=user.id, category="philosophy").count(),
-            "read": Book.query.filter_by(user_id=user.id, category="philosophy", status="read").count(),
-            "to_read": Book.query.filter_by(user_id=user.id, category="philosophy", status="to_read").count(),
-        },
-        "self_help": {
-            "label": "Self-Help",
-            "emoji": "🌱",
-            "total": Book.query.filter_by(user_id=user.id, category="self_help").count(),
-            "read": Book.query.filter_by(user_id=user.id, category="self_help", status="read").count(),
-            "to_read": Book.query.filter_by(user_id=user.id, category="self_help", status="to_read").count(),
-        },
-        "business": {
-            "label": "Business & Finance",
-            "emoji": "💼",
-            "total": Book.query.filter_by(user_id=user.id, category="business").count(),
-            "read": Book.query.filter_by(user_id=user.id, category="business", status="read").count(),
-            "to_read": Book.query.filter_by(user_id=user.id, category="business", status="to_read").count(),
-        },
-        "non_fiction": {
-            "label": "Non-Fiction",
-            "emoji": "🌍",
-            "total": Book.query.filter_by(user_id=user.id, category="non_fiction").count(),
-            "read": Book.query.filter_by(user_id=user.id, category="non_fiction", status="read").count(),
-            "to_read": Book.query.filter_by(user_id=user.id, category="non_fiction", status="to_read").count(),
-        },
+    book_meta = {
+        "fiction": ("Fiction & Literature", "📖"),
+        "philosophy": ("Philosophy", "🧠"),
+        "self_help": ("Self-Help", "🌱"),
+        "business": ("Business & Finance", "💼"),
+        "non_fiction": ("Non-Fiction", "🌍"),
     }
+    book_category_counts = {}
+    for cat, (label, emoji) in book_meta.items():
+        book_category_counts[cat] = {
+            "label": label,
+            "emoji": emoji,
+            "total": sum(1 for b in user_books_all if b.category == cat),
+            "read": sum(1 for b in user_books_all if b.category == cat and b.status == "read"),
+            "to_read": sum(1 for b in user_books_all if b.category == cat and b.status == "to_read"),
+        }
 
     return render_template("public_collection.html", 
                            profile_user=user,
@@ -2978,9 +3009,11 @@ def book_preview(book_id):
 # --- Quick Add Routes ---
 # =====================
 
-@app.route("/quick_add_movie")
+@app.route("/quick_add_movie", methods=["GET", "POST"])
 @login_required
 def quick_add_movie():
+    if not is_safe_origin(request):
+        abort(403)
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
     tmdb_id = request.args.get("id")
     status = request.args.get("status", "to_watch")
@@ -3056,9 +3089,11 @@ def quick_add_movie():
     return redirect(request.args.get("return_url") or request.referrer or url_for("discover", tab="movies"))
 
 
-@app.route("/quick_add_book")
+@app.route("/quick_add_book", methods=["GET", "POST"])
 @login_required
 def quick_add_book():
+    if not is_safe_origin(request):
+        abort(403)
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
     google_id = request.args.get("id")
     status = request.args.get("status", "to_read")
@@ -3341,12 +3376,13 @@ def edit(movie_id):
         movie.title = form.title.data
         movie.media_type = form.media_type.data or "movie"
         try:
-            movie.rating = float(form.rating.data or 0)
+            val = float(form.rating.data or 0)
+            movie.rating = max(0.0, min(10.0, val))
         except ValueError:
             movie.rating = 0.0
-        movie.custom_tags = form.custom_tags.data
-        movie.review = form.review.data
-        movie.description = form.description.data
+        movie.custom_tags = form.custom_tags.data or ""
+        movie.review = form.review.data or ""
+        movie.description = form.description.data or ""
         movie.status = form.status.data
         if form.status.data == "watched" and not movie.date_watched:
             movie.date_watched = date.today()
@@ -3366,12 +3402,17 @@ def edit(movie_id):
 @app.route("/delete/<int:movie_id>", methods=["GET", "POST", "DELETE"])
 @login_required
 def delete(movie_id):
+    if not is_safe_origin(request):
+        abort(403)
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
     movie = db.session.get(Movie, movie_id)
     if movie and movie.user_id == current_user.id:
         title = movie.title
+        was_favorite = AllTimeFavorite.query.filter_by(user_id=current_user.id, movie_id=movie_id).first() is not None
         db.session.delete(movie)
         db.session.commit()
+        if was_favorite:
+            normalize_favorite_ranks(current_user.id)
         if is_ajax:
             return jsonify({
                 "success": True,
@@ -3397,6 +3438,8 @@ def delete(movie_id):
 @app.route("/toggle_status/<string:item_type>/<int:item_id>", methods=["GET", "POST"])
 @login_required
 def toggle_status(item_type, item_id):
+    if not is_safe_origin(request):
+        abort(403)
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
 
     if item_type == "movie":
@@ -3709,12 +3752,13 @@ def edit_book(book_id):
         book.title = form.title.data
         book.category = form.category.data
         try:
-            book.rating = float(form.rating.data or 0)
+            val = float(form.rating.data or 0)
+            book.rating = max(0.0, min(10.0, val))
         except ValueError:
             book.rating = 0.0
-        book.custom_tags = form.custom_tags.data
-        book.review = form.review.data
-        book.description = form.description.data
+        book.custom_tags = form.custom_tags.data or ""
+        book.review = form.review.data or ""
+        book.description = form.description.data or ""
         book.status = form.status.data
         if form.status.data == "read" and not book.date_read:
             book.date_read = date.today()
@@ -3734,6 +3778,8 @@ def edit_book(book_id):
 @app.route("/delete_book/<int:book_id>", methods=["GET", "POST", "DELETE"])
 @login_required
 def delete_book(book_id):
+    if not is_safe_origin(request):
+        abort(403)
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1"
     book = db.session.get(Book, book_id)
     if book and book.user_id == current_user.id:
@@ -3827,4 +3873,6 @@ def handle_network_exception(e):
                            error_message=msg), 503
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() in ["true", "1"]
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)

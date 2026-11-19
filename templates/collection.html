@@ -669,6 +669,7 @@ function deleteMediaItem(event, type, id, deleteUrl) {
     const fetchUrl = deleteUrl + (deleteUrl.includes('?') ? '&' : '?') + 'ajax=1';
 
     fetch(fetchUrl, {
+        method: 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(r => r.json())
