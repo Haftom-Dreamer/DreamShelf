@@ -79,7 +79,3 @@ Ready for one-click deployment on platforms like Heroku, Render, or Railway:
 - Automatically detects `DATABASE_URL` (PostgreSQL) when deployed to the cloud.
 
 ---
-
-## 📄 License
-
-This project is licensed under the MIT License.

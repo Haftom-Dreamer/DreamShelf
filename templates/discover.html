@@ -12,7 +12,7 @@
             <button type="button" class="btn-preview" onclick="showPreview('movie', '{{ movie.tmdb_id }}', this.closest('.discover-card'))" title="Quick Preview">
                 <i class="fas fa-eye"></i> Preview
             </button>
-            <a href="{{ url_for('movie_detail', tmdb_id=movie.tmdb_id) }}" class="btn-preview-detail" title="Full Detail View">
+            <a href="{{ url_for('discover_movie_detail', tmdb_id=movie.tmdb_id) }}" class="btn-preview-detail" title="Full Detail View">
                 <i class="fas fa-info-circle"></i> Details
             </a>
         </div>
@@ -52,7 +52,7 @@
             <button type="button" class="btn-preview book" onclick="showPreview('book', '{{ book.google_id }}', this.closest('.discover-card'))" title="Quick Preview">
                 <i class="fas fa-eye"></i> Preview
             </button>
-            <a href="{{ url_for('book_detail', google_id=book.google_id) }}" class="btn-preview-detail book" title="Full Book Details">
+            <a href="{{ url_for('discover_book_detail', book_id=book.google_id) }}" class="btn-preview-detail book" title="Full Book Details">
                 <i class="fas fa-info-circle"></i> Details
             </a>
         </div>

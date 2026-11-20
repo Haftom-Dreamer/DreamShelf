@@ -362,9 +362,13 @@ def humanize_error(e, default="An unexpected error occurred. Please try again.")
     if any(k in err_str for k in ["401", "403", "forbidden", "unauthorized"]):
         return "Access was denied or session expired. Please sign in again."
 
-    # Python stack traces or technical strings
-    if any(k in err_str for k in ["httpsconnectionpool", "httpconnectionpool", "traceback", "urllib3", "requests.exceptions"]):
+    # Technical network exceptions from urllib3/requests
+    if any(k in err_str for k in ["httpsconnectionpool", "httpconnectionpool", "urllib3", "requests.exceptions"]):
         return "Network connection issue. Please check your internet connection and try again."
+
+    # Python stack traces or technical strings
+    if any(k in err_str for k in ["traceback", "syntaxerror", "attributeerror", "keyerror", "typeerror", "valueerror", "builderror"]):
+        return "An internal server error occurred while processing your request. Please try again."
 
     # If it's a short human-readable message without code artifacts, return it
     if len(raw) < 140 and not any(ch in raw for ch in ["<", ">", "://", "{", "}", "\\", "[errno"]):
@@ -1007,8 +1011,9 @@ def view_book(item_id):
     can_view_personal = is_owner or not (book.owner and book.owner.is_private)
     return render_template("detail.html", item=book, trailer_key=None, cast=[], director=book.author, backdrop_url=book.img_url, item_type="book", can_view_personal=can_view_personal, is_owner=is_owner)
 
-@app.route("/discover/movie/<int:tmdb_id>")
+@app.route("/discover/movie/<int:tmdb_id>", endpoint="discover_movie_detail")
 @app.route("/view/tmdb/<int:tmdb_id>")
+@app.route("/movie_detail/<int:tmdb_id>", endpoint="movie_detail")
 def discover_movie_detail(tmdb_id):
     """Rich detail dossier for any discovered movie/series from TMDB."""
     user_movie = None
@@ -1114,8 +1119,11 @@ def discover_movie_detail(tmdb_id):
         recommendations=recommendations
     )
 
-@app.route("/discover/book/<book_id>")
-def discover_book_detail(book_id):
+@app.route("/discover/book/<book_id>", endpoint="discover_book_detail")
+@app.route("/book_detail/<book_id>")
+@app.route("/discover/book/g/<google_id>", endpoint="book_detail")
+def discover_book_detail(book_id=None, google_id=None):
+    book_id = book_id or google_id
     """Rich detail dossier for any discovered book from Google Books / Open Library."""
     user_book = None
     if current_user.is_authenticated:
@@ -3853,12 +3861,15 @@ def error_404(e):
 
 @app.errorhandler(500)
 def error_500(e):
-    msg = humanize_error(e, "We encountered an issue processing your request. Please check your internet connection and try again.")
+    exc = getattr(e, 'original_exception', e)
+    app.logger.error("Internal Server Error (500): %s", exc, exc_info=exc)
+    default_msg = "An unexpected server error occurred while processing your request. Please try again."
+    msg = humanize_error(exc, default_msg)
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.path.startswith("/api/"):
         return jsonify({"success": False, "error": msg, "message": msg}), 500
     return render_template("error.html",
                            status_code=500,
-                           error_title="Connection or Service Issue",
+                           error_title="Internal Server Error",
                            error_message=msg), 500
 
 @app.errorhandler(requests.exceptions.RequestException)
@@ -3873,6 +3884,6 @@ def handle_network_exception(e):
                            error_message=msg), 503
 
 if __name__ == "__main__":
-    debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() in ["true", "1"]
+    debug_mode = os.environ.get("FLASK_DEBUG", "true").lower() in ["true", "1"]
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
