@@ -1,0 +1,11 @@
+{
+  "name": "dreamshelf",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "python3 -m py_compile main.py"
+  },
+  "dependencies": {
+    "@neon/config": "^1.14.5",
+    "@neon/env": "^2.1.8"
+  }
+}

@@ -22,7 +22,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Date, Boolean, event
 from sqlalchemy.engine import Engine
 
-TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "f319b185cd1af98f98b55a81304dfe9b")
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "")
 
 # =====================
 # --- Google OAuth Config ---
@@ -39,7 +39,7 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '8BYkEfBA6O6donzWlSihBXox7Y0sKR6b')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 if os.environ.get("FLASK_ENV") == "production" or os.environ.get("SESSION_COOKIE_SECURE", "").lower() == "true":
