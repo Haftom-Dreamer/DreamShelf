@@ -67,15 +67,3 @@ GOOGLE_REDIRECT_URI=http://localhost:5000/auth/google/callback
 ```bash
 python main.py
 ```
-Open **http://localhost:5000** in your browser. Database tables and schema migrations initialize automatically on startup.
-
----
-
-## ☁️ Deployment
-
-Ready for one-click deployment on platforms like Heroku, Render, or Railway:
-
-- **Procfile** included: `web: gunicorn main:app`
-- Automatically detects `DATABASE_URL` (PostgreSQL) when deployed to the cloud.
-
----
