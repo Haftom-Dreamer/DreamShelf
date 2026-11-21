@@ -5,24 +5,31 @@
 {% block content %}
 
 {% macro render_movie(movie) %}
-<div class="discover-card" data-tmdb="{{ movie.tmdb_id }}" data-title="{{ movie.title }}" data-media-type="{{ movie.media_type or 'movie' }}">
+<div class="discover-card" data-tmdb="{{ movie.tmdb_id }}" data-title="{{ movie.title }}"
+    data-media-type="{{ movie.media_type or 'movie' }}">
     <div class="discover-poster">
         <img src="{{ movie.img_url }}" alt="{{ movie.title }}" loading="lazy">
         <div class="discover-overlay">
-            <button type="button" class="btn-preview" onclick="showPreview('movie', '{{ movie.tmdb_id }}', this.closest('.discover-card'))" title="Quick Preview">
+            <button type="button" class="btn-preview"
+                onclick="showPreview('movie', '{{ movie.tmdb_id }}', this.closest('.discover-card'))"
+                title="Quick Preview">
                 <i class="fas fa-eye"></i> Preview
             </button>
-            <a href="{{ url_for('discover_movie_detail', tmdb_id=movie.tmdb_id) }}" class="btn-preview-detail" title="Full Detail View">
+            <a href="{{ url_for('discover_movie_detail', tmdb_id=movie.tmdb_id) }}" class="btn-preview-detail"
+                title="Full Detail View">
                 <i class="fas fa-info-circle"></i> Details
             </a>
         </div>
         <div class="tmdb-rating">⭐ {{ movie.rating }}</div>
         {% if movie.media_type == 'series' %}
-        <span class="type-tag series" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-tv"></i> Series</span>
+        <span class="type-tag series" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-tv"></i>
+            Series</span>
         {% elif movie.media_type == 'animation' %}
-        <span class="type-tag animation" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-paint-brush"></i> Animation</span>
+        <span class="type-tag animation" style="position:absolute; top:8px; left:8px; z-index:2;"><i
+                class="fas fa-paint-brush"></i> Animation</span>
         {% elif movie.media_type == 'anime' %}
-        <span class="type-tag anime" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-torii-gate"></i> Anime</span>
+        <span class="type-tag anime" style="position:absolute; top:8px; left:8px; z-index:2;"><i
+                class="fas fa-torii-gate"></i> Anime</span>
         {% endif %}
     </div>
     <div class="discover-info">
@@ -30,13 +37,13 @@
         <div class="discover-year">{{ movie.year }}</div>
         <div class="quick-add-row">
             <a href="{{ url_for('quick_add_movie', id=movie.tmdb_id, status='to_watch', media_type=movie.media_type or 'movie') }}"
-               onclick="quickAdd(event, this, 'movie', '{{ movie.tmdb_id }}', 'to_watch')"
-               class="btn-quick to-watch" title="Add to Watchlist">
+                onclick="quickAdd(event, this, 'movie', '{{ movie.tmdb_id }}', 'to_watch')" class="btn-quick to-watch"
+                title="Add to Watchlist">
                 <i class="fas fa-clock"></i> To Watch
             </a>
             <a href="{{ url_for('quick_add_movie', id=movie.tmdb_id, status='watched', media_type=movie.media_type or 'movie') }}"
-               onclick="quickAdd(event, this, 'movie', '{{ movie.tmdb_id }}', 'watched')"
-               class="btn-quick watched" title="Mark as Watched">
+                onclick="quickAdd(event, this, 'movie', '{{ movie.tmdb_id }}', 'watched')" class="btn-quick watched"
+                title="Mark as Watched">
                 <i class="fas fa-check"></i> Watched
             </a>
         </div>
@@ -45,14 +52,18 @@
 {% endmacro %}
 
 {% macro render_book(book) %}
-<div class="discover-card" data-google="{{ book.google_id }}" data-title="{{ book.title }}" data-author="{{ book.author }}" data-year="{{ book.year }}" data-img="{{ book.img_url }}">
+<div class="discover-card" data-google="{{ book.google_id }}" data-title="{{ book.title }}"
+    data-author="{{ book.author }}" data-year="{{ book.year }}" data-img="{{ book.img_url }}">
     <div class="discover-poster">
         <img src="{{ book.img_url }}" alt="{{ book.title }}" loading="lazy">
         <div class="discover-overlay">
-            <button type="button" class="btn-preview book" onclick="showPreview('book', '{{ book.google_id }}', this.closest('.discover-card'))" title="Quick Preview">
+            <button type="button" class="btn-preview book"
+                onclick="showPreview('book', '{{ book.google_id }}', this.closest('.discover-card'))"
+                title="Quick Preview">
                 <i class="fas fa-eye"></i> Preview
             </button>
-            <a href="{{ url_for('discover_book_detail', book_id=book.google_id) }}" class="btn-preview-detail book" title="Full Book Details">
+            <a href="{{ url_for('discover_book_detail', book_id=book.google_id) }}" class="btn-preview-detail book"
+                title="Full Book Details">
                 <i class="fas fa-info-circle"></i> Details
             </a>
         </div>
@@ -62,13 +73,13 @@
         <div class="discover-year">{{ book.author }}{% if book.year %} · {{ book.year }}{% endif %}</div>
         <div class="quick-add-row">
             <a href="{{ url_for('quick_add_book', id=book.google_id, status='to_read', title=book.title, author=book.author, img_url=book.img_url, year=book.year) }}"
-               onclick="quickAdd(event, this, 'book', '{{ book.google_id }}', 'to_read')"
-               class="btn-quick to-read" title="Add to Reading List">
+                onclick="quickAdd(event, this, 'book', '{{ book.google_id }}', 'to_read')" class="btn-quick to-read"
+                title="Add to Reading List">
                 <i class="fas fa-bookmark"></i> To Read
             </a>
             <a href="{{ url_for('quick_add_book', id=book.google_id, status='read', title=book.title, author=book.author, img_url=book.img_url, year=book.year) }}"
-               onclick="quickAdd(event, this, 'book', '{{ book.google_id }}', 'read')"
-               class="btn-quick read-done" title="Mark as Read">
+                onclick="quickAdd(event, this, 'book', '{{ book.google_id }}', 'read')" class="btn-quick read-done"
+                title="Mark as Read">
                 <i class="fas fa-check"></i> Read
             </a>
         </div>
@@ -77,202 +88,231 @@
 {% endmacro %}
 
 <div class="page-container">
-    <div class="discover-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+    <div class="discover-header"
+        style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
         <div>
             <h1 class="page-title"><i class="fas fa-compass" style="color:var(--accent)"></i> Discover</h1>
             <p class="page-subtitle">Curated algorithms and handpicked selections across your favorite genres.</p>
         </div>
         <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
             {% if tab == 'movies' %}
-            <a href="{{ url_for('add') }}" class="btn-primary" style="white-space:nowrap;"><i class="fas fa-search"></i> Search Movie</a>
+            <a href="{{ url_for('add') }}" class="btn-primary" style="white-space:nowrap;"><i class="fas fa-search"></i>
+                Search Movie</a>
             {% else %}
-            <a href="{{ url_for('add_book') }}" class="btn-secondary" style="white-space:nowrap; border-color:var(--accent-book); color:var(--accent-book);"><i class="fas fa-search"></i> Search Book</a>
+            <a href="{{ url_for('add_book') }}" class="btn-secondary"
+                style="white-space:nowrap; border-color:var(--accent-book); color:var(--accent-book);"><i
+                    class="fas fa-search"></i> Search Book</a>
             {% endif %}
         </div>
     </div>
 
     <!-- Tab Bar: Separate Movies & Books -->
     <div class="tab-bar" style="margin-top: 1.5rem;">
-        <a href="{{ url_for('discover', tab='movies') }}"
-           class="tab-item {% if tab == 'movies' %}active{% endif %}">
+        <a href="{{ url_for('discover', tab='movies') }}" class="tab-item {% if tab == 'movies' %}active{% endif %}">
             <i class="fas fa-film"></i> Movies
         </a>
-        <a href="{{ url_for('discover', tab='books') }}"
-           class="tab-item {% if tab == 'books' %}active{% endif %}">
+        <a href="{{ url_for('discover', tab='books') }}" class="tab-item {% if tab == 'books' %}active{% endif %}">
             <i class="fas fa-book"></i> Books
         </a>
     </div>
 
     {% if tab == 'movies' %}
-        <!-- Minimized Category Filter Dropdown -->
-        <div class="discover-filter-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.8rem; margin: 1.5rem 0 1rem 0;">
-            <div class="filter-dropdown" id="discoverCategoryDropdown">
-                <button type="button" class="filter-dropdown-btn {% if current_category and current_category != 'all' %}active {{ current_category }}{% endif %}" onclick="toggleFilterDropdown('discoverCategoryDropdown', event)">
-                    <i class="fas fa-shapes"></i>
-                    <span id="discoverCategoryLabel">
-                        {% if current_category == 'movie' %}🎬 Movies
-                        {% elif current_category == 'series' %}📺 Series
-                        {% elif current_category == 'animation' %}🎨 Animation
-                        {% elif current_category == 'anime' %}⛩️ Anime
-                        {% else %}Category: All Types{% endif %}
-                    </span>
-                    <i class="fas fa-chevron-down dropdown-arrow"></i>
-                </button>
-                <div class="filter-dropdown-menu">
-                    <a class="filter-dropdown-item {% if current_category == 'all' or not current_category %}active{% endif %}"
-                       href="{{ url_for('discover', tab='movies', category='all') }}"
-                       onclick="filterDiscoverCategory(event, 'all', 'All Types')" data-cat="all">
-                       <span>All Types</span>
-                    </a>
-                    <a class="filter-dropdown-item movie {% if current_category == 'movie' %}active{% endif %}"
-                       href="{{ url_for('discover', tab='movies', category='movie') }}"
-                       onclick="filterDiscoverCategory(event, 'movie', '🎬 Movies')" data-cat="movie">
-                       <span>🎬 Normal Movies</span>
-                    </a>
-                    <a class="filter-dropdown-item series {% if current_category == 'series' %}active{% endif %}"
-                       href="{{ url_for('discover', tab='movies', category='series') }}"
-                       onclick="filterDiscoverCategory(event, 'series', '📺 Series')" data-cat="series">
-                       <span>📺 Series / TV Shows</span>
-                    </a>
-                    <a class="filter-dropdown-item animation {% if current_category == 'animation' %}active{% endif %}"
-                       href="{{ url_for('discover', tab='movies', category='animation') }}"
-                       onclick="filterDiscoverCategory(event, 'animation', '🎨 Animation')" data-cat="animation">
-                       <span>🎨 Animation</span>
-                    </a>
-                    <a class="filter-dropdown-item anime {% if current_category == 'anime' %}active{% endif %}"
-                       href="{{ url_for('discover', tab='movies', category='anime') }}"
-                       onclick="filterDiscoverCategory(event, 'anime', '⛩️ Anime')" data-cat="anime">
-                       <span>⛩️ Anime</span>
-                    </a>
-                </div>
+    <!-- Minimized Category Filter Dropdown -->
+    <div class="discover-filter-row"
+        style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.8rem; margin: 1.5rem 0 1rem 0;">
+        <div class="filter-dropdown" id="discoverCategoryDropdown">
+            <button type="button"
+                class="filter-dropdown-btn {% if current_category and current_category != 'all' %}active {{ current_category }}{% endif %}"
+                onclick="toggleFilterDropdown('discoverCategoryDropdown', event)">
+                <i class="fas fa-shapes"></i>
+                <span id="discoverCategoryLabel">
+                    {% if current_category == 'movie' %}🎬 Movies
+                    {% elif current_category == 'series' %}📺 Series
+                    {% elif current_category == 'animation' %}🎨 Animation
+                    {% elif current_category == 'anime' %}⛩️ Anime
+                    {% else %}Category: All Types{% endif %}
+                </span>
+                <i class="fas fa-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="filter-dropdown-menu">
+                <a class="filter-dropdown-item {% if current_category == 'all' or not current_category %}active{% endif %}"
+                    href="{{ url_for('discover', tab='movies', category='all') }}"
+                    onclick="filterDiscoverCategory(event, 'all', 'All Types')" data-cat="all">
+                    <span>All Types</span>
+                </a>
+                <a class="filter-dropdown-item movie {% if current_category == 'movie' %}active{% endif %}"
+                    href="{{ url_for('discover', tab='movies', category='movie') }}"
+                    onclick="filterDiscoverCategory(event, 'movie', '🎬 Movies')" data-cat="movie">
+                    <span>🎬 Normal Movies</span>
+                </a>
+                <a class="filter-dropdown-item series {% if current_category == 'series' %}active{% endif %}"
+                    href="{{ url_for('discover', tab='movies', category='series') }}"
+                    onclick="filterDiscoverCategory(event, 'series', '📺 Series')" data-cat="series">
+                    <span>📺 Series / TV Shows</span>
+                </a>
+                <a class="filter-dropdown-item animation {% if current_category == 'animation' %}active{% endif %}"
+                    href="{{ url_for('discover', tab='movies', category='animation') }}"
+                    onclick="filterDiscoverCategory(event, 'animation', '🎨 Animation')" data-cat="animation">
+                    <span>🎨 Animation</span>
+                </a>
+                <a class="filter-dropdown-item anime {% if current_category == 'anime' %}active{% endif %}"
+                    href="{{ url_for('discover', tab='movies', category='anime') }}"
+                    onclick="filterDiscoverCategory(event, 'anime', '⛩️ Anime')" data-cat="anime">
+                    <span>⛩️ Anime</span>
+                </a>
             </div>
-            <span style="font-size: 0.8rem; opacity: 0.6;"><i class="fas fa-magic"></i> Curated algorithms tailored to your library</span>
         </div>
+        <span style="font-size: 0.8rem; opacity: 0.6;"><i class="fas fa-magic"></i> Curated algorithms tailored to your
+            library</span>
+    </div>
 
-        <!-- Movies Section -->
-        {% if is_personalized_movies and recommended_movies %}
-        <div class="dashboard-section" style="margin-top:2rem;">
-            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-                <div>
-                    <h2 class="section-heading"><i class="fas fa-magic" style="color:var(--accent)"></i> Recommended Movies</h2>
-                    <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Blended across your Sci-Fi, Action, Animation, and Thriller collection</span>
-                </div>
-                <button class="btn-section-refresh" onclick="refreshSection('recommended', 'movies')" id="btnRefreshRecMovies">
-                    <i class="fas fa-sync-alt"></i> Refresh Recommendations
-                </button>
+    <!-- Movies Section -->
+    {% if is_personalized_movies and recommended_movies %}
+    <div class="dashboard-section" style="margin-top:2rem;">
+        <div class="section-header"
+            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+                <h2 class="section-heading"><i class="fas fa-magic" style="color:var(--accent)"></i> Recommended Movies
+                </h2>
+                <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Blended across your Sci-Fi, Action,
+                    Animation, and Thriller collection</span>
             </div>
-            <div class="discover-grid" id="gridRecommendedMovies">
-                {% for movie in recommended_movies %}{{ render_movie(movie) }}{% endfor %}
-            </div>
+            <button class="btn-section-refresh" onclick="refreshSection('recommended', 'movies')"
+                id="btnRefreshRecMovies">
+                <i class="fas fa-sync-alt"></i> Refresh Recommendations
+            </button>
         </div>
-        {% endif %}
+        <div class="discover-grid" id="gridRecommendedMovies">
+            {% for movie in recommended_movies %}{{ render_movie(movie) }}{% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
-        <div class="dashboard-section" style="margin-top:2.8rem;">
-            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-                <div>
-                    <h2 class="section-heading"><i class="fas fa-fire" style="color:#ff6b6b"></i> Trending &amp; Popular Movies</h2>
-                    <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Global top trending titles right now</span>
-                </div>
-                <button class="btn-section-refresh" onclick="refreshSection('trending', 'movies')" id="btnRefreshTrendingMovies">
-                    <i class="fas fa-sync-alt"></i> Refresh Trending
-                </button>
+    <div class="dashboard-section" style="margin-top:2.8rem;">
+        <div class="section-header"
+            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+                <h2 class="section-heading"><i class="fas fa-fire" style="color:#ff6b6b"></i> Trending &amp; Popular
+                    Movies</h2>
+                <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Global top trending titles right
+                    now</span>
             </div>
-            <div class="discover-grid" id="gridTrendingMovies">
-                {% for movie in trending_movies %}{{ render_movie(movie) }}{% endfor %}
-            </div>
+            <button class="btn-section-refresh" onclick="refreshSection('trending', 'movies')"
+                id="btnRefreshTrendingMovies">
+                <i class="fas fa-sync-alt"></i> Refresh Trending
+            </button>
         </div>
+        <div class="discover-grid" id="gridTrendingMovies">
+            {% for movie in trending_movies %}{{ render_movie(movie) }}{% endfor %}
+        </div>
+    </div>
 
     {% else %}
-        <!-- Minimized Book Category Filter Dropdown -->
-        <div class="discover-filter-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.8rem; margin: 1.5rem 0 1rem 0;">
-            <div class="filter-dropdown" id="discoverBookCategoryDropdown">
-                <button type="button" class="filter-dropdown-btn {% if current_category and current_category != 'all' %}active {{ current_category }}{% endif %}" onclick="toggleFilterDropdown('discoverBookCategoryDropdown', event)">
-                    <i class="fas fa-shapes"></i>
-                    <span id="discoverBookCategoryLabel">
-                        {% if current_category == 'fiction' %}📖 Fiction &amp; Sci-Fi
-                        {% elif current_category == 'philosophy' %}🧠 Philosophy
-                        {% elif current_category == 'self_help' %}🌱 Self-Help
-                        {% elif current_category == 'business' %}💼 Business &amp; Finance
-                        {% elif current_category == 'non_fiction' %}🌍 Non-Fiction
-                        {% else %}Category: All Themes{% endif %}
-                    </span>
-                    <i class="fas fa-chevron-down dropdown-arrow"></i>
-                </button>
-                <div class="filter-dropdown-menu">
-                    <a class="filter-dropdown-item {% if current_category == 'all' or not current_category %}active{% endif %}"
-                       href="{{ url_for('discover', tab='books', category='all') }}"
-                       onclick="filterDiscoverCategory(event, 'all', 'All Themes')" data-cat="all">
-                       <span>All Themes</span>
-                    </a>
-                    <a class="filter-dropdown-item fiction {% if current_category == 'fiction' %}active{% endif %}"
-                       href="{{ url_for('discover', tab='books', category='fiction') }}"
-                       onclick="filterDiscoverCategory(event, 'fiction', '📖 Fiction &amp; Sci-Fi')" data-cat="fiction">
-                       <span>📖 Fiction &amp; Literature</span>
-                    </a>
-                    <a class="filter-dropdown-item philosophy {% if current_category == 'philosophy' %}active{% endif %}"
-                       href="{{ url_for('discover', tab='books', category='philosophy') }}"
-                       onclick="filterDiscoverCategory(event, 'philosophy', '🧠 Philosophy')" data-cat="philosophy">
-                       <span>🧠 Philosophy &amp; Ethics</span>
-                    </a>
-                    <a class="filter-dropdown-item self_help {% if current_category == 'self_help' %}active{% endif %}"
-                       href="{{ url_for('discover', tab='books', category='self_help') }}"
-                       onclick="filterDiscoverCategory(event, 'self_help', '🌱 Self-Help')" data-cat="self_help">
-                       <span>🌱 Self-Help &amp; Growth</span>
-                    </a>
-                    <a class="filter-dropdown-item business {% if current_category == 'business' %}active{% endif %}"
-                       href="{{ url_for('discover', tab='books', category='business') }}"
-                       onclick="filterDiscoverCategory(event, 'business', '💼 Business &amp; Finance')" data-cat="business">
-                       <span>💼 Business &amp; Finance</span>
-                    </a>
-                    <a class="filter-dropdown-item non_fiction {% if current_category == 'non_fiction' %}active{% endif %}"
-                       href="{{ url_for('discover', tab='books', category='non_fiction') }}"
-                       onclick="filterDiscoverCategory(event, 'non_fiction', '🌍 Non-Fiction')" data-cat="non_fiction">
-                       <span>🌍 Non-Fiction &amp; Science</span>
-                    </a>
-                </div>
+    <!-- Minimized Book Category Filter Dropdown -->
+    <div class="discover-filter-row"
+        style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.8rem; margin: 1.5rem 0 1rem 0;">
+        <div class="filter-dropdown" id="discoverBookCategoryDropdown">
+            <button type="button"
+                class="filter-dropdown-btn {% if current_category and current_category != 'all' %}active {{ current_category }}{% endif %}"
+                onclick="toggleFilterDropdown('discoverBookCategoryDropdown', event)">
+                <i class="fas fa-shapes"></i>
+                <span id="discoverBookCategoryLabel">
+                    {% if current_category == 'fiction' %}📖 Fiction &amp; Sci-Fi
+                    {% elif current_category == 'philosophy' %}🧠 Philosophy
+                    {% elif current_category == 'self_help' %}🌱 Self-Help
+                    {% elif current_category == 'business' %}💼 Business &amp; Finance
+                    {% elif current_category == 'non_fiction' %}🌍 Non-Fiction
+                    {% else %}Category: All Themes{% endif %}
+                </span>
+                <i class="fas fa-chevron-down dropdown-arrow"></i>
+            </button>
+            <div class="filter-dropdown-menu">
+                <a class="filter-dropdown-item {% if current_category == 'all' or not current_category %}active{% endif %}"
+                    href="{{ url_for('discover', tab='books', category='all') }}"
+                    onclick="filterDiscoverCategory(event, 'all', 'All Themes')" data-cat="all">
+                    <span>All Themes</span>
+                </a>
+                <a class="filter-dropdown-item fiction {% if current_category == 'fiction' %}active{% endif %}"
+                    href="{{ url_for('discover', tab='books', category='fiction') }}"
+                    onclick="filterDiscoverCategory(event, 'fiction', '📖 Fiction &amp; Sci-Fi')" data-cat="fiction">
+                    <span>📖 Fiction &amp; Literature</span>
+                </a>
+                <a class="filter-dropdown-item philosophy {% if current_category == 'philosophy' %}active{% endif %}"
+                    href="{{ url_for('discover', tab='books', category='philosophy') }}"
+                    onclick="filterDiscoverCategory(event, 'philosophy', '🧠 Philosophy')" data-cat="philosophy">
+                    <span>🧠 Philosophy &amp; Ethics</span>
+                </a>
+                <a class="filter-dropdown-item self_help {% if current_category == 'self_help' %}active{% endif %}"
+                    href="{{ url_for('discover', tab='books', category='self_help') }}"
+                    onclick="filterDiscoverCategory(event, 'self_help', '🌱 Self-Help')" data-cat="self_help">
+                    <span>🌱 Self-Help &amp; Growth</span>
+                </a>
+                <a class="filter-dropdown-item business {% if current_category == 'business' %}active{% endif %}"
+                    href="{{ url_for('discover', tab='books', category='business') }}"
+                    onclick="filterDiscoverCategory(event, 'business', '💼 Business &amp; Finance')"
+                    data-cat="business">
+                    <span>💼 Business &amp; Finance</span>
+                </a>
+                <a class="filter-dropdown-item non_fiction {% if current_category == 'non_fiction' %}active{% endif %}"
+                    href="{{ url_for('discover', tab='books', category='non_fiction') }}"
+                    onclick="filterDiscoverCategory(event, 'non_fiction', '🌍 Non-Fiction')" data-cat="non_fiction">
+                    <span>🌍 Non-Fiction &amp; Science</span>
+                </a>
             </div>
-            <span style="font-size: 0.8rem; opacity: 0.6;"><i class="fas fa-magic"></i> Curated algorithms tailored to your reading journey</span>
         </div>
+        <span style="font-size: 0.8rem; opacity: 0.6;"><i class="fas fa-magic"></i> Curated algorithms tailored to your
+            reading journey</span>
+    </div>
 
-        <!-- Books Section -->
-        {% if is_personalized_books and recommended_books %}
-        <div class="dashboard-section" style="margin-top:2rem;">
-            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-                <div>
-                    <h2 class="section-heading"><i class="fas fa-magic" style="color:var(--accent-book)"></i> Recommended Books</h2>
-                    <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Blended across your Philosophy, Fiction, Self-Help, and Finance tastes</span>
-                </div>
-                <button class="btn-section-refresh book" onclick="refreshSection('recommended', 'books')" id="btnRefreshRecBooks">
-                    <i class="fas fa-sync-alt"></i> Refresh Recommendations
-                </button>
+    <!-- Books Section -->
+    {% if is_personalized_books and recommended_books %}
+    <div class="dashboard-section" style="margin-top:2rem;">
+        <div class="section-header"
+            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+                <h2 class="section-heading"><i class="fas fa-magic" style="color:var(--accent-book)"></i> Recommended
+                    Books</h2>
+                <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Blended across your Philosophy,
+                    Fiction, Self-Help, and Finance tastes</span>
             </div>
-            <div class="discover-grid" id="gridRecommendedBooks">
-                {% for book in recommended_books %}{{ render_book(book) }}{% endfor %}
-            </div>
+            <button class="btn-section-refresh book" onclick="refreshSection('recommended', 'books')"
+                id="btnRefreshRecBooks">
+                <i class="fas fa-sync-alt"></i> Refresh Recommendations
+            </button>
         </div>
-        {% elif not is_personalized_books %}
-        <div class="dashboard-section" style="margin-top:2rem;">
-            <div class="empty-state" style="padding:1.5rem; margin-bottom:1rem; border:1px dashed var(--border);">
-                <i class="fas fa-book-reader" style="font-size:2rem; color:var(--accent-book); opacity:0.6; margin-bottom:0.5rem;"></i>
-                <p style="margin:0; font-size:0.9rem;">Add books to your reading list or mark them as read to get personalized recommendations tailored to your taste!</p>
-            </div>
+        <div class="discover-grid" id="gridRecommendedBooks">
+            {% for book in recommended_books %}{{ render_book(book) }}{% endfor %}
         </div>
-        {% endif %}
+    </div>
+    {% elif not is_personalized_books %}
+    <div class="dashboard-section" style="margin-top:2rem;">
+        <div class="empty-state" style="padding:1.5rem; margin-bottom:1rem; border:1px dashed var(--border);">
+            <i class="fas fa-book-reader"
+                style="font-size:2rem; color:var(--accent-book); opacity:0.6; margin-bottom:0.5rem;"></i>
+            <p style="margin:0; font-size:0.9rem;">Add books to your reading list or mark them as read to get
+                personalized recommendations tailored to your taste!</p>
+        </div>
+    </div>
+    {% endif %}
 
-        <div class="dashboard-section" style="margin-top:2.8rem;">
-            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-                <div>
-                    <h2 class="section-heading"><i class="fas fa-fire" style="color:var(--gold)"></i> Popular &amp; Trending Books</h2>
-                    <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Worldwide bestsellers and daily reader favorites</span>
-                </div>
-                <button class="btn-section-refresh book" onclick="refreshSection('trending', 'books')" id="btnRefreshTrendingBooks">
-                    <i class="fas fa-sync-alt"></i> Refresh Popular
-                </button>
+    <div class="dashboard-section" style="margin-top:2.8rem;">
+        <div class="section-header"
+            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+                <h2 class="section-heading"><i class="fas fa-fire" style="color:var(--gold)"></i> Popular &amp; Trending
+                    Books</h2>
+                <span class="section-link" style="opacity:0.6;font-size:0.8rem;">Worldwide bestsellers and daily reader
+                    favorites</span>
             </div>
-            <div class="discover-grid" id="gridTrendingBooks">
-                {% for book in trending_books %}{{ render_book(book) }}{% endfor %}
-            </div>
+            <button class="btn-section-refresh book" onclick="refreshSection('trending', 'books')"
+                id="btnRefreshTrendingBooks">
+                <i class="fas fa-sync-alt"></i> Refresh Popular
+            </button>
         </div>
+        <div class="discover-grid" id="gridTrendingBooks">
+            {% for book in trending_books %}{{ render_book(book) }}{% endfor %}
+        </div>
+    </div>
     {% endif %}
 </div>
 
@@ -302,275 +342,275 @@
 </div>
 
 <script>
-// Keep track of section page/seed counts so each refresh fetches fresh data
-const currentTab = '{{ tab }}';
-const refreshState = {
-    recPage: 1,
-    trendPage: 1,
-    recSeed: Math.floor(Math.random() * 100) + 1,
-    trendSeed: Math.floor(Math.random() * 100) + 1,
-    category: '{{ current_category or "all" }}'
-};
+    // Keep track of section page/seed counts so each refresh fetches fresh data
+    const currentTab = '{{ tab }}';
+    const refreshState = {
+        recPage: 1,
+        trendPage: 1,
+        recSeed: Math.floor(Math.random() * 100) + 1,
+        trendSeed: Math.floor(Math.random() * 100) + 1,
+        category: '{{ current_category or "all" }}'
+    };
 
-// Filter Dropdown Toggling
-function toggleFilterDropdown(id, event) {
-    if (event) {
-        event.stopPropagation();
-        event.preventDefault();
-    }
-    const target = document.getElementById(id);
-    if (!target) return;
-    const isOpen = target.classList.contains('open');
-    document.querySelectorAll('.filter-dropdown.open').forEach(d => {
-        if (d !== target) d.classList.remove('open');
-    });
-    target.classList.toggle('open', !isOpen);
-}
-
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.filter-dropdown')) {
-        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
-    }
-});
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
-    }
-});
-
-// Category Filter in Discover
-function filterDiscoverCategory(event, cat, label) {
-    if (event) {
-        event.preventDefault();
-    }
-    // Close dropdown
-    document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
-
-    const dropdownId = currentTab === 'movies' ? 'discoverCategoryDropdown' : 'discoverBookCategoryDropdown';
-    const labelId = currentTab === 'movies' ? 'discoverCategoryLabel' : 'discoverBookCategoryLabel';
-
-    // Update active dropdown item UI
-    document.querySelectorAll(`#${dropdownId} .filter-dropdown-item`).forEach(c => {
-        c.classList.toggle('active', c.dataset.cat === cat);
-    });
-    const labelEl = document.getElementById(labelId);
-    if (labelEl) {
-        labelEl.textContent = cat === 'all' ? (currentTab === 'movies' ? 'Category: All Types' : 'Category: All Themes') : label;
-    }
-    const btn = document.querySelector(`#${dropdownId} .filter-dropdown-btn`);
-    if (btn) {
-        btn.classList.remove('active', 'movie', 'series', 'animation', 'anime', 'fiction', 'philosophy', 'self_help', 'business', 'non_fiction');
-        if (cat !== 'all') {
-            btn.classList.add('active', cat);
+    // Filter Dropdown Toggling
+    function toggleFilterDropdown(id, event) {
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
         }
-    }
-
-    refreshState.category = cat;
-    refreshState.recPage = 1;
-    refreshState.trendPage = 1;
-    refreshState.recSeed = 1;
-    refreshState.trendSeed = 1;
-
-    // Update browser URL query string without reloading
-    const newUrl = new URL(window.location);
-    newUrl.searchParams.set('tab', currentTab);
-    newUrl.searchParams.set('category', cat);
-    window.history.pushState({}, '', newUrl);
-
-    // Refresh both Recommended and Trending grids
-    refreshSectionDirect('recommended', currentTab, cat);
-    refreshSectionDirect('trending', currentTab, cat);
-}
-
-function refreshSectionDirect(section, tab, cat) {
-    let gridId, btnId;
-    if (tab === 'movies') {
-        gridId = section === 'recommended' ? 'gridRecommendedMovies' : 'gridTrendingMovies';
-        btnId = section === 'recommended' ? 'btnRefreshRecMovies' : 'btnRefreshTrendingMovies';
-    } else {
-        gridId = section === 'recommended' ? 'gridRecommendedBooks' : 'gridTrendingBooks';
-        btnId = section === 'recommended' ? 'btnRefreshRecBooks' : 'btnRefreshTrendingBooks';
-    }
-    const grid = document.getElementById(gridId);
-    const btn = document.getElementById(btnId);
-    if (!grid) return;
-
-    const icon = btn ? btn.querySelector('i') : null;
-    if (icon) icon.classList.add('fa-spin');
-    if (btn) btn.style.pointerEvents = 'none';
-
-    grid.style.opacity = '0.4';
-    grid.style.transition = 'opacity 0.2s ease';
-
-    const pageOrSeed = tab === 'movies'
-        ? (section === 'recommended' ? `page=${refreshState.recPage}` : `page=${refreshState.trendPage}`)
-        : (section === 'recommended' ? `seed=${refreshState.recSeed}` : `seed=${refreshState.trendSeed}`);
-
-    fetch(`/api/discover_section?tab=${tab}&section=${section}&category=${cat}&${pageOrSeed}`)
-        .then(r => r.json())
-        .then(data => {
-            if (data.success && data.items) {
-                let html = '';
-                data.items.forEach(item => {
-                    html += tab === 'movies' ? buildMovieCard(item) : buildBookCard(item);
-                });
-                grid.innerHTML = html || '<div class="empty-state" style="grid-column: 1/-1; padding: 2rem;"><p>No items found for this category.</p></div>';
-            }
-            grid.style.opacity = '1';
-            if (icon) icon.classList.remove('fa-spin');
-            if (btn) btn.style.pointerEvents = '';
-        })
-        .catch(err => {
-            grid.style.opacity = '1';
-            if (icon) icon.classList.remove('fa-spin');
-            if (btn) btn.style.pointerEvents = '';
-            showToast('Unable to refresh recommendations. Please check your internet connection.', 'error');
+        const target = document.getElementById(id);
+        if (!target) return;
+        const isOpen = target.classList.contains('open');
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => {
+            if (d !== target) d.classList.remove('open');
         });
-}
-
-// 1. ASYNC QUICK-ADD (Prevents page reload and preserving the lists / scroll position)
-function quickAdd(event, btn, type, id, status) {
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
+        target.classList.toggle('open', !isOpen);
     }
-    const origHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    btn.style.pointerEvents = 'none';
 
-    const card = btn.closest('.discover-card');
-    let url = btn.getAttribute('href');
-    if (!url) {
-        if (type === 'movie') {
-            const mType = card ? (card.dataset.mediaType || 'movie') : 'movie';
-            url = `/quick_add_movie?id=${id}&status=${status}&media_type=${mType}`;
-        } else {
-            const titleEnc = card ? encodeURIComponent(card.dataset.title || '') : '';
-            const authorEnc = card ? encodeURIComponent(card.dataset.author || '') : '';
-            const imgEnc = card ? encodeURIComponent(card.dataset.img || '') : '';
-            const yearEnc = card ? encodeURIComponent(card.dataset.year || '') : '';
-            url = `/quick_add_book?id=${id}&status=${status}&title=${titleEnc}&author=${authorEnc}&img_url=${imgEnc}&year=${yearEnc}`;
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.filter-dropdown')) {
+            document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
         }
-    }
-    url += (url.includes('?') ? '&' : '?') + 'ajax=1';
+    });
 
-    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                const label = status === 'watched' ? 'Watched' : (status === 'read' ? 'Read' : (status === 'to_read' ? 'To Read' : 'To Watch'));
-                const row = btn.closest('.quick-add-row') || btn.closest('.preview-actions');
-                if (row) {
-                    row.innerHTML = `<span class="quick-added-badge"><i class="fas fa-check-circle"></i> Added (${label})</span>`;
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+        }
+    });
+
+    // Category Filter in Discover
+    function filterDiscoverCategory(event, cat, label) {
+        if (event) {
+            event.preventDefault();
+        }
+        // Close dropdown
+        document.querySelectorAll('.filter-dropdown.open').forEach(d => d.classList.remove('open'));
+
+        const dropdownId = currentTab === 'movies' ? 'discoverCategoryDropdown' : 'discoverBookCategoryDropdown';
+        const labelId = currentTab === 'movies' ? 'discoverCategoryLabel' : 'discoverBookCategoryLabel';
+
+        // Update active dropdown item UI
+        document.querySelectorAll(`#${dropdownId} .filter-dropdown-item`).forEach(c => {
+            c.classList.toggle('active', c.dataset.cat === cat);
+        });
+        const labelEl = document.getElementById(labelId);
+        if (labelEl) {
+            labelEl.textContent = cat === 'all' ? (currentTab === 'movies' ? 'Category: All Types' : 'Category: All Themes') : label;
+        }
+        const btn = document.querySelector(`#${dropdownId} .filter-dropdown-btn`);
+        if (btn) {
+            btn.classList.remove('active', 'movie', 'series', 'animation', 'anime', 'fiction', 'philosophy', 'self_help', 'business', 'non_fiction');
+            if (cat !== 'all') {
+                btn.classList.add('active', cat);
+            }
+        }
+
+        refreshState.category = cat;
+        refreshState.recPage = 1;
+        refreshState.trendPage = 1;
+        refreshState.recSeed = 1;
+        refreshState.trendSeed = 1;
+
+        // Update browser URL query string without reloading
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.set('tab', currentTab);
+        newUrl.searchParams.set('category', cat);
+        window.history.pushState({}, '', newUrl);
+
+        // Refresh both Recommended and Trending grids
+        refreshSectionDirect('recommended', currentTab, cat);
+        refreshSectionDirect('trending', currentTab, cat);
+    }
+
+    function refreshSectionDirect(section, tab, cat) {
+        let gridId, btnId;
+        if (tab === 'movies') {
+            gridId = section === 'recommended' ? 'gridRecommendedMovies' : 'gridTrendingMovies';
+            btnId = section === 'recommended' ? 'btnRefreshRecMovies' : 'btnRefreshTrendingMovies';
+        } else {
+            gridId = section === 'recommended' ? 'gridRecommendedBooks' : 'gridTrendingBooks';
+            btnId = section === 'recommended' ? 'btnRefreshRecBooks' : 'btnRefreshTrendingBooks';
+        }
+        const grid = document.getElementById(gridId);
+        const btn = document.getElementById(btnId);
+        if (!grid) return;
+
+        const icon = btn ? btn.querySelector('i') : null;
+        if (icon) icon.classList.add('fa-spin');
+        if (btn) btn.style.pointerEvents = 'none';
+
+        grid.style.opacity = '0.4';
+        grid.style.transition = 'opacity 0.2s ease';
+
+        const pageOrSeed = tab === 'movies'
+            ? (section === 'recommended' ? `page=${refreshState.recPage}` : `page=${refreshState.trendPage}`)
+            : (section === 'recommended' ? `seed=${refreshState.recSeed}` : `seed=${refreshState.trendSeed}`);
+
+        fetch(`/api/discover_section?tab=${tab}&section=${section}&category=${cat}&${pageOrSeed}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.items) {
+                    let html = '';
+                    data.items.forEach(item => {
+                        html += tab === 'movies' ? buildMovieCard(item) : buildBookCard(item);
+                    });
+                    grid.innerHTML = html || '<div class="empty-state" style="grid-column: 1/-1; padding: 2rem;"><p>No items found for this category.</p></div>';
                 }
-                if (card) {
-                    card.classList.add('card-in-collection');
-                    const cardRow = card.querySelector('.quick-add-row');
-                    if (cardRow && cardRow !== row) {
-                        cardRow.innerHTML = `<span class="quick-added-badge"><i class="fas fa-check-circle"></i> Added (${label})</span>`;
-                    }
-                }
-                showToast(data.message || 'Added to your shelf!', 'success');
+                grid.style.opacity = '1';
+                if (icon) icon.classList.remove('fa-spin');
+                if (btn) btn.style.pointerEvents = '';
+            })
+            .catch(err => {
+                grid.style.opacity = '1';
+                if (icon) icon.classList.remove('fa-spin');
+                if (btn) btn.style.pointerEvents = '';
+                showToast('Unable to refresh recommendations. Please check your internet connection.', 'error');
+            });
+    }
+
+    // 1. ASYNC QUICK-ADD (Prevents page reload and preserving the lists / scroll position)
+    function quickAdd(event, btn, type, id, status) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.style.pointerEvents = 'none';
+
+        const card = btn.closest('.discover-card');
+        let url = btn.getAttribute('href');
+        if (!url) {
+            if (type === 'movie') {
+                const mType = card ? (card.dataset.mediaType || 'movie') : 'movie';
+                url = `/quick_add_movie?id=${id}&status=${status}&media_type=${mType}`;
             } else {
-                let msg = data.message || 'Could not add title.';
-                if (/https?connection|traceback|errno|socket|urllib/i.test(msg)) {
-                    msg = 'Could not add title. Please check your internet connection.';
+                const titleEnc = card ? encodeURIComponent(card.dataset.title || '') : '';
+                const authorEnc = card ? encodeURIComponent(card.dataset.author || '') : '';
+                const imgEnc = card ? encodeURIComponent(card.dataset.img || '') : '';
+                const yearEnc = card ? encodeURIComponent(card.dataset.year || '') : '';
+                url = `/quick_add_book?id=${id}&status=${status}&title=${titleEnc}&author=${authorEnc}&img_url=${imgEnc}&year=${yearEnc}`;
+            }
+        }
+        url += (url.includes('?') ? '&' : '?') + 'ajax=1';
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const label = status === 'watched' ? 'Watched' : (status === 'read' ? 'Read' : (status === 'to_read' ? 'To Read' : 'To Watch'));
+                    const row = btn.closest('.quick-add-row') || btn.closest('.preview-actions');
+                    if (row) {
+                        row.innerHTML = `<span class="quick-added-badge"><i class="fas fa-check-circle"></i> Added (${label})</span>`;
+                    }
+                    if (card) {
+                        card.classList.add('card-in-collection');
+                        const cardRow = card.querySelector('.quick-add-row');
+                        if (cardRow && cardRow !== row) {
+                            cardRow.innerHTML = `<span class="quick-added-badge"><i class="fas fa-check-circle"></i> Added (${label})</span>`;
+                        }
+                    }
+                    showToast(data.message || 'Added to your shelf!', 'success');
+                } else {
+                    let msg = data.message || 'Could not add title.';
+                    if (/https?connection|traceback|errno|socket|urllib/i.test(msg)) {
+                        msg = 'Could not add title. Please check your internet connection.';
+                    }
+                    showToast(msg, 'error');
+                    btn.innerHTML = origHtml;
+                    btn.style.pointerEvents = '';
                 }
-                showToast(msg, 'error');
+            })
+            .catch(err => {
                 btn.innerHTML = origHtml;
                 btn.style.pointerEvents = '';
-            }
-        })
-        .catch(err => {
-            btn.innerHTML = origHtml;
-            btn.style.pointerEvents = '';
-            showToast('Unable to connect to the service. Please check your internet connection.', 'error');
-        });
-}
-
-// 2. SEPARATE INDEPENDENT SECTION REFRESH
-function refreshSection(section, tab) {
-    let btn, gridId, pageParam;
-    if (tab === 'movies') {
-        if (section === 'recommended') {
-            btn = document.getElementById('btnRefreshRecMovies');
-            gridId = 'gridRecommendedMovies';
-            refreshState.recPage += 1;
-            pageParam = `page=${refreshState.recPage}`;
-        } else {
-            btn = document.getElementById('btnRefreshTrendingMovies');
-            gridId = 'gridTrendingMovies';
-            refreshState.trendPage += 1;
-            pageParam = `page=${refreshState.trendPage}`;
-        }
-    } else {
-        if (section === 'recommended') {
-            btn = document.getElementById('btnRefreshRecBooks');
-            gridId = 'gridRecommendedBooks';
-            refreshState.recSeed += 1;
-            pageParam = `seed=${refreshState.recSeed}`;
-        } else {
-            btn = document.getElementById('btnRefreshTrendingBooks');
-            gridId = 'gridTrendingBooks';
-            refreshState.trendSeed += 1;
-            pageParam = `seed=${refreshState.trendSeed}`;
-        }
+                showToast('Unable to connect to the service. Please check your internet connection.', 'error');
+            });
     }
 
-    const grid = document.getElementById(gridId);
-    if (!grid) return;
-
-    let icon = btn ? btn.querySelector('i') : null;
-    if (icon) icon.classList.add('fa-spin');
-    if (btn) btn.style.pointerEvents = 'none';
-
-    grid.style.opacity = '0.5';
-    grid.style.transition = 'opacity 0.2s ease';
-
-    const catParam = refreshState.category && refreshState.category !== 'all' ? `&category=${refreshState.category}` : '';
-    fetch(`/api/discover_section?tab=${tab}&section=${section}&${pageParam}${catParam}`)
-        .then(r => r.json())
-        .then(data => {
-            if (data.success && data.items && data.items.length > 0) {
-                let html = '';
-                data.items.forEach(item => {
-                    html += tab === 'movies' ? buildMovieCard(item) : buildBookCard(item);
-                });
-                grid.innerHTML = html;
+    // 2. SEPARATE INDEPENDENT SECTION REFRESH
+    function refreshSection(section, tab) {
+        let btn, gridId, pageParam;
+        if (tab === 'movies') {
+            if (section === 'recommended') {
+                btn = document.getElementById('btnRefreshRecMovies');
+                gridId = 'gridRecommendedMovies';
+                refreshState.recPage += 1;
+                pageParam = `page=${refreshState.recPage}`;
             } else {
-                if (tab === 'movies') {
-                    if (section === 'recommended') refreshState.recPage = 1;
-                    else refreshState.trendPage = 1;
-                } else {
-                    if (section === 'recommended') refreshState.recSeed = 1;
-                    else refreshState.trendSeed = 1;
-                }
+                btn = document.getElementById('btnRefreshTrendingMovies');
+                gridId = 'gridTrendingMovies';
+                refreshState.trendPage += 1;
+                pageParam = `page=${refreshState.trendPage}`;
             }
-            grid.style.opacity = '1';
-            if (icon) icon.classList.remove('fa-spin');
-            if (btn) btn.style.pointerEvents = '';
-        })
-        .catch(err => {
-            grid.style.opacity = '1';
-            if (icon) icon.classList.remove('fa-spin');
-            if (btn) btn.style.pointerEvents = '';
-        });
-}
+        } else {
+            if (section === 'recommended') {
+                btn = document.getElementById('btnRefreshRecBooks');
+                gridId = 'gridRecommendedBooks';
+                refreshState.recSeed += 1;
+                pageParam = `seed=${refreshState.recSeed}`;
+            } else {
+                btn = document.getElementById('btnRefreshTrendingBooks');
+                gridId = 'gridTrendingBooks';
+                refreshState.trendSeed += 1;
+                pageParam = `seed=${refreshState.trendSeed}`;
+            }
+        }
 
-// Dynamic Card Builders for Refresh
-function buildMovieCard(m) {
-    const titleEsc = escapeHtml(m.title);
-    const mType = m.media_type || 'movie';
-    let typeBadge = '';
-    if (mType === 'series') {
-        typeBadge = '<span class="type-tag series" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-tv"></i> Series</span>';
-    } else if (mType === 'animation') {
-        typeBadge = '<span class="type-tag animation" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-paint-brush"></i> Animation</span>';
-    } else if (mType === 'anime') {
-        typeBadge = '<span class="type-tag anime" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-torii-gate"></i> Anime</span>';
+        const grid = document.getElementById(gridId);
+        if (!grid) return;
+
+        let icon = btn ? btn.querySelector('i') : null;
+        if (icon) icon.classList.add('fa-spin');
+        if (btn) btn.style.pointerEvents = 'none';
+
+        grid.style.opacity = '0.5';
+        grid.style.transition = 'opacity 0.2s ease';
+
+        const catParam = refreshState.category && refreshState.category !== 'all' ? `&category=${refreshState.category}` : '';
+        fetch(`/api/discover_section?tab=${tab}&section=${section}&${pageParam}${catParam}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.items && data.items.length > 0) {
+                    let html = '';
+                    data.items.forEach(item => {
+                        html += tab === 'movies' ? buildMovieCard(item) : buildBookCard(item);
+                    });
+                    grid.innerHTML = html;
+                } else {
+                    if (tab === 'movies') {
+                        if (section === 'recommended') refreshState.recPage = 1;
+                        else refreshState.trendPage = 1;
+                    } else {
+                        if (section === 'recommended') refreshState.recSeed = 1;
+                        else refreshState.trendSeed = 1;
+                    }
+                }
+                grid.style.opacity = '1';
+                if (icon) icon.classList.remove('fa-spin');
+                if (btn) btn.style.pointerEvents = '';
+            })
+            .catch(err => {
+                grid.style.opacity = '1';
+                if (icon) icon.classList.remove('fa-spin');
+                if (btn) btn.style.pointerEvents = '';
+            });
     }
-    return `
+
+    // Dynamic Card Builders for Refresh
+    function buildMovieCard(m) {
+        const titleEsc = escapeHtml(m.title);
+        const mType = m.media_type || 'movie';
+        let typeBadge = '';
+        if (mType === 'series') {
+            typeBadge = '<span class="type-tag series" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-tv"></i> Series</span>';
+        } else if (mType === 'animation') {
+            typeBadge = '<span class="type-tag animation" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-paint-brush"></i> Animation</span>';
+        } else if (mType === 'anime') {
+            typeBadge = '<span class="type-tag anime" style="position:absolute; top:8px; left:8px; z-index:2;"><i class="fas fa-torii-gate"></i> Anime</span>';
+        }
+        return `
     <div class="discover-card" data-tmdb="${m.tmdb_id}" data-title="${titleEsc}" data-media-type="${mType}">
         <div class="discover-poster">
             <img src="${m.img_url}" alt="${titleEsc}" loading="lazy">
@@ -604,16 +644,16 @@ function buildMovieCard(m) {
             </div>
         </div>
     </div>`;
-}
+    }
 
-function buildBookCard(b) {
-    const titleEsc = escapeHtml(b.title);
-    const authorEsc = escapeHtml(b.author || 'Unknown');
-    const titleEnc = encodeURIComponent(b.title);
-    const authorEnc = encodeURIComponent(b.author || '');
-    const imgEnc = encodeURIComponent(b.img_url || '');
-    const yearEnc = encodeURIComponent(b.year || '');
-    return `
+    function buildBookCard(b) {
+        const titleEsc = escapeHtml(b.title);
+        const authorEsc = escapeHtml(b.author || 'Unknown');
+        const titleEnc = encodeURIComponent(b.title);
+        const authorEnc = encodeURIComponent(b.author || '');
+        const imgEnc = encodeURIComponent(b.img_url || '');
+        const yearEnc = encodeURIComponent(b.year || '');
+        return `
     <div class="discover-card" data-google="${b.google_id}" data-title="${titleEsc}" data-author="${authorEsc}" data-year="${b.year || ''}" data-img="${b.img_url || ''}">
         <div class="discover-poster">
             <img src="${b.img_url}" alt="${titleEsc}" loading="lazy">
@@ -645,63 +685,63 @@ function buildBookCard(b) {
             </div>
         </div>
     </div>`;
-}
+    }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
 
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-    const toast = document.createElement('div');
-    toast.className = `toast-msg ${type}`;
-    const icon = type === 'success' ? 'check-circle' : 'info-circle';
-    toast.innerHTML = `<i class="fas fa-${icon}"></i> ${escapeHtml(message)}`;
-    container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(10px)';
-        toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 3200);
-}
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast-msg ${type}`;
+        const icon = type === 'success' ? 'check-circle' : 'info-circle';
+        toast.innerHTML = `<i class="fas fa-${icon}"></i> ${escapeHtml(message)}`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(10px)';
+            toast.style.transition = 'all 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3200);
+    }
 
-// 3. PREVIEW MODAL
-function showPreview(type, id, card) {
-    document.getElementById('previewOverlay').classList.add('active');
-    document.getElementById('previewLoading').style.display = 'flex';
-    document.getElementById('previewContent').style.display = 'none';
+    // 3. PREVIEW MODAL
+    function showPreview(type, id, card) {
+        document.getElementById('previewOverlay').classList.add('active');
+        document.getElementById('previewLoading').style.display = 'flex';
+        document.getElementById('previewContent').style.display = 'none';
 
-    const cardAuthor = card && card.dataset.author ? encodeURIComponent(card.dataset.author) : '';
-    const url = type === 'movie' ? `/movie_preview/${id}` : `/book_preview/${id}?author=${cardAuthor}`;
-    fetch(url)
-        .then(r => {
-            if (!r.ok) {
-                return r.json().then(errData => { throw new Error(errData.error || 'Preview failed'); }).catch(() => { throw new Error('Preview failed'); });
-            }
-            return r.json();
-        })
-        .then(d => {
-            if (d.error) {
-                throw new Error(d.error);
-            }
-            document.getElementById('previewPoster').src = d.poster || (card && card.dataset.img ? card.dataset.img : '');
-            document.getElementById('previewTitle').textContent = d.title || (card ? card.dataset.title : '');
-            document.getElementById('previewSub').textContent = type === 'movie'
-                ? ((d.year || '') + (d.runtime ? ` · ${d.runtime} min` : ''))
-                : `by ${d.author || (card ? card.dataset.author : 'Unknown')}${d.year ? ' · ' + d.year : ''}${d.pages ? ' · ' + d.pages + ' pages' : ''}`;
-            document.getElementById('previewGenres').textContent = d.genres || '';
-            document.getElementById('previewRating').textContent = d.rating ? `⭐ ${d.rating} / 10` : '';
-            document.getElementById('previewExtra').textContent = type === 'movie' && d.cast ? `Cast: ${d.cast}` : '';
-            document.getElementById('previewOverview').textContent = d.overview || 'No description available.';
+        const cardAuthor = card && card.dataset.author ? encodeURIComponent(card.dataset.author) : '';
+        const url = type === 'movie' ? `/movie_preview/${id}` : `/book_preview/${id}?author=${cardAuthor}`;
+        fetch(url)
+            .then(r => {
+                if (!r.ok) {
+                    return r.json().then(errData => { throw new Error(errData.error || 'Preview failed'); }).catch(() => { throw new Error('Preview failed'); });
+                }
+                return r.json();
+            })
+            .then(d => {
+                if (d.error) {
+                    throw new Error(d.error);
+                }
+                document.getElementById('previewPoster').src = d.poster || (card && card.dataset.img ? card.dataset.img : '');
+                document.getElementById('previewTitle').textContent = d.title || (card ? card.dataset.title : '');
+                document.getElementById('previewSub').textContent = type === 'movie'
+                    ? ((d.year || '') + (d.runtime ? ` · ${d.runtime} min` : ''))
+                    : `by ${d.author || (card ? card.dataset.author : 'Unknown')}${d.year ? ' · ' + d.year : ''}${d.pages ? ' · ' + d.pages + ' pages' : ''}`;
+                document.getElementById('previewGenres').textContent = d.genres || '';
+                document.getElementById('previewRating').textContent = d.rating ? `⭐ ${d.rating} / 10` : '';
+                document.getElementById('previewExtra').textContent = type === 'movie' && d.cast ? `Cast: ${d.cast}` : '';
+                document.getElementById('previewOverview').textContent = d.overview || 'No description available.';
 
-            const tmdb_id = d.tmdb_id || id;
-            const google_id = d.google_id || id;
-            let actions = '';
-            if (type === 'movie') {
-                actions = `
+                const tmdb_id = d.tmdb_id || id;
+                const google_id = d.google_id || id;
+                let actions = '';
+                if (type === 'movie') {
+                    actions = `
                     <a href="/discover/movie/${tmdb_id}" class="btn-preview-action view-detail">
                         <i class="fas fa-film"></i> Full Detail View
                     </a>
@@ -711,12 +751,12 @@ function showPreview(type, id, card) {
                     <a href="/quick_add_movie?id=${tmdb_id}&status=watched"
                        onclick="quickAdd(event, this, 'movie', '${tmdb_id}', 'watched')"
                        class="btn-preview-action watched"><i class="fas fa-check"></i> Mark as Watched</a>`;
-            } else {
-                const titleEnc = encodeURIComponent(d.title || (card ? card.dataset.title : ''));
-                const authorEnc = encodeURIComponent(d.author || (card ? card.dataset.author : ''));
-                const imgEnc = encodeURIComponent(d.poster || (card ? card.dataset.img : ''));
-                const yearEnc = encodeURIComponent(d.year || (card ? card.dataset.year : ''));
-                actions = `
+                } else {
+                    const titleEnc = encodeURIComponent(d.title || (card ? card.dataset.title : ''));
+                    const authorEnc = encodeURIComponent(d.author || (card ? card.dataset.author : ''));
+                    const imgEnc = encodeURIComponent(d.poster || (card ? card.dataset.img : ''));
+                    const yearEnc = encodeURIComponent(d.year || (card ? card.dataset.year : ''));
+                    actions = `
                     <a href="/discover/book/${google_id}" class="btn-preview-action view-detail">
                         <i class="fas fa-book-open"></i> Full Book Details
                     </a>
@@ -726,25 +766,25 @@ function showPreview(type, id, card) {
                     <a href="/quick_add_book?id=${google_id}&status=read&title=${titleEnc}&author=${authorEnc}&img_url=${imgEnc}&year=${yearEnc}"
                        onclick="quickAdd(event, this, 'book', '${google_id}', 'read')"
                        class="btn-preview-action read-done"><i class="fas fa-check"></i> Mark as Read</a>`;
-            }
-            document.getElementById('previewActions').innerHTML = actions;
-            document.getElementById('previewLoading').style.display = 'none';
-            document.getElementById('previewContent').style.display = 'block';
-        })
-        .catch(err => {
-            if (card) {
-                document.getElementById('previewPoster').src = card.dataset.img || '';
-                document.getElementById('previewTitle').textContent = card.dataset.title || '';
-                document.getElementById('previewSub').textContent = card.dataset.author ? `by ${card.dataset.author}` : '';
-                document.getElementById('previewOverview').textContent = 'Selected from DreamShelf curated collection.';
-                const titleEnc = encodeURIComponent(card.dataset.title || '');
-                const authorEnc = encodeURIComponent(card.dataset.author || '');
-                const imgEnc = encodeURIComponent(card.dataset.img || '');
-                const yearEnc = encodeURIComponent(card.dataset.year || '');
-                const viewDetailBtn = type === 'movie'
-                    ? `<a href="/discover/movie/${id}" class="btn-preview-action view-detail"><i class="fas fa-film"></i> Full Detail View</a>`
-                    : `<a href="/discover/book/${id}" class="btn-preview-action view-detail"><i class="fas fa-book-open"></i> Full Book Details</a>`;
-                document.getElementById('previewActions').innerHTML = `
+                }
+                document.getElementById('previewActions').innerHTML = actions;
+                document.getElementById('previewLoading').style.display = 'none';
+                document.getElementById('previewContent').style.display = 'block';
+            })
+            .catch(err => {
+                if (card) {
+                    document.getElementById('previewPoster').src = card.dataset.img || '';
+                    document.getElementById('previewTitle').textContent = card.dataset.title || '';
+                    document.getElementById('previewSub').textContent = card.dataset.author ? `by ${card.dataset.author}` : '';
+                    document.getElementById('previewOverview').textContent = 'Selected from DreamShelf curated collection.';
+                    const titleEnc = encodeURIComponent(card.dataset.title || '');
+                    const authorEnc = encodeURIComponent(card.dataset.author || '');
+                    const imgEnc = encodeURIComponent(card.dataset.img || '');
+                    const yearEnc = encodeURIComponent(card.dataset.year || '');
+                    const viewDetailBtn = type === 'movie'
+                        ? `<a href="/discover/movie/${id}" class="btn-preview-action view-detail"><i class="fas fa-film"></i> Full Detail View</a>`
+                        : `<a href="/discover/book/${id}" class="btn-preview-action view-detail"><i class="fas fa-book-open"></i> Full Book Details</a>`;
+                    document.getElementById('previewActions').innerHTML = `
                     ${viewDetailBtn}
                     <a href="/quick_add_book?id=${id}&status=to_read&title=${titleEnc}&author=${authorEnc}&img_url=${imgEnc}&year=${yearEnc}"
                        onclick="quickAdd(event, this, 'book', '${id}', 'to_read')"
@@ -753,27 +793,27 @@ function showPreview(type, id, card) {
                        onclick="quickAdd(event, this, 'book', '${id}', 'read')"
                        class="btn-preview-action read-done"><i class="fas fa-check"></i> Mark as Read</a>
                 `;
-                document.getElementById('previewLoading').style.display = 'none';
-                document.getElementById('previewContent').style.display = 'block';
-            } else {
-                let msg = 'Unable to reach the preview service. Please check your internet connection.';
-                if (err && err.message && !/https?connection|traceback|errno|socket|urllib/i.test(err.message)) {
-                    msg = err.message;
-                }
-                document.getElementById('previewLoading').innerHTML = `
+                    document.getElementById('previewLoading').style.display = 'none';
+                    document.getElementById('previewContent').style.display = 'block';
+                } else {
+                    let msg = 'Unable to reach the preview service. Please check your internet connection.';
+                    if (err && err.message && !/https?connection|traceback|errno|socket|urllib/i.test(err.message)) {
+                        msg = err.message;
+                    }
+                    document.getElementById('previewLoading').innerHTML = `
                     <div style="text-align:center; padding: 2.5rem 1.5rem; color:var(--text-muted);">
                         <i class="fas fa-wifi" style="font-size:2.4rem; color:var(--accent); opacity:0.8; margin-bottom:1rem; display:block;"></i>
                         <h3 style="font-size:1.15rem; color:#ffffff; font-weight:700; margin-bottom:0.4rem;">Connection Issue</h3>
                         <p style="font-size:0.88rem; line-height:1.6; max-width:320px; margin:0 auto 1.2rem;">${escapeHtml(msg)}</p>
                         <button type="button" class="btn-secondary" onclick="closePreview()" style="border-radius:8px; padding:0.5rem 1.2rem; font-size:0.82rem;">Close</button>
                     </div>`;
-            }
-        });
-}
+                }
+            });
+    }
 
-function closePreview(e) {
-    if (e && e.target !== document.getElementById('previewOverlay')) return;
-    document.getElementById('previewOverlay').classList.remove('active');
-}
+    function closePreview(e) {
+        if (e && e.target !== document.getElementById('previewOverlay')) return;
+        document.getElementById('previewOverlay').classList.remove('active');
+    }
 </script>
 {% endblock %}

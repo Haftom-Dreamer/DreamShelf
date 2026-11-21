@@ -38,7 +38,10 @@ GOOGLE_AUTH_URL  = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -614,25 +617,19 @@ def logout():
 # --- Google OAuth Routes ---
 # =====================
 
+def get_google_redirect_uri():
+    configured = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
+    if configured:
+        return configured
+    scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+    return url_for("google_callback", _external=True, _scheme=scheme)
+
 @app.route("/auth/google/login")
 def google_login():
     """Redirect the user to Google's OAuth consent screen."""
     if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
         flash("Google Sign-In is not configured. Please contact the administrator.", "error")
         return redirect(url_for("login"))
-
-    # Ensure host matches GOOGLE_REDIRECT_URI so session cookies are preserved
-    parsed_redirect = urllib.parse.urlparse(GOOGLE_REDIRECT_URI)
-    if parsed_redirect.netloc and request.host != parsed_redirect.netloc:
-        target = urllib.parse.urlunparse((
-            parsed_redirect.scheme or request.scheme,
-            parsed_redirect.netloc,
-            request.path,
-            '',
-            request.query_string.decode('utf-8') if request.query_string else '',
-            ''
-        ))
-        return redirect(target)
 
     # Generate a random state token to protect against CSRF
     state = secrets.token_urlsafe(32)
@@ -643,9 +640,12 @@ def google_login():
     if next_url:
         session["oauth_next"] = next_url
 
+    redirect_uri = get_google_redirect_uri()
+    session["oauth_redirect_uri"] = redirect_uri
+
     params = {
         "client_id":     GOOGLE_CLIENT_ID,
-        "redirect_uri":  GOOGLE_REDIRECT_URI,
+        "redirect_uri":  redirect_uri,
         "response_type": "code",
         "scope":         "openid email profile",
         "state":         state,
@@ -677,6 +677,8 @@ def google_callback():
         flash("Google Sign-In failed: no authorization code received.", "error")
         return redirect(url_for("login"))
 
+    redirect_uri = session.pop("oauth_redirect_uri", None) or get_google_redirect_uri()
+
     # --- Exchange code for tokens ---
     try:
         token_resp = requests.post(
@@ -685,7 +687,7 @@ def google_callback():
                 "code":          code,
                 "client_id":     GOOGLE_CLIENT_ID,
                 "client_secret": GOOGLE_CLIENT_SECRET,
-                "redirect_uri":  GOOGLE_REDIRECT_URI,
+                "redirect_uri":  redirect_uri,
                 "grant_type":    "authorization_code",
             },
             timeout=10,
