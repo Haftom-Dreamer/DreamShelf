@@ -45,8 +45,12 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)   # stay logged in for 30 days
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
 if os.environ.get("FLASK_ENV") == "production" or os.environ.get("SESSION_COOKIE_SECURE", "").lower() == "true":
     app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['REMEMBER_COOKIE_SECURE'] = True
 
 Bootstrap(app)
 
@@ -575,7 +579,7 @@ def register():
         )
         db.session.add(user)
         db.session.commit()
-        login_user(user)
+        login_user(user, remember=True)
         flash("Welcome! Your account has been created.", "success")
         return redirect(url_for("dashboard"))
     return render_template("register.html", form=form)
@@ -593,7 +597,7 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user and user.password_hash and check_password_hash(user.password_hash, form.password.data):
-            login_user(user)
+            login_user(user, remember=True)
             next_page = request.args.get("next")
             if next_page and is_safe_url(next_page):
                 return redirect(next_page)
@@ -770,7 +774,7 @@ def google_callback():
                 db.session.commit()
                 flash(f"Welcome to DreamShelf, {user.username}! Your account has been created via Google.", "success")
 
-        login_user(user)
+        login_user(user, remember=True)
     except Exception as e:
         db.session.rollback()
         flash("An error occurred while setting up your account. Please try again.", "error")

@@ -13,13 +13,14 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
 </head>
 
 <body>
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <a href="{{ url_for('landing') }}" class="nav-logo">
-                <span class="logo-icon">✦</span> DreamShelf
+                <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="DreamShelf" height="34" style="display:block;">
             </a>
             <div class="nav-right">
                 {% if current_user.is_authenticated %}
@@ -133,8 +134,8 @@
         </div>
         {% else %}
         <div class="mobile-menu-guest">
-            <span class="nav-logo" style="font-size:1.5rem; margin-bottom:1.5rem; justify-content:center;">
-                <span class="logo-icon">✦</span> DreamShelf
+            <span class="nav-logo" style="margin-bottom:1.5rem; justify-content:center;">
+                <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="DreamShelf" height="30" style="display:block;">
             </span>
             <p style="color:var(--text-muted); font-size:0.95rem; text-align:center; margin-bottom:2rem; max-width:260px;">Every story deserves a shelf. Explore movies and books.</p>
             <div style="display:flex; flex-direction:column; gap:0.8rem; width:100%; max-width:280px;">
@@ -166,8 +167,8 @@
 
     <footer class="footer">
         <div class="footer-inner">
-            <span class="nav-logo" style="font-size:1.3rem; justify-content:center;">
-                <span class="logo-icon">✦</span> DreamShelf
+            <span class="nav-logo" style="justify-content:center;">
+                <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="DreamShelf" height="26" style="display:block;">
             </span>
             <p style="font-size: 1.05rem; font-weight: 600; color: #ffffff; margin-top: 6px; letter-spacing: 0.02em;">Every story deserves a shelf.</p>
             <p style="color:var(--text-muted); opacity:0.65; font-size:0.8rem; margin-top:4px;">Your personal celestial universe of movies &amp; books · © 2026 DreamShelf</p>
