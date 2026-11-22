@@ -2335,10 +2335,26 @@ input:-webkit-autofill:active {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.4s ease;
     display: block;
+    image-rendering: -webkit-optimize-contrast;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    transition: transform 0.4s ease;
 }
-.discover-card:hover .discover-poster img { transform: scale(1.07); }
+
+@media (hover: hover) and (pointer: fine) {
+    .discover-card:hover .discover-poster img { transform: scale(1.05); }
+    .discover-card:hover .discover-overlay { opacity: 1; }
+}
+
+@media (hover: none) or (pointer: coarse) {
+    .discover-overlay {
+        display: none !important;
+    }
+    .discover-card:hover .discover-poster img {
+        transform: none !important;
+    }
+}
 
 .discover-overlay {
     position: absolute;
@@ -2351,9 +2367,7 @@ input:-webkit-autofill:active {
     padding: 0.5rem;
     opacity: 0;
     transition: opacity 0.3s;
-    backdrop-filter: blur(2px);
 }
-.discover-card:hover .discover-overlay { opacity: 1; }
 
 .btn-add-discover {
     background: var(--accent);
@@ -5449,4 +5463,276 @@ a.cat-pill:hover {
         font-size: 0.72rem !important;
     }
 }
+
+/* ================================================
+   FOLLOWERS / FOLLOWING & SOCIAL MODAL STYLES
+   ================================================ */
+
+.profile-stat-badge {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 50px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    outline: none;
+}
+.profile-stat-badge:hover {
+    background: rgba(124, 92, 255, 0.15);
+    border-color: var(--accent);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 92, 255, 0.25);
+}
+.profile-stat-badge strong {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.social-user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.social-user-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.social-user-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+.social-user-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    text-decoration: none;
+    color: inherit;
+}
+.social-user-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #ffffff;
+    font-size: 1.1rem;
+}
+.social-user-names {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.social-user-display {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.social-user-handle {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+}
+.btn-social-follow {
+    padding: 0.35rem 0.85rem;
+    border-radius: 50px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #ffffff;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.btn-social-follow.following {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-muted);
+}
+.btn-social-follow:hover {
+    transform: scale(1.03);
+}
+
+/* ================================================
+   CUSTOM COLLECTION MANAGEMENT MODAL
+   ================================================ */
+
+.custom-col-card {
+    cursor: pointer;
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.custom-col-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(244, 114, 182, 0.4);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+.btn-col-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    border: 1px solid rgba(244, 114, 182, 0.3);
+    background: rgba(244, 114, 182, 0.1);
+    color: #f472b6;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-col-action:hover {
+    background: #f472b6;
+    color: #ffffff;
+}
+
+.col-manager-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+@media (max-width: 768px) {
+    .col-manager-layout {
+        grid-template-columns: 1fr;
+        gap: 1.2rem;
+    }
+}
+
+.col-panel-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 1.1rem;
+    display: flex;
+    flex-direction: column;
+}
+.col-panel-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.col-film-scroll {
+    max-height: 48vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-right: 4px;
+}
+
+.col-film-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: background 0.15s ease;
+}
+.col-film-row:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+.col-film-left {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+}
+.col-film-thumb {
+    width: 36px;
+    height: 52px;
+    border-radius: 4px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+}
+.col-film-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.col-film-name {
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.col-film-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+.btn-col-film-add {
+    padding: 0.3rem 0.65rem;
+    border-radius: 50px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: rgba(56, 239, 125, 0.15);
+    border: 1px solid rgba(56, 239, 125, 0.3);
+    color: #38ef7d;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.btn-col-film-add:hover {
+    background: #38ef7d;
+    color: #000000;
+}
+.btn-col-film-add.added {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-faint);
+    cursor: default;
+}
+.btn-col-film-remove {
+    padding: 0.28rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.btn-col-film-remove:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
 

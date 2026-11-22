@@ -857,34 +857,100 @@ def settings():
 # --- Social Routes ---
 # =====================
 
-@app.route("/follow/<username>")
+@app.route("/follow/<username>", methods=["GET", "POST"])
 @login_required
 def follow(username):
     user = User.query.filter_by(username=username).first()
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json or request.args.get("format") == "json"
     if user is None:
+        if is_ajax:
+            return jsonify({"success": False, "error": f"User {username} not found."}), 404
         flash(f"User {username} not found.", "error")
         return redirect(url_for("landing"))
     if user == current_user:
+        if is_ajax:
+            return jsonify({"success": False, "error": "You cannot follow yourself!"}), 400
         flash("You cannot follow yourself!", "error")
         return redirect(url_for("public_collection", username=username))
     if user not in current_user.followed:
         current_user.followed.append(user)
         db.session.commit()
-        flash(f"You followed {username}.", "success")
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "action": "followed",
+            "is_following": True,
+            "username": username,
+            "followers_count": user.followers.count(),
+            "following_count": user.followed.count()
+        })
+    flash(f"You followed {username}.", "success")
     return redirect(url_for("public_collection", username=username))
 
-@app.route("/unfollow/<username>")
+@app.route("/unfollow/<username>", methods=["GET", "POST"])
 @login_required
 def unfollow(username):
     user = User.query.filter_by(username=username).first()
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json or request.args.get("format") == "json"
     if user is None:
+        if is_ajax:
+            return jsonify({"success": False, "error": f"User {username} not found."}), 404
         flash(f"User {username} not found.", "error")
         return redirect(url_for("landing"))
     if user in current_user.followed:
         current_user.followed.remove(user)
         db.session.commit()
-        flash(f"You stopped following {username}.", "info")
+    if is_ajax:
+        return jsonify({
+            "success": True,
+            "action": "unfollowed",
+            "is_following": False,
+            "username": username,
+            "followers_count": user.followers.count(),
+            "following_count": user.followed.count()
+        })
+    flash(f"You stopped following {username}.", "info")
     return redirect(url_for("public_collection", username=username))
+
+@app.route("/api/user/<username>/followers")
+def api_user_followers(username):
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"success": False, "error": "User not found"}), 404
+    
+    followers_list = []
+    for u in user.followers.all():
+        followers_list.append({
+            "id": u.id,
+            "username": u.username,
+            "display_name": u.display_name or u.username,
+            "avatar_url": u.avatar_url or "",
+            "avatar_color": u.avatar_color or "#6c63ff",
+            "bio": (u.bio or "")[:100],
+            "is_following": current_user.is_authenticated and (u in current_user.followed) if current_user.is_authenticated else False,
+            "is_self": current_user.is_authenticated and (u.id == current_user.id)
+        })
+    return jsonify({"success": True, "followers": followers_list, "count": len(followers_list)})
+
+@app.route("/api/user/<username>/following")
+def api_user_following(username):
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"success": False, "error": "User not found"}), 404
+    
+    following_list = []
+    for u in user.followed.all():
+        following_list.append({
+            "id": u.id,
+            "username": u.username,
+            "display_name": u.display_name or u.username,
+            "avatar_url": u.avatar_url or "",
+            "avatar_color": u.avatar_color or "#6c63ff",
+            "bio": (u.bio or "")[:100],
+            "is_following": current_user.is_authenticated and (u in current_user.followed) if current_user.is_authenticated else False,
+            "is_self": current_user.is_authenticated and (u.id == current_user.id)
+        })
+    return jsonify({"success": True, "following": following_list, "count": len(following_list)})
 
 @app.route("/import", methods=["GET", "POST"])
 @login_required
@@ -2139,8 +2205,32 @@ def api_get_collection(col_id):
     } for m in col.movies]
     
     d = col.to_dict()
+    d["is_owner"] = current_user.is_authenticated and current_user.id == col.user_id
     d["movies"] = movies_data
     return jsonify({"success": True, "collection": d})
+
+@app.route("/api/my_library_movies")
+@login_required
+def api_my_library_movies():
+    """Return all movies in current_user library for the custom collection movie picker."""
+    user_movies = Movie.query.filter_by(user_id=current_user.id).order_by(Movie.title.asc()).all()
+    col_id = request.args.get("collection_id", type=int)
+    existing_movie_ids = set()
+    if col_id:
+        col = db.session.get(CustomCollection, col_id)
+        if col and col.user_id == current_user.id:
+            existing_movie_ids = {m.id for m in col.movies}
+    
+    data = [{
+        "id": m.id,
+        "title": m.title,
+        "year": m.year or "",
+        "img_url": m.img_url or "",
+        "rating": m.rating or 0,
+        "genre": m.genre or "",
+        "in_collection": m.id in existing_movie_ids
+    } for m in user_movies]
+    return jsonify({"success": True, "movies": data})
 
 
 
