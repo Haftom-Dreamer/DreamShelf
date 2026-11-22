@@ -67,6 +67,22 @@ else:
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max upload
 
+# Fix stale / SSL-dropped PostgreSQL connections (Neon & Render)
+_is_postgres = bool(os.environ.get("DATABASE_URL"))
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,          # ping before every use – auto-reconnects dead connections
+    "pool_recycle": 300,            # recycle connections every 5 min
+    "pool_size": 5,
+    "max_overflow": 10,
+    **({"connect_args": {
+        "connect_timeout": 10,
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+    }} if _is_postgres else {}),
+}
+
 UPLOAD_AVATAR_DIR = os.path.join(app.static_folder, 'uploads', 'avatars')
 UPLOAD_COVER_DIR = os.path.join(app.static_folder, 'uploads', 'covers')
 os.makedirs(UPLOAD_AVATAR_DIR, exist_ok=True)
@@ -119,7 +135,11 @@ login_manager.login_message = "Please log in to access this page."
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except Exception:
+        db.session.rollback()
+        return None
 
 AVATAR_COLORS = ["#6c63ff", "#ff6584", "#43b89c", "#f5a623", "#4ecdc4", "#c56ef3"]
 
