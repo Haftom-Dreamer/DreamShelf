@@ -106,7 +106,7 @@
         </div>
     </div>
 
-    <!-- Tab Bar: Separate Movies & Books -->
+    <!-- Tab Bar: Separate Movies & Books + Quick Navigator to Collection -->
     <div class="tab-bar" style="margin-top: 1.5rem;">
         <a href="{{ url_for('discover', tab='movies') }}" class="tab-item {% if tab == 'movies' %}active{% endif %}">
             <i class="fas fa-film"></i> Movies
@@ -114,6 +114,80 @@
         <a href="{{ url_for('discover', tab='books') }}" class="tab-item {% if tab == 'books' %}active{% endif %}">
             <i class="fas fa-book"></i> Books
         </a>
+        <a href="{{ url_for('collection', tab=tab) }}" class="tab-item tab-collection-shortcut" title="Back to my collection">
+            <i class="fas fa-layer-group" style="color:var(--accent-cyan);"></i> My Collection <i class="fas fa-arrow-right" style="font-size:0.7rem; opacity:0.6; margin-left:2px;"></i>
+        </a>
+    </div>
+
+    <!-- Category Breakdown & Size Controls for Discover -->
+    <div class="discover-category-strip" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem; margin: 1.2rem 0 0.5rem 0;">
+        {% if tab == 'movies' %}
+        <div class="category-breakdown-bar discover-cat-bar" id="discoverMovieCatBar">
+            <a class="cat-pill {% if current_category == 'all' or not current_category %}active{% endif %}"
+               href="{{ url_for('discover', tab='movies', category='all') }}"
+               onclick="filterDiscoverCategory(event, 'all', 'All Types')" data-cat="all">
+                ✦ All Types
+            </a>
+            <a class="cat-pill movie {% if current_category == 'movie' %}active{% endif %}"
+               href="{{ url_for('discover', tab='movies', category='movie') }}"
+               onclick="filterDiscoverCategory(event, 'movie', '🎬 Movies')" data-cat="movie">
+                🎬 Movies
+            </a>
+            <a class="cat-pill series {% if current_category == 'series' %}active{% endif %}"
+               href="{{ url_for('discover', tab='movies', category='series') }}"
+               onclick="filterDiscoverCategory(event, 'series', '📺 Series')" data-cat="series">
+                📺 Series
+            </a>
+            <a class="cat-pill animation {% if current_category == 'animation' %}active{% endif %}"
+               href="{{ url_for('discover', tab='movies', category='animation') }}"
+               onclick="filterDiscoverCategory(event, 'animation', '🎨 Animation')" data-cat="animation">
+                🎨 Animation
+            </a>
+            <a class="cat-pill anime {% if current_category == 'anime' %}active{% endif %}"
+               href="{{ url_for('discover', tab='movies', category='anime') }}"
+               onclick="filterDiscoverCategory(event, 'anime', '⛩️ Anime')" data-cat="anime">
+                ⛩️ Anime
+            </a>
+        </div>
+        {% else %}
+        <div class="category-breakdown-bar discover-cat-bar" id="discoverBookCatBar">
+            <a class="cat-pill {% if current_category == 'all' or not current_category %}active{% endif %}"
+               href="{{ url_for('discover', tab='books', category='all') }}"
+               onclick="filterDiscoverCategory(event, 'all', 'All Themes')" data-cat="all">
+                ✦ All Themes
+            </a>
+            <a class="cat-pill fiction {% if current_category == 'fiction' %}active{% endif %}"
+               href="{{ url_for('discover', tab='books', category='fiction') }}"
+               onclick="filterDiscoverCategory(event, 'fiction', '📖 Fiction')" data-cat="fiction">
+                📖 Fiction
+            </a>
+            <a class="cat-pill philosophy {% if current_category == 'philosophy' %}active{% endif %}"
+               href="{{ url_for('discover', tab='books', category='philosophy') }}"
+               onclick="filterDiscoverCategory(event, 'philosophy', '🧠 Philosophy')" data-cat="philosophy">
+                🧠 Philosophy
+            </a>
+            <a class="cat-pill self_help {% if current_category == 'self_help' %}active{% endif %}"
+               href="{{ url_for('discover', tab='books', category='self_help') }}"
+               onclick="filterDiscoverCategory(event, 'self_help', '🌱 Self-Help')" data-cat="self_help">
+                🌱 Self-Help
+            </a>
+            <a class="cat-pill business {% if current_category == 'business' %}active{% endif %}"
+               href="{{ url_for('discover', tab='books', category='business') }}"
+               onclick="filterDiscoverCategory(event, 'business', '💼 Business')" data-cat="business">
+                💼 Business
+            </a>
+            <a class="cat-pill non_fiction {% if current_category == 'non_fiction' %}active{% endif %}"
+               href="{{ url_for('discover', tab='books', category='non_fiction') }}"
+               onclick="filterDiscoverCategory(event, 'non_fiction', '🌍 Non-Fiction')" data-cat="non_fiction">
+                🌍 Non-Fiction
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="grid-controls" style="display:flex; gap:0.3rem;">
+            <button class="sort-chip" onclick="setDiscoverGridSize('small')" title="Small Cards View" style="padding:0.35rem 0.55rem; font-size:0.75rem;"><i class="fas fa-th"></i> Small</button>
+            <button class="sort-chip" onclick="setDiscoverGridSize('medium')" title="Standard Cards View" style="padding:0.35rem 0.55rem; font-size:0.75rem;"><i class="fas fa-th-large"></i> Normal</button>
+        </div>
     </div>
 
     {% if tab == 'movies' %}
@@ -393,6 +467,10 @@
         // Update active dropdown item UI
         document.querySelectorAll(`#${dropdownId} .filter-dropdown-item`).forEach(c => {
             c.classList.toggle('active', c.dataset.cat === cat);
+        });
+        // Update active category strip pills UI
+        document.querySelectorAll('.discover-cat-bar .cat-pill').forEach(p => {
+            p.classList.toggle('active', p.dataset.cat === cat);
         });
         const labelEl = document.getElementById(labelId);
         if (labelEl) {
@@ -815,5 +893,20 @@
         if (e && e.target !== document.getElementById('previewOverlay')) return;
         document.getElementById('previewOverlay').classList.remove('active');
     }
+
+    // Discover Grid Sizing Controls
+    function setDiscoverGridSize(size) {
+        document.querySelectorAll('.discover-grid').forEach(g => {
+            g.classList.remove('grid-small', 'grid-medium');
+            g.classList.add('grid-' + size);
+        });
+        localStorage.setItem('dreamshelf_discoverGridSize', size);
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedSize = localStorage.getItem('dreamshelf_discoverGridSize');
+        if (savedSize) {
+            setDiscoverGridSize(savedSize);
+        }
+    });
 </script>
 {% endblock %}

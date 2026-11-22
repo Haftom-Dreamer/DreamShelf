@@ -98,6 +98,9 @@
            class="tab-item {% if tab == 'books' %}active{% endif %}">
             <i class="fas fa-book"></i> Books <span class="tab-badge">{{ total_books_count }}</span>
         </a>
+        <a href="{{ url_for('discover', tab=tab) }}" class="tab-item tab-discover-shortcut" title="Discover recommendations & trending titles">
+            <i class="fas fa-compass" style="color:var(--accent);"></i> Discover <i class="fas fa-arrow-right" style="font-size:0.7rem; opacity:0.6; margin-left:2px;"></i>
+        </a>
     </div>
 
     <!-- Toolbar: Minimized filter dropdowns + sort + search -->

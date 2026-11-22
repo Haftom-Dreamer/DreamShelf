@@ -2155,7 +2155,7 @@ CURATED_BOOKS = [
         "author": "James Clear",
         "year": "2018",
         "genre": "Self-Help, Psychology, Productivity",
-        "img_url": "https://covers.openlibrary.org/b/id/12539702-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/12539702-L.jpg",
         "overview": "No matter your goals, Atomic Habits offers a proven framework for improving every day. James Clear reveals practical strategies to form good habits and break bad ones."
     },
     {
@@ -2164,7 +2164,7 @@ CURATED_BOOKS = [
         "author": "Mark Manson",
         "year": "2016",
         "genre": "Self-Help, Philosophy",
-        "img_url": "https://covers.openlibrary.org/b/id/8231990-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8231990-L.jpg",
         "overview": "A generation-defining self-help guide that shows how to stop trying to be 'positive' all the time and instead become better at handling adversity."
     },
     {
@@ -2173,7 +2173,7 @@ CURATED_BOOKS = [
         "author": "Ichiro Kishimi, Fumitake Koga",
         "year": "2013",
         "genre": "Philosophy, Psychology, Self-Help",
-        "img_url": "https://covers.openlibrary.org/b/id/10543210-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/10543210-L.jpg",
         "overview": "The Japanese phenomenon demonstrating how to free yourself, change your life, and achieve real happiness through the philosophy of Alfred Adler."
     },
     {
@@ -2182,7 +2182,7 @@ CURATED_BOOKS = [
         "author": "Cal Newport",
         "year": "2016",
         "genre": "Self-Help, Productivity, Business",
-        "img_url": "https://covers.openlibrary.org/b/id/8235111-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8235111-L.jpg",
         "overview": "Deep work is the ability to focus without distraction on a demanding cognitive task. A guide for focused success in a distracted world."
     },
     {
@@ -2191,7 +2191,7 @@ CURATED_BOOKS = [
         "author": "Morgan Housel",
         "year": "2020",
         "genre": "Finance, Psychology, Business",
-        "img_url": "https://covers.openlibrary.org/b/id/10574768-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/10574768-L.jpg",
         "overview": "Doing well with money isn't just about what you know—it's about how you behave. Timeless lessons on wealth, greed, and happiness."
     },
     {
@@ -2200,7 +2200,7 @@ CURATED_BOOKS = [
         "author": "Marcus Aurelius",
         "year": "2002",
         "genre": "Philosophy, Stoicism, Classics",
-        "img_url": "https://covers.openlibrary.org/b/id/8774136-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8774136-L.jpg",
         "overview": "The personal writings of the Roman Emperor Marcus Aurelius, recording private reflections on Stoic philosophy, duty, and life."
     },
     {
@@ -2209,7 +2209,7 @@ CURATED_BOOKS = [
         "author": "Viktor E. Frankl",
         "year": "1946",
         "genre": "Psychology, Philosophy, Memoir",
-        "img_url": "https://covers.openlibrary.org/b/id/8231856-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8231856-L.jpg",
         "overview": "Psychiatrist Viktor Frankl explores his experiences in concentration camps and the fundamental human drive to find purpose and meaning."
     },
     {
@@ -2218,7 +2218,7 @@ CURATED_BOOKS = [
         "author": "Daniel Kahneman",
         "year": "2011",
         "genre": "Psychology, Behavioral Economics, Science",
-        "img_url": "https://covers.openlibrary.org/b/id/7266155-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/7266155-L.jpg",
         "overview": "Nobel laureate Daniel Kahneman takes us on a groundbreaking tour of the mind, explaining the two systems that drive how we think and decide."
     },
     {
@@ -2227,7 +2227,7 @@ CURATED_BOOKS = [
         "author": "Robert Greene",
         "year": "1998",
         "genre": "Philosophy, Psychology, Strategy",
-        "img_url": "https://covers.openlibrary.org/b/id/6424160-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/6424160-L.jpg",
         "overview": "Amoral, cunning, and instructive—a synthesis of three thousand years of history distilled into forty-eight essential laws of power."
     },
     {
@@ -2236,7 +2236,7 @@ CURATED_BOOKS = [
         "author": "Paulo Coelho",
         "year": "1988",
         "genre": "Fiction, Fantasy, Philosophy",
-        "img_url": "https://covers.openlibrary.org/b/id/8231992-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8231992-L.jpg",
         "overview": "The enchanting story of Santiago, an Andalusian shepherd boy who journeys across the desert in pursuit of his personal legend."
     },
     {
@@ -2245,7 +2245,7 @@ CURATED_BOOKS = [
         "author": "Matt Haig",
         "year": "2020",
         "genre": "Fiction, Fantasy, Magical Realism",
-        "img_url": "https://covers.openlibrary.org/b/id/10313767-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/10313767-L.jpg",
         "overview": "Between life and death stands a library with infinite books—each one an opportunity to live out a different path you could have taken."
     },
     {
@@ -2254,7 +2254,7 @@ CURATED_BOOKS = [
         "author": "George Orwell",
         "year": "1949",
         "genre": "Fiction, Dystopian, Classics",
-        "img_url": "https://covers.openlibrary.org/b/id/7222246-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/7222246-L.jpg",
         "overview": "A dystopian masterpiece exploring ubiquitous surveillance, truth manipulation, and individual liberty in a totalitarian world."
     },
     {
@@ -2263,7 +2263,7 @@ CURATED_BOOKS = [
         "author": "Harper Lee",
         "year": "1960",
         "genre": "Fiction, Classics, Literature",
-        "img_url": "https://covers.openlibrary.org/b/id/8226191-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8226191-L.jpg",
         "overview": "A compassionate and deeply moving story of innocence, moral growth, and empathy amidst racial injustice in the American South."
     },
     {
@@ -2272,7 +2272,7 @@ CURATED_BOOKS = [
         "author": "Frank Herbert",
         "year": "1965",
         "genre": "Sci-Fi, Fantasy, Classics",
-        "img_url": "https://covers.openlibrary.org/b/id/8235123-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8235123-L.jpg",
         "overview": "Set on the desert planet Arrakis, Dune is the grand epic of young Paul Atreides, destiny, ecology, and planetary power."
     },
     {
@@ -2281,7 +2281,7 @@ CURATED_BOOKS = [
         "author": "Andy Weir",
         "year": "2021",
         "genre": "Sci-Fi, Space, Adventure",
-        "img_url": "https://covers.openlibrary.org/b/id/10543211-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/10543211-L.jpg",
         "overview": "A lone astronaut awakens with amnesia on a desperate last-chance interstellar mission to save humanity from impending extinction."
     },
     {
@@ -2290,7 +2290,7 @@ CURATED_BOOKS = [
         "author": "Yuval Noah Harari",
         "year": "2014",
         "genre": "History, Science, Anthropology",
-        "img_url": "https://covers.openlibrary.org/b/id/8231991-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8231991-L.jpg",
         "overview": "A provocative narrative tracing the evolutionary history of Homo sapiens from the Stone Age to modern global society."
     },
     {
@@ -2299,7 +2299,7 @@ CURATED_BOOKS = [
         "author": "Robert T. Kiyosaki",
         "year": "1997",
         "genre": "Finance, Personal Growth, Business",
-        "img_url": "https://covers.openlibrary.org/b/id/8315603-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8315603-L.jpg",
         "overview": "What the rich teach their kids about money that the poor and middle class do not—an iconic guide on financial independence."
     },
     {
@@ -2308,7 +2308,7 @@ CURATED_BOOKS = [
         "author": "David Goggins",
         "year": "2018",
         "genre": "Biography, Self-Help, Motivation",
-        "img_url": "https://covers.openlibrary.org/b/id/8739161-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8739161-L.jpg",
         "overview": "The remarkable story of how mental toughness, disciplined habits, and self-belief turned hardship into legendary achievement."
     },
     {
@@ -2317,7 +2317,7 @@ CURATED_BOOKS = [
         "author": "F. Scott Fitzgerald",
         "year": "1925",
         "genre": "Fiction, Classics, Literature",
-        "img_url": "https://covers.openlibrary.org/b/id/7222161-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/7222161-L.jpg",
         "overview": "The evocative story of Jay Gatsby's pursuit of love and wealth on Long Island during the glittering roaring twenties."
     },
     {
@@ -2326,7 +2326,7 @@ CURATED_BOOKS = [
         "author": "Friedrich Nietzsche",
         "year": "1886",
         "genre": "Philosophy, Classics",
-        "img_url": "https://covers.openlibrary.org/b/id/8235222-M.jpg",
+        "img_url": "https://covers.openlibrary.org/b/id/8235222-L.jpg",
         "overview": "Nietzsche's incisive philosophical critique dissecting conventional morality, dogmatism, and the will to power."
     }
 ]
@@ -2410,7 +2410,7 @@ def get_diverse_movie_recommendations(user_movies, movie_in_collection, page=1, 
                         "tmdb_id": tid,
                         "title": item.get("name") or item.get("original_name") or "",
                         "year": (item.get("first_air_date") or "")[:4],
-                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "img_url": f"https://image.tmdb.org/t/p/w500{item['poster_path']}",
                         "rating": round(item.get("vote_average", 0), 1),
                         "overview": (item.get("overview") or "")[:200],
                         "media_type": "series"
@@ -2442,7 +2442,7 @@ def get_diverse_movie_recommendations(user_movies, movie_in_collection, page=1, 
                         "tmdb_id": tid,
                         "title": item.get("title", ""),
                         "year": (item.get("release_date") or "")[:4],
-                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "img_url": f"https://image.tmdb.org/t/p/w500{item['poster_path']}",
                         "rating": round(item.get("vote_average", 0), 1),
                         "overview": (item.get("overview") or "")[:200],
                         "media_type": "anime"
@@ -2474,7 +2474,7 @@ def get_diverse_movie_recommendations(user_movies, movie_in_collection, page=1, 
                         "tmdb_id": tid,
                         "title": item.get("title", ""),
                         "year": (item.get("release_date") or "")[:4],
-                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "img_url": f"https://image.tmdb.org/t/p/w500{item['poster_path']}",
                         "rating": round(item.get("vote_average", 0), 1),
                         "overview": (item.get("overview") or "")[:200],
                         "media_type": "animation"
@@ -2533,7 +2533,7 @@ def get_diverse_movie_recommendations(user_movies, movie_in_collection, page=1, 
                             "tmdb_id": tid,
                             "title": item.get("title", ""),
                             "year": (item.get("release_date") or "")[:4],
-                            "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                            "img_url": f"https://image.tmdb.org/t/p/w500{item['poster_path']}",
                             "rating": round(item.get("vote_average", 0), 1),
                             "overview": (item.get("overview") or "")[:200],
                             "media_type": "movie"
@@ -2602,7 +2602,7 @@ def get_diverse_movie_recommendations(user_movies, movie_in_collection, page=1, 
                             "tmdb_id": tid,
                             "title": item.get("title", ""),
                             "year": (item.get("release_date") or "")[:4],
-                            "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                            "img_url": f"https://image.tmdb.org/t/p/w500{item['poster_path']}",
                             "rating": round(item.get("vote_average", 0), 1),
                             "overview": (item.get("overview") or "")[:200],
                             "media_type": m_type
@@ -2641,7 +2641,7 @@ def get_trending_movies(movie_in_collection, page=1, category="all"):
                         "tmdb_id": tid,
                         "title": item.get("name") or item.get("original_name") or "",
                         "year": (item.get("first_air_date") or "")[:4],
-                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "img_url": f"https://image.tmdb.org/t/p/w500{item['poster_path']}",
                         "rating": round(item.get("vote_average", 0), 1),
                         "overview": (item.get("overview") or "")[:200],
                         "media_type": "series"
@@ -2661,7 +2661,7 @@ def get_trending_movies(movie_in_collection, page=1, category="all"):
                         "tmdb_id": tid,
                         "title": item.get("title", ""),
                         "year": (item.get("release_date") or "")[:4],
-                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "img_url": f"https://image.tmdb.org/t/p/w500{item['poster_path']}",
                         "rating": round(item.get("vote_average", 0), 1),
                         "overview": (item.get("overview") or "")[:200],
                         "media_type": "anime"
@@ -2681,7 +2681,7 @@ def get_trending_movies(movie_in_collection, page=1, category="all"):
                         "tmdb_id": tid,
                         "title": item.get("title", ""),
                         "year": (item.get("release_date") or "")[:4],
-                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "img_url": f"https://image.tmdb.org/t/p/w500{item['poster_path']}",
                         "rating": round(item.get("vote_average", 0), 1),
                         "overview": (item.get("overview") or "")[:200],
                         "media_type": "animation"
@@ -2701,7 +2701,7 @@ def get_trending_movies(movie_in_collection, page=1, category="all"):
                         "tmdb_id": tid,
                         "title": item.get("title", ""),
                         "year": (item.get("release_date") or "")[:4],
-                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "img_url": f"https://image.tmdb.org/t/p/w500{item['poster_path']}",
                         "rating": round(item.get("vote_average", 0), 1),
                         "overview": (item.get("overview") or "")[:200],
                         "media_type": "movie"
@@ -2721,7 +2721,7 @@ def get_trending_movies(movie_in_collection, page=1, category="all"):
                         "tmdb_id": tid,
                         "title": item.get("title", ""),
                         "year": (item.get("release_date") or "")[:4],
-                        "img_url": f"https://image.tmdb.org/t/p/w300{item['poster_path']}",
+                        "img_url": f"https://image.tmdb.org/t/p/w500{item['poster_path']}",
                         "rating": round(item.get("vote_average", 0), 1),
                         "overview": (item.get("overview") or "")[:200],
                         "media_type": "movie"
@@ -2820,7 +2820,7 @@ def get_trending_books(book_in_collection, book_titles_in_collection, seed=0, ca
             if w_key in book_in_collection:
                 continue
             cover_i = w.get("cover_i")
-            thumb = f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg" if cover_i else ""
+            thumb = f"https://covers.openlibrary.org/b/id/{cover_i}-L.jpg" if cover_i else ""
             if not thumb:
                 continue
             authors = w.get("author_name", ["Unknown"])
@@ -2943,7 +2943,7 @@ def movie_preview(tmdb_id):
             "title": d.get("title", ""),
             "year": (d.get("release_date") or "")[:4],
             "overview": d.get("overview", ""),
-            "poster": f"https://image.tmdb.org/t/p/w300{d.get('poster_path', '')}",
+            "poster": f"https://image.tmdb.org/t/p/w500{d.get('poster_path', '')}",
             "rating": round(d.get("vote_average", 0), 1),
             "genres": ", ".join(genres),
             "cast": ", ".join(cast),
@@ -2982,7 +2982,7 @@ def book_preview(book_id):
                     desc = desc.get("value", "")
                 covers = d.get("covers", [])
                 cover_id = covers[0] if covers else None
-                poster = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else ""
+                poster = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg" if cover_id else ""
                 genres = ", ".join(d.get("subjects", [])[:4])
                 return jsonify({
                     "title": d.get("title", ""),
@@ -3206,7 +3206,7 @@ def quick_add_book():
                 desc = desc.get("value", "")
             covers = data.get("covers", [])
             cover_id = covers[0] if covers else None
-            thumb = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else ""
+            thumb = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg" if cover_id else ""
             genres = ", ".join(data.get("subjects", [])[:3])
             cat = detect_book_category(b_title, genres, desc)
             new_book = Book(
@@ -3585,7 +3585,7 @@ def find_book():
             if r.status_code == 200:
                 for doc in r.json().get("docs", []):
                     cover_i = doc.get("cover_i")
-                    thumb = f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg" if cover_i else ""
+                    thumb = f"https://covers.openlibrary.org/b/id/{cover_i}-L.jpg" if cover_i else ""
                     key = doc.get("key", "").replace("/works/", "")
                     authors = doc.get("author_name", ["Unknown"])
                     items.append({
@@ -3669,7 +3669,7 @@ def select_book():
                 desc = desc.get("value", "")
             covers = data.get("covers", [])
             cover_id = covers[0] if covers else None
-            thumb = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg" if cover_id else ""
+            thumb = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg" if cover_id else ""
             genres = ", ".join(data.get("subjects", [])[:3])
             cat = detect_book_category(b_title, genres, desc)
             new_book = Book(
