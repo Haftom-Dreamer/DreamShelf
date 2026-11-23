@@ -1297,6 +1297,12 @@ def discover_book_detail(book_id=None, google_id=None):
 # --- Core Routes ---
 # =====================
 
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Lightweight health check endpoint for monitoring (e.g. UptimeRobot)."""
+    return jsonify({"status": "healthy"}), 200
+
+
 @app.route("/")
 def landing():
     return render_template("index.html")

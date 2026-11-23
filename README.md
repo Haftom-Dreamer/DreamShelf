@@ -67,3 +67,23 @@ GOOGLE_REDIRECT_URI=http://localhost:5000/auth/google/callback
 ```bash
 python main.py
 ```
+
+---
+
+## 🩺 Health Check & Monitoring
+
+DreamShelf provides a lightweight health check endpoint designed for uptime monitors (such as [UptimeRobot](https://uptimerobot.com/)) to prevent Render's free tier from sleeping:
+
+- **Endpoint**: `GET /health`
+- **Response**: `{"status": "healthy"}` (HTTP 200)
+- **Authentication**: None required (public)
+
+### Setting Up UptimeRobot
+1. Create a free account at [uptimerobot.com](https://uptimerobot.com/).
+2. Click **+ Add New Monitor**.
+3. Set **Monitor Type** to `HTTP(s)`.
+4. Enter a friendly name (e.g. `DreamShelf Keep-Alive`).
+5. Set the **URL (or IP)** to `https://<your-render-app-name>.onrender.com/health` (replace with your actual Render service URL, e.g. `https://dreamshelf.onrender.com/health`).
+6. Set the **Monitoring Interval** to every 5 or 10 minutes (Render free instances spin down after 15 minutes of inactivity).
+7. Save the monitor.
+
